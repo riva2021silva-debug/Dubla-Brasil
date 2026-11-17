@@ -9,6 +9,10 @@ export interface Personagem {
   id: string;
   nome: string;
   cor: string;
+  /** Endereço da foto do rosto (gerada do vídeo ou enviada pelo administrador). */
+  foto?: string | null;
+  /** Caminho da foto no servidor (pasta "midias"). */
+  fotoPath?: string | null;
 }
 
 export interface Fala {
@@ -38,7 +42,7 @@ export interface Cena {
   /** Imagem de capa gerada a partir do vídeo. */
   capa?: FonteMidia | null;
   /** Caminhos dos arquivos no servidor (pasta "midias"), quando a cena vem do servidor. */
-  caminhos?: { video: string; fundo: string | null; capa: string | null };
+  caminhos?: { video: string; fundo: string | null; capa: string | null; rostos?: Record<string, string> };
 }
 
 export const estaPublicada = (c: Cena) => c.publicada !== false;

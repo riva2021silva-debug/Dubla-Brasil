@@ -121,3 +121,13 @@ npx cap open ios
 No Xcode, escolha o seu time em Signing & Capabilities e clique em ▶ para rodar no iPhone conectado.
 
 Os ícones e a tela de abertura são gerados a partir de `assets/` com `npx capacitor-assets generate`.
+
+## Rostos dos personagens
+
+Ao salvar uma cena, o editor procura o rosto de cada personagem nos momentos em que ele fala (o maior rosto
+em alguns quadros de cada fala) e recorta uma foto redonda. O administrador pode ajustar com
+**Quadro atual** (pausa no rosto certo) ou **Foto** (envia uma imagem). A detecção roda no próprio aparelho,
+com o modelo *tiny face detector* da biblioteca [@vladmandic/face-api](https://github.com/vladmandic/face-api)
+(licença MIT), carregado só no editor.
+
+O vídeo de teste `testes/fixtures/cena-rostos/video.mp4` usa as fotos de exemplo dessa biblioteca (MIT).

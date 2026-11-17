@@ -87,12 +87,17 @@ function linhaParaCena(l: LinhaCena): Cena {
     video: { tipo: "url", url: urlPublica(l.video_path) },
     fundo: l.fundo_path ? { tipo: "url", url: urlPublica(l.fundo_path) } : null,
     capa: l.capa_path ? { tipo: "url", url: urlPublica(l.capa_path) } : null,
-    personagens: l.personagens ?? [],
+    personagens: (l.personagens ?? []).map((p) => ({ ...p, foto: p.fotoPath ? urlPublica(p.fotoPath) : null })),
     falas: l.falas ?? [],
     publicada: l.publicada,
     criadaEm: Date.parse(l.criada_em),
     atualizadaEm: Date.parse(l.atualizada_em),
-    caminhos: { video: l.video_path, fundo: l.fundo_path, capa: l.capa_path },
+    caminhos: {
+      video: l.video_path,
+      fundo: l.fundo_path,
+      capa: l.capa_path,
+      rostos: Object.fromEntries((l.personagens ?? []).filter((p) => p.fotoPath).map((p) => [p.id, p.fotoPath as string])),
+    },
   };
 }
 
@@ -114,7 +119,10 @@ export async function obterCena(id: string): Promise<Cena | undefined> {
  * Salva a cena no servidor. Arquivos novos são enviados; `fundo: null` remove a trilha de fundo.
  * Arquivos substituídos são apagados do servidor depois que a cena foi salva.
  */
-export async function salvarCena(cena: Cena, arquivos: { video?: Blob; fundo?: Blob | null; capa?: Blob } = {}): Promise<Cena> {
+export async function salvarCena(
+  cena: Cena,
+  arquivos: { video?: Blob; fundo?: Blob | null; capa?: Blob; rostos?: Record<string, Blob | null> } = {},
+): Promise<Cena> {
   const antes = cena.caminhos;
   const pasta = `cenas/${cena.id}`;
   const novos: string[] = [];
@@ -126,6 +134,18 @@ export async function salvarCena(cena: Cena, arquivos: { video?: Blob; fundo?: B
     if (arquivos.fundo) novos.push(fundo!);
     const capa = arquivos.capa ? await enviar(pasta, "capa", arquivos.capa) : (antes?.capa ?? null);
     if (arquivos.capa) novos.push(capa!);
+    // Rostos: Blob = foto nova; null = remover; ausente = manter a atual.
+    const personagens = [];
+    for (const p of cena.personagens) {
+      const pedido = arquivos.rostos?.[p.id];
+      let fotoPath = pedido === null ? null : (p.fotoPath ?? antes?.rostos?.[p.id] ?? null);
+      if (pedido) {
+        fotoPath = await enviar(pasta, `rosto-${p.id}`, pedido);
+        novos.push(fotoPath);
+      }
+      personagens.push({ id: p.id, nome: p.nome, cor: p.cor, fotoPath });
+    }
+    const rostosFinais = new Set(personagens.map((p) => p.fotoPath).filter(Boolean));
     const linha = {
       id: cena.id,
       titulo: cena.titulo,
@@ -135,7 +155,7 @@ export async function salvarCena(cena: Cena, arquivos: { video?: Blob; fundo?: B
       video_path: video,
       fundo_path: fundo,
       capa_path: capa,
-      personagens: cena.personagens,
+      personagens,
       falas: cena.falas,
       publicada: cena.publicada !== false,
     };
@@ -145,6 +165,7 @@ export async function salvarCena(cena: Cena, arquivos: { video?: Blob; fundo?: B
       arquivos.video ? antes?.video : null,
       arquivos.fundo !== undefined ? antes?.fundo : null,
       arquivos.capa ? antes?.capa : null,
+      ...Object.values(antes?.rostos ?? {}).filter((c) => !rostosFinais.has(c)),
     ]);
     return linhaParaCena(data as LinhaCena);
   } catch (e) {
@@ -161,7 +182,7 @@ export async function publicarCena(id: string, publicada: boolean) {
 export async function excluirCena(c: Cena) {
   const { error } = await supabase.from("cenas").delete().eq("id", c.id);
   if (error) falhou(error);
-  await apagarArquivos([c.caminhos?.video, c.caminhos?.fundo, c.caminhos?.capa]);
+  await apagarArquivos([c.caminhos?.video, c.caminhos?.fundo, c.caminhos?.capa, ...Object.values(c.caminhos?.rostos ?? {})]);
 }
 
 // ---------- Sons ----------

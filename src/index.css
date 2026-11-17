@@ -279,3 +279,35 @@ kbd { background: var(--superficie-2); border: 1px solid var(--borda); border-bo
   .pagina { padding-bottom: 110px; }
   .rodape { padding-bottom: calc(90px + env(safe-area-inset-bottom)); }
 }
+
+/* ===== Rostos ===== */
+.avatar { overflow: hidden; position: relative; }
+.avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.personagem-editor { display: flex; gap: 12px; align-items: flex-start; padding: 10px; border: 1px solid var(--borda); border-radius: 12px; background: var(--fundo); }
+
+/* ===== Pronto para dublar? ===== */
+.pronto { max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+.pronto-cabeca { text-align: center; display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+.pronto-titulo { font-size: clamp(2.1rem, 9vw, 3.2rem); text-transform: uppercase; letter-spacing: -0.01em; margin: 0; text-wrap: balance; }
+.pronto-cena { font-family: var(--fonte-titulo); font-weight: 800; font-size: 1.15rem; color: var(--roxo-claro); }
+.elenco { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px 18px; }
+.ator { display: flex; flex-direction: column; align-items: center; gap: 6px; background: none; border: none; cursor: pointer; padding: 4px; color: var(--texto); width: 92px; }
+.ator-foto { position: relative; border-radius: 50%; padding: 3px; border: 3px solid transparent; transition: border-color .15s, transform .15s, opacity .15s; opacity: 0.5; filter: grayscale(0.6); }
+.ator.escolhido .ator-foto { border-color: var(--amarelo); opacity: 1; filter: none; transform: scale(1.04); }
+.ator:hover .ator-foto { opacity: 1; }
+.ator:focus-visible { outline: 2px solid var(--amarelo); outline-offset: 2px; border-radius: 12px; }
+.ator-marca { position: absolute; right: -4px; bottom: -2px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--amarelo); font-size: 0.8rem; box-shadow: 0 2px 6px rgb(0 0 0 / 0.4); }
+.ator-nome { font-weight: 800; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; text-align: center; overflow-wrap: anywhere; }
+.ator-falas { font-size: 0.72rem; color: var(--texto-suave); }
+.legenda-elenco { display: flex; align-items: center; gap: 12px; color: var(--texto-suave); font-size: 0.9rem; font-weight: 600; }
+.legenda-elenco::before, .legenda-elenco::after { content: ""; flex: 1; height: 1px; background: var(--borda); }
+.previa-cena { padding: 0; overflow: hidden; position: relative; cursor: pointer; display: block; width: 100%; }
+.previa-cena .capa { aspect-ratio: 16 / 7; }
+.previa-play { position: absolute; left: 12px; bottom: 12px; padding: 8px 14px; border-radius: 999px; background: rgb(8 2 31 / 0.8); font-weight: 800; color: #fff; }
+.teste-mic { display: flex; flex-direction: column; gap: 12px; }
+.segmentos { display: flex; gap: 3px; flex: 1; min-width: 0; }
+.segmentos i { flex: 1; height: 16px; border-radius: 4px; background: var(--superficie-2); }
+.segmentos i.aceso { background: var(--verde); }
+.segmentos i.alto { background: var(--gravando); }
+.pronto-acao { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+.cta-estudio { min-width: 260px; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--fonte-titulo); font-size: 1.2rem; }

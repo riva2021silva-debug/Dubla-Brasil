@@ -35,9 +35,11 @@ fs.mkdirSync(SAIDA, { recursive: true });
 
   await p.getByRole("link", { name: /Escolher uma cena/ }).click();
   await p.getByText("Cadê meu chinelo?").first().click();
-  await p.getByRole("button", { name: /Capivara/ }).click();
+  // Começa com todos escolhidos; tira o Tucano para dublar só a Capivara.
+  await p.getByRole("button", { name: /^Tucano/ }).click();
+  await p.getByText("Você dubla: Capivara").waitFor();
   await foto("2-papel");
-  await p.getByRole("button", { name: /Ir para o estúdio/ }).click();
+  await p.getByRole("button", { name: /Entrar no estúdio/ }).click();
   await p.locator(".estudio").waitFor();
   await p.waitForFunction(() => document.querySelector("video")?.readyState >= 2);
   await foto("3-estudio");

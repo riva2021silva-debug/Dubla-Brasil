@@ -4,6 +4,8 @@ import LinhaDoTempo from "../componentes/LinhaDoTempo";
 import Legenda from "../componentes/Legenda";
 import { urlDaMidia } from "../db";
 import { mensagemDeErro, salvarCena } from "../nuvem";
+import { gerarRostos, rostoDaImagem, rostoDoQuadro } from "../rostos";
+import Avatar from "../componentes/Avatar";
 import { buscarCena, useTempoDoVideo } from "../ganchos";
 import { irPara } from "../audio/sincronia";
 import type { Cena, Fala, Personagem } from "../tipos";
@@ -52,6 +54,13 @@ export default function Editor() {
   const [etapa, setEtapa] = useState<string | null>(null);
   const [problemas, setProblemas] = useState<string[]>([]);
   const [alterado, setAlterado] = useState(false);
+  // Rostos alterados nesta edição: Blob = foto nova, null = remover.
+  const [novosRostos, setNovosRostos] = useState<Record<string, Blob | null>>({});
+  const [previas, setPrevias] = useState<Record<string, string>>({});
+  const [rostoOcupado, setRostoOcupado] = useState<string | null>(null);
+  const [avisoRosto, setAvisoRosto] = useState<string | null>(null);
+  const entradaFoto = useRef<HTMLInputElement>(null);
+  const fotoPara = useRef<string | null>(null);
   const entradaVideo = useRef<HTMLInputElement>(null);
   const entradaFundo = useRef<HTMLInputElement>(null);
   const entradaSrt = useRef<HTMLInputElement>(null);
@@ -205,6 +214,63 @@ export default function Editor() {
     return p;
   };
 
+  const definirRosto = (pid: string, foto: Blob | null) => {
+    setNovosRostos((r) => ({ ...r, [pid]: foto }));
+    setPrevias((pv) => {
+      if (pv[pid]) URL.revokeObjectURL(pv[pid]);
+      const n = { ...pv };
+      if (foto) n[pid] = URL.createObjectURL(foto);
+      else delete n[pid];
+      return n;
+    });
+    setAlterado(true);
+  };
+  const fotoAtual = (p: Personagem) => (pidRemovido(p.id) ? null : (previas[p.id] ?? p.foto ?? null));
+  const pidRemovido = (pid: string) => pid in novosRostos && novosRostos[pid] === null;
+
+  /** Procura os rostos no vídeo. `todos` = refaz todos; senão só quem ainda não tem foto. */
+  const encontrarRostos = async (todos: boolean): Promise<Record<string, Blob>> => {
+    if (!video || !cena) return {};
+    const alvo = cena.personagens.filter(
+      (p) => cena.falas.some((f) => f.personagemId === p.id) && (todos || (!fotoAtual(p) && !pidRemovido(p.id))),
+    );
+    if (!alvo.length) return {};
+    setRostoOcupado("todos");
+    setAvisoRosto(null);
+    try {
+      const achados = await gerarRostos(video.url, alvo, cena.falas, (f, t) => setEtapa(`Procurando os rostos… ${f}/${t}`));
+      const sem = alvo.filter((p) => achados[p.id] && !achados[p.id].achouRosto).map((p) => p.nome);
+      if (sem.length)
+        setAvisoRosto(`Não achei um rosto nítido para ${sem.join(", ")}: usei o centro do vídeo. Ajuste com “Quadro atual” ou “Foto”.`);
+      const saida: Record<string, Blob> = {};
+      for (const [pid, r] of Object.entries(achados)) {
+        definirRosto(pid, r.foto);
+        saida[pid] = r.foto;
+      }
+      return saida;
+    } catch {
+      setAvisoRosto("Não foi possível procurar os rostos neste aparelho. Use “Quadro atual” ou envie uma foto.");
+      return {};
+    } finally {
+      setRostoOcupado(null);
+    }
+  };
+
+  const rostoDoQuadroAtual = async (pid: string) => {
+    if (!el) return;
+    el.pause();
+    setRostoOcupado(pid);
+    try {
+      const r = await rostoDoQuadro(el);
+      definirRosto(pid, r.foto);
+      setAvisoRosto(r.achouRosto ? null : "Nenhum rosto nesse quadro: usei o centro da imagem. Pause num momento com o rosto bem visível.");
+    } catch {
+      setAvisoRosto("Não foi possível usar este quadro.");
+    } finally {
+      setRostoOcupado(null);
+    }
+  };
+
   const salvar = async () => {
     const p = validar();
     setProblemas(p);
@@ -219,11 +285,14 @@ export default function Editor() {
         const ms = primeira ? (primeira.inicioMs + primeira.fimMs) / 2 : Math.min(2000, c.duracaoMs / 2);
         capa = (await gerarCapa(video.url, ms)) ?? undefined;
       }
+      // Personagens que falam e ainda não têm foto ganham o rosto automaticamente.
+      const automaticos = await encontrarRostos(false);
       setEtapa(video?.novo || fundo?.novo ? "Enviando os arquivos para o servidor…" : "Salvando…");
       await salvarCena(c, {
         video: video?.novo,
         fundo: fundo?.novo ? fundo.novo : !fundo && c.caminhos?.fundo ? null : undefined,
         capa,
+        rostos: { ...novosRostos, ...automaticos },
       });
       setAlterado(false);
       navegar("/admin");
@@ -434,6 +503,15 @@ export default function Editor() {
           <section className="cartao pilha">
             <div className="linha entre">
               <h3 style={{ margin: 0 }}>Personagens</h3>
+              <span className="linha" style={{ gap: 6 }}>
+              <button
+                className="botao botao-pequeno"
+                disabled={!video || !!rostoOcupado || cena.falas.length === 0}
+                title="Procura o rosto de cada personagem nos momentos em que ele fala"
+                onClick={() => void encontrarRostos(true)}
+              >
+                {rostoOcupado === "todos" ? (etapa ?? "Procurando…") : "✨ Rostos automáticos"}
+              </button>
               <button
                 className="botao botao-pequeno"
                 onClick={() =>
@@ -445,12 +523,21 @@ export default function Editor() {
               >
                 + Adicionar
               </button>
+              </span>
             </div>
+            <p className="suave pequeno" style={{ margin: 0 }}>
+              Ao salvar, o app procura sozinho o rosto de cada personagem no vídeo. Para ajustar, pause no rosto e toque em
+              “Quadro atual”, ou envie uma foto.
+            </p>
+            {avisoRosto && <p className="info pequeno" style={{ margin: 0 }}>{avisoRosto}</p>}
             {cena.personagens.map((p) => {
               const usos = cena.falas.filter((f) => f.personagemId === p.id).length;
               return (
-                <div key={p.id} className="linha" style={{ flexWrap: "nowrap" }}>
-                  <input type="color" value={p.cor} onChange={(e) => atualizarPersonagem(p.id, { cor: e.target.value })} aria-label={`Cor de ${p.nome}`} style={{ width: 38, height: 38, border: "none", background: "none", padding: 0 }} />
+                <div key={p.id} className="personagem-editor">
+                  <Avatar personagem={p} foto={fotoAtual(p)} tamanho={52} />
+                  <div className="pilha" style={{ gap: 6, minWidth: 0, flex: 1 }}>
+                  <div className="linha" style={{ flexWrap: "nowrap" }}>
+                  <input type="color" value={p.cor} onChange={(e) => atualizarPersonagem(p.id, { cor: e.target.value })} aria-label={`Cor de ${p.nome}`} style={{ width: 38, height: 38, border: "none", background: "none", padding: 0, flex: "none" }} />
                   <input className="entrada" value={p.nome} onChange={(e) => atualizarPersonagem(p.id, { nome: e.target.value })} aria-label="Nome do personagem" />
                   <span className="suave pequeno" style={{ whiteSpace: "nowrap" }}>
                     {usos} {usos === 1 ? "fala" : "falas"}
@@ -464,6 +551,28 @@ export default function Editor() {
                   >
                     🗑
                   </button>
+                  </div>
+                  <div className="linha" style={{ gap: 6 }}>
+                    <button className="botao botao-pequeno" disabled={!el || !!rostoOcupado} title="Usa o quadro que está na tela do vídeo" onClick={() => void rostoDoQuadroAtual(p.id)}>
+                      {rostoOcupado === p.id ? "Procurando…" : "📷 Quadro atual"}
+                    </button>
+                    <button
+                      className="botao botao-pequeno"
+                      disabled={!!rostoOcupado}
+                      onClick={() => {
+                        fotoPara.current = p.id;
+                        entradaFoto.current?.click();
+                      }}
+                    >
+                      🖼 Foto
+                    </button>
+                    {fotoAtual(p) && (
+                      <button className="botao botao-pequeno" aria-label={`Remover foto de ${p.nome}`} onClick={() => definirRosto(p.id, null)}>
+                        Remover foto
+                      </button>
+                    )}
+                  </div>
+                  </div>
                 </div>
               );
             })}
@@ -477,6 +586,26 @@ export default function Editor() {
 
       <input ref={entradaVideo} type="file" accept="video/*" className="oculto" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void escolherVideo(f); }} />
       <input ref={entradaFundo} type="file" accept="audio/*,video/*" className="oculto" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void escolherFundo(f); }} />
+      <input
+        ref={entradaFoto}
+        type="file"
+        accept="image/*"
+        className="oculto"
+        onChange={async (e) => {
+          const f = e.target.files?.[0];
+          e.target.value = "";
+          const pid = fotoPara.current;
+          if (!f || !pid) return;
+          setRostoOcupado(pid);
+          try {
+            definirRosto(pid, await rostoDaImagem(f));
+          } catch (err) {
+            setAvisoRosto(err instanceof Error ? err.message : String(err));
+          } finally {
+            setRostoOcupado(null);
+          }
+        }}
+      />
       <input ref={entradaSrt} type="file" accept=".srt,text/plain" className="oculto" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void importarSrt(f); }} />
     </div>
   );

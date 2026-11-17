@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import Avatar from "../componentes/Avatar";
 import FormaDeOnda, { type PontoAoVivo } from "../componentes/FormaDeOnda";
 import { useConfig } from "../config";
 import { db } from "../db";
@@ -380,8 +381,9 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
         <>
           <div className="cartao-fala">
             <div className="linha entre pequeno">
-              <span className="etiqueta" style={{ borderColor: p?.cor, color: p?.cor }}>
-                {p?.nome}
+              <span className="linha" style={{ gap: 8 }}>
+                {p && <Avatar personagem={p} tamanho={34} />}
+                <strong style={{ color: p?.cor }}>{p?.nome}</strong>
               </span>
               <span className="suave">
                 Fala {indice + 1} de {total} · {((falaSel.fimMs - falaSel.inicioMs) / 1000).toFixed(1)} s

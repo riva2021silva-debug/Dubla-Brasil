@@ -69,7 +69,7 @@ export async function importarPacote(arquivo: File): Promise<Cena> {
     duracaoMs: Number(c.duracaoMs) || 0,
     video: { tipo: "blob", chave: "" },
     fundo: null,
-    personagens: Array.isArray(c.personagens) ? c.personagens : [],
+    personagens: Array.isArray(c.personagens) ? c.personagens.map((p: Cena["personagens"][0]) => ({ id: p.id, nome: p.nome, cor: p.cor })) : [],
     falas: Array.isArray(c.falas) ? c.falas : [],
     criadaEm: agora,
     atualizadaEm: agora,
