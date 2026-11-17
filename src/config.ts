@@ -21,6 +21,8 @@ export interface Configuracoes {
   limparVoz: boolean;
   /** Depois de gravar: ajusta a voz no tempo para casar com a fala original (até 0,3 s). */
   alinharVoz: boolean;
+  /** Grava a câmera frontal junto com a voz e mostra no cantinho do vídeo, como numa chamada. */
+  usarCamera?: boolean;
   /** Versão das preferências (para ligar padrões novos em quem já usava o app). */
   versao?: number;
 }

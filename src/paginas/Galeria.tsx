@@ -391,6 +391,9 @@ function ItemFeed(props: {
             🎙️ Dublar esta cena
           </Link>
         )}
+        <button className="post-barra-comentario" onClick={props.aoComentar}>
+          Faça um comentário…
+        </button>
       </div>
     </article>
   );

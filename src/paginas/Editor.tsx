@@ -604,7 +604,7 @@ export default function Editor() {
                     📷 Quadro atual
                   </button>
                   <button className="botao botao-pequeno" onClick={() => entradaCapa.current?.click()}>
-                    🖼 Enviar imagem
+                    🖼 Da galeria
                   </button>
                 </div>
                 {avisoCapa && <span className="pequeno" style={{ color: "var(--perigo)" }}>{avisoCapa}</span>}
@@ -680,7 +680,7 @@ export default function Editor() {
                         entradaFoto.current?.click();
                       }}
                     >
-                      🖼 Foto
+                      🖼 Da galeria
                     </button>
                     {fotoAtual(p) && (
                       <button className="botao botao-pequeno" aria-label={`Remover foto de ${p.nome}`} onClick={() => definirRosto(p.id, null)}>

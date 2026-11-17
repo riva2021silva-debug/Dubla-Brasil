@@ -9,6 +9,7 @@ import { db } from "../db";
 import { buscarCena, useCarregar, useFormatoDoVideo, useMidiasDaCena, useTempoDoVideo } from "../ganchos";
 import { decodificar, Mixer } from "../audio/mixer";
 import { irPara } from "../audio/sincronia";
+import { trechoNoTempo } from "../audio/camera";
 import type { Cena, Dub } from "../tipos";
 import { formatarTempo, gerarCapa, nomeArquivo, salvarVideoNaGaleria } from "../util";
 
@@ -55,6 +56,45 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
   const navegar = useNavigate();
   const tempo = useTempoDoVideo(video);
   const formato = useFormatoDoVideo(video);
+  const pip = useRef<HTMLVideoElement>(null);
+  const [pipVisivel, setPipVisivel] = useState(false);
+  const cameras = dub.cameras;
+  const urlsCamera = useMemo(() => new Map((cameras ?? []).map((t) => [t.id, URL.createObjectURL(t.video)])), [cameras]);
+  useEffect(() => () => urlsCamera.forEach((u) => URL.revokeObjectURL(u)), [urlsCamera]);
+
+  // Mantém o vídeo da câmera (cantinho) andando junto com o vídeo principal.
+  useEffect(() => {
+    if (!video || !cameras?.length) return;
+    let raf = 0;
+    let atual: string | null = null;
+    const passo = () => {
+      const p = pip.current;
+      if (p) {
+        const ms = video.currentTime * 1000;
+        const t = trechoNoTempo(cameras, ms);
+        if (!t) {
+          if (atual) {
+            p.pause();
+            atual = null;
+            setPipVisivel(false);
+          }
+        } else {
+          if (atual !== t.id) {
+            atual = t.id;
+            p.src = urlsCamera.get(t.id) ?? "";
+            setPipVisivel(true);
+          }
+          const alvo = Math.max(0, (ms - t.inicioMs) / 1000);
+          if (p.readyState >= 1 && Math.abs(p.currentTime - alvo) > 0.25) p.currentTime = alvo;
+          if (!video.paused && p.paused) void p.play().catch(() => {});
+          if (video.paused && !p.paused) p.pause();
+        }
+      }
+      raf = requestAnimationFrame(passo);
+    };
+    passo();
+    return () => cancelAnimationFrame(raf);
+  }, [video, cameras, urlsCamera]);
 
   const minhas = useMemo(() => cena.falas.filter((f) => dub.papeis.includes(f.personagemId)), [cena, dub.papeis]);
   const faltando = minhas.filter((f) => !dub.tomadas[f.id]).length;
@@ -138,6 +178,29 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
     const desenhar = () => {
       g.drawImage(video, 0, 0, largura, altura);
       const ms = video.currentTime * 1000;
+      // Câmera da pessoa num quadradinho no canto de cima, à direita (como numa chamada), espelhada.
+      const p = pip.current;
+      if (p && trechoNoTempo(cameras, ms) && p.readyState >= 2 && p.videoWidth) {
+        const lado = Math.round(Math.min(largura, altura) * (altura > largura ? 0.42 : 0.3));
+        const mg = Math.round(Math.min(largura, altura) * 0.035);
+        const x = largura - lado - mg;
+        const y = mg;
+        const raio = Math.round(lado * 0.12);
+        const borda = Math.max(2, Math.round(lado * 0.025));
+        const s = Math.min(p.videoWidth, p.videoHeight);
+        g.save();
+        g.beginPath();
+        g.roundRect(x - borda, y - borda, lado + borda * 2, lado + borda * 2, raio + borda);
+        g.fillStyle = "#ffffff";
+        g.fill();
+        g.beginPath();
+        g.roundRect(x, y, lado, lado, raio);
+        g.clip();
+        g.translate(x + lado, y);
+        g.scale(-1, 1);
+        g.drawImage(p, (p.videoWidth - s) / 2, (p.videoHeight - s) / 2, s, s, 0, 0, lado, lado);
+        g.restore();
+      }
       // Marca d'água: a logo pequena no canto de baixo, à direita (sem legenda por cima da imagem).
       if (logo.complete && logo.naturalWidth) {
         const lw = Math.round(Math.min(largura, altura) * 0.2);
@@ -273,6 +336,11 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
             onPause={() => setTocando(false)}
             onClick={alternar}
           />
+        )}
+        {!!cameras?.length && (
+          <div className="pip-camera" hidden={!pipVisivel}>
+            <video ref={pip} muted playsInline preload="auto" />
+          </div>
         )}
       </div>
       {cfg.mostrarLegendas && <LegendaKaraoke falas={cena.falas} personagens={cena.personagens} tempoMs={tempo} papeis={dub.papeis} />}

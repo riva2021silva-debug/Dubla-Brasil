@@ -64,9 +64,22 @@ export interface Dub {
   /** Personagens que a pessoa dublou. */
   papeis: string[];
   tomadas: Record<string, Tomada>;
+  /** Vídeos da câmera gravados junto com as falas (aparecem no cantinho, como numa chamada). */
+  cameras?: TrechoCamera[];
   nome: string;
   criadoEm: number;
   atualizadoEm: number;
+}
+
+/** Um trecho gravado pela câmera frontal durante a dublagem. */
+export interface TrechoCamera {
+  id: string;
+  video: Blob;
+  /** Momento da cena (ms) em que o primeiro quadro deve aparecer. */
+  inicioMs: number;
+  duracaoMs: number;
+  /** Falas gravadas neste trecho (regravar uma delas substitui o trecho). */
+  falas: string[];
 }
 
 /** Som curto para o Modo Imitação (cadastrado pelo administrador). */

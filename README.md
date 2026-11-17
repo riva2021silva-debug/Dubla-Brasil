@@ -171,3 +171,17 @@ No estúdio, a legenda em português aparece embaixo do vídeo no estilo karaok�
 - **Fotos sem quadro preto:** antes de fotografar, o app espera o quadro ser desenhado e descarta quadros escuros
   (problema do Android). Se o detector de rostos não carregar, cada personagem ainda ganha uma foto.
 - **Vídeos 9:16:** o player se ajusta ao formato do vídeo (em pé ou deitado). Teste: `node testes/e2e-melhorias.cjs`.
+
+## Versão 2.0: câmera estilo chamada
+
+- **Câmera no estúdio (opcional):** o botão 📷 no topo do estúdio liga a câmera frontal. A prévia aparece
+  espelhada no canto do vídeo. Ao gravar, a câmera grava junto com a voz (`src/audio/camera.ts`). Cada trecho
+  fica guardado no dub (`Dub.cameras`), com o momento da cena em que começou. Regravar uma fala troca o trecho
+  da câmera dessa fala. A escolha fica salva nas preferências.
+- **Resultado:** o rosto da pessoa passa num quadradinho com borda branca no canto de cima, à direita,
+  sincronizado com o vídeo. O vídeo salvo na galeria e o publicado levam o quadradinho também.
+- **Permissões:** `CAMERA` no Android (câmera não obrigatória) e `NSCameraUsageDescription` no iOS.
+- **Administrador:** os botões "🖼 Da galeria" no editor escolhem as fotos dos personagens e a capa pelas
+  imagens do celular.
+- **Galeria:** barra "Faça um comentário…" embaixo de cada dub, que abre os comentários.
+- Teste: `node testes/e2e-camera.cjs` (usa a câmera falsa do Chrome).

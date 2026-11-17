@@ -6,10 +6,11 @@ import { useConfig } from "../config";
 import { db } from "../db";
 import { buscarCena, useCarregar, useFormatoDoVideo, useMidiasDaCena, useTempoDoVideo } from "../ganchos";
 import { Microfone } from "../audio/microfone";
+import { Camera } from "../audio/camera";
 import { decodificar, Mixer, type TomadaTocavel } from "../audio/mixer";
 import { compensacao, fatiarEmTomadas, FOLGA_FIM_MS, irPara, picoDe } from "../audio/sincronia";
-import type { Cena, Dub, Fala } from "../tipos";
-import { formatarTempo } from "../util";
+import type { Cena, Dub, Fala, TrechoCamera } from "../tipos";
+import { formatarTempo, novoId } from "../util";
 
 type Modo = "parado" | "gravando" | "original" | "minha" | "tocando";
 
@@ -48,6 +49,9 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
   const [video, setVideo] = useState<HTMLVideoElement | null>(null);
   const mixer = useRef<Mixer | null>(null);
   const palco = useRef<HTMLDivElement>(null);
+  const camera = useRef<Camera | null>(null);
+  const camInicioCtx = useRef(0);
+  const [camStream, setCamStream] = useState<MediaStream | null>(null);
   const mic = useRef<Microfone | null>(null);
   const [micPronto, setMicPronto] = useState(false);
   const [nivel, setNivel] = useState(0);
@@ -163,7 +167,31 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
     }
   };
 
+  const ligarCamera = async (ligar: boolean) => {
+    setErro(null);
+    camera.current?.fechar();
+    camera.current = null;
+    setCamStream(null);
+    salvarCfg({ usarCamera: ligar });
+    if (!ligar) return;
+    try {
+      camera.current = await Camera.abrir();
+      setCamStream(camera.current.stream);
+    } catch (e) {
+      salvarCfg({ usarCamera: false });
+      setErro(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  // Se a pessoa deixou a câmera ligada da última vez, liga de novo ao abrir o estúdio.
+  useEffect(() => {
+    if (cfg.usarCamera) void ligarCamera(true);
+    return () => camera.current?.fechar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const parar = useCallback(() => {
+    if (camera.current?.gravando()) void camera.current.parar();
     mic.current?.parar();
     mixer.current?.ignorarTomadas([]);
     mixer.current?.definirModoOriginal(false);
@@ -193,6 +221,10 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
     setModo("gravando");
     palco.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     mic.current.iniciar();
+    if (camera.current) {
+      camera.current.iniciar();
+      camInicioCtx.current = m.ctx.currentTime;
+    }
     await video.play();
   };
 
@@ -205,6 +237,10 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
     const m = mixer.current;
     const g = mic.current?.parar() ?? null;
     const cenaInicio = g ? m.cenaNoTempo(g.inicioCtx) : null;
+    // Câmera: guarda em que momento da cena ela começou (antes de pausar, enquanto o relógio da cena vale).
+    const camGravando = camera.current?.gravando() ? camera.current : null;
+    const cenaCamera = camGravando ? m.cenaNoTempo(camInicioCtx.current) : null;
+    const duracaoCamera = camGravando ? (m.ctx.currentTime - camInicioCtx.current) * 1000 : 0;
     video.pause();
     m.ignorarTomadas([]);
     const falas = alvo.falas;
@@ -219,7 +255,22 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
       limpar: cfg.limparVoz,
       alinharCom: cfg.alinharVoz ? original : null,
     });
-    const atualizado: Dub = { ...dub, tomadas: { ...dub.tomadas, ...novas }, atualizadoEm: Date.now() };
+    const idsGravados = Object.keys(novas);
+    // A câmera antiga dessas falas não combina mais com a voz nova: sai.
+    const camerasMantidas = (dub.cameras ?? []).filter((t) => !t.falas.some((f) => idsGravados.includes(f)));
+    const atualizado: Dub = { ...dub, tomadas: { ...dub.tomadas, ...novas }, cameras: camerasMantidas, atualizadoEm: Date.now() };
+    if (camGravando && cenaCamera !== null) {
+      const comp = compensacao(m, cfg.latenciaMs);
+      void camGravando.parar().then((video) => {
+        if (!video) return;
+        const trecho: TrechoCamera = { id: novoId(), video, inicioMs: cenaCamera - comp, duracaoMs: duracaoCamera, falas: idsGravados };
+        setDub((d) => {
+          const n = { ...d, cameras: [...(d.cameras ?? []).filter((t) => !t.falas.some((f) => idsGravados.includes(f))), trecho] };
+          void db.salvarDub(n);
+          return n;
+        });
+      });
+    }
     setDub(atualizado);
     setBuffers((b) => {
       const c = { ...b };
@@ -327,6 +378,15 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
           </div>
         </div>
         <button
+          className={`botao botao-pequeno botao-legenda ${camStream ? "ligada" : ""}`}
+          aria-pressed={!!camStream}
+          title={camStream ? "Desligar a câmera" : "Gravar a câmera junto (aparece no cantinho, como numa chamada)"}
+          disabled={ocupado}
+          onClick={() => void ligarCamera(!camStream)}
+        >
+          📷
+        </button>
+        <button
           className={`botao botao-pequeno botao-legenda ${cfg.mostrarLegendas ? "ligada" : ""}`}
           aria-pressed={cfg.mostrarLegendas}
           title={cfg.mostrarLegendas ? "Esconder a legenda" : "Mostrar a legenda"}
@@ -364,6 +424,19 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
             <span className="nivel" style={{ color: nivelInfo.cor }}>
               {nivelInfo.texto}
             </span>
+          </div>
+        )}
+        {camStream && (
+          <div className={`pip-camera ${modo === "gravando" ? "gravando" : ""}`}>
+            <video
+              ref={(el) => {
+                if (el && el.srcObject !== camStream) el.srcObject = camStream;
+              }}
+              muted
+              autoPlay
+              playsInline
+            />
+            {modo === "gravando" && <span className="pip-selo">● Gravando</span>}
           </div>
         )}
         {contagem !== null && contagem <= 3 && <div className="contagem">{contagem}</div>}

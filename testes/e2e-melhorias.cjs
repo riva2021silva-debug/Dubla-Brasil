@@ -73,7 +73,7 @@ fs.mkdirSync(SAIDA, { recursive: true });
   await u.getByText("Mais opções").click();
   await u.getByRole("button", { name: /Gravar todas seguidas/ }).click();
   await u.waitForTimeout(2600);
-  const legendaForaDoVideo = await u.evaluate(() => !document.querySelector(".palco .legenda-karaoke") && !!document.querySelector(".legenda-karaoke"));
+  const legendaForaDoVideo = await u.evaluate(() => !document.querySelector(".palco .texto-karaoke") && !!document.querySelector(".texto-karaoke"));
   console.log("Legenda fora da imagem (embaixo do vídeo):", legendaForaDoVideo ? "ok" : "NÃO");
   await u.screenshot({ path: path.join(SAIDA, "m-estudio-vertical.png") });
   await u.getByRole("link", { name: /Resultado 3\/3/ }).waitFor({ timeout: 40000 });
