@@ -5,6 +5,7 @@ import Legenda from "../componentes/Legenda";
 import { urlDaMidia } from "../db";
 import { mensagemDeErro, salvarCena } from "../nuvem";
 import { gerarRostos, rostoDaImagem, rostoDoQuadro } from "../rostos";
+import type { Progresso } from "../transcricao";
 import Avatar from "../componentes/Avatar";
 import { buscarCena, useTempoDoVideo } from "../ganchos";
 import { irPara } from "../audio/sincronia";
@@ -58,6 +59,9 @@ export default function Editor() {
   const [novosRostos, setNovosRostos] = useState<Record<string, Blob | null>>({});
   const [previas, setPrevias] = useState<Record<string, string>>({});
   const [rostoOcupado, setRostoOcupado] = useState<string | null>(null);
+  const [progressoIa, setProgressoIa] = useState<Progresso | null>(null);
+  const [avisoIa, setAvisoIa] = useState<string | null>(null);
+  const [confirmarSubstituir, setConfirmarSubstituir] = useState(false);
   const [avisoRosto, setAvisoRosto] = useState<string | null>(null);
   const entradaFoto = useRef<HTMLInputElement>(null);
   const fotoPara = useRef<string | null>(null);
@@ -184,6 +188,31 @@ export default function Editor() {
     atualizar((c) => ({ ...c, falas: [...c.falas, f] }));
     setSel(f.id);
   }
+
+  /** IA: ouve o vídeo, separa as falas, traduz para o português e sugere os personagens. */
+  const separarAutomaticamente = async () => {
+    if (!video || !cena) return;
+    if (cena.falas.length && !confirmarSubstituir) {
+      setConfirmarSubstituir(true);
+      return;
+    }
+    setConfirmarSubstituir(false);
+    setAvisoIa(null);
+    setProgressoIa({ etapa: "preparando", detalhe: "Preparando…" });
+    try {
+      const { separarFalas } = await import("../transcricao");
+      const falas = await separarFalas({ urlVideo: video.url, idioma: cena.idioma, personagens: cena.personagens, aoProgredir: setProgressoIa });
+      atualizar((c) => ({ ...c, falas }));
+      const vozes = new Set(falas.map((f) => f.personagemId)).size;
+      setAvisoIa(
+        `Encontrei ${falas.length} ${falas.length === 1 ? "fala" : "falas"}${cena.idioma.startsWith("Português") ? "" : ", já traduzidas para o português"}, em ${vozes} ${vozes === 1 ? "voz" : "vozes"}. Revise o texto, os tempos e os personagens antes de salvar.`,
+      );
+    } catch (e) {
+      setAvisoIa(`Não deu certo: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setProgressoIa(null);
+    }
+  };
 
   const importarSrt = async (arq: File) => {
     const lidas = lerSrt(await arq.text());
@@ -389,9 +418,41 @@ export default function Editor() {
                 </span>
               )}
             </div>
-            {cena.falas.length === 0 && (
+            <div className="cartao-ia">
+              <div className="linha entre">
+                <span>
+                  <strong>✨ Separar falas automaticamente</strong>
+                  <br />
+                  <span className="suave pequeno">
+                    A IA ouve o vídeo, separa cada fala com início e fim, traduz para o português e sugere o personagem pelo tom de voz.
+                    Confira o idioma em “Idioma das falas” antes.
+                  </span>
+                </span>
+                <button className="botao botao-primario" disabled={!video || !!progressoIa} onClick={() => void separarAutomaticamente()}>
+                  {progressoIa ? "Processando…" : confirmarSubstituir ? "Substituir as falas?" : "✨ Separar falas"}
+                </button>
+              </div>
+              {confirmarSubstituir && !progressoIa && (
+                <div className="linha pequeno">
+                  <span>Isso troca as {cena.falas.length} falas atuais pelas que a IA encontrar.</span>
+                  <button className="botao botao-pequeno" onClick={() => setConfirmarSubstituir(false)}>
+                    Cancelar
+                  </button>
+                </div>
+              )}
+              {progressoIa && (
+                <div className="pilha" style={{ gap: 6 }}>
+                  <span className="pequeno">{progressoIa.detalhe}</span>
+                  <div className="medidor">
+                    <div style={{ width: `${Math.round((progressoIa.fracao ?? (progressoIa.etapa === "ouvindo" ? 0.5 : 0.1)) * 100)}%` }} />
+                  </div>
+                </div>
+              )}
+              {avisoIa && <p className="info pequeno" style={{ margin: 0 }}>{avisoIa}</p>}
+            </div>
+            {cena.falas.length === 0 && !progressoIa && (
               <p className="suave pequeno" style={{ margin: 0 }}>
-                Toque o vídeo até o começo de uma fala e clique em “+ Fala aqui”, ou importe um arquivo de legendas .srt.
+                Ou faça à mão: toque o vídeo até o começo de uma fala e clique em “+ Fala aqui”, ou importe um arquivo de legendas .srt.
               </p>
             )}
             <div className="tabela-falas">
@@ -412,13 +473,20 @@ export default function Editor() {
                       </option>
                     ))}
                   </select>
-                  <input
-                    className="entrada"
-                    value={f.texto}
-                    placeholder="O que o personagem diz…"
-                    onChange={(e) => atualizarFala(f.id, { texto: e.target.value })}
-                    aria-label="Texto da fala"
-                  />
+                  <div style={{ minWidth: 0 }}>
+                    <input
+                      className="entrada"
+                      value={f.texto}
+                      placeholder="O que o personagem diz…"
+                      onChange={(e) => atualizarFala(f.id, { texto: e.target.value })}
+                      aria-label="Texto da fala"
+                    />
+                    {f.original && (
+                      <span className="suave pequeno" title="Texto original" style={{ display: "block", marginTop: 2 }}>
+                        🌐 {f.original}
+                      </span>
+                    )}
+                  </div>
                   <div className="linha tempos" style={{ gap: 4 }}>
                     <AjusteTempo rotulo="início" ms={f.inicioMs} onMarcar={() => atualizarFala(f.id, { inicioMs: Math.round(tempo) })} onMudar={(ms) => atualizarFala(f.id, { inicioMs: ms })} />
                     <AjusteTempo rotulo="fim" ms={f.fimMs} onMarcar={() => atualizarFala(f.id, { fimMs: Math.round(tempo) })} onMudar={(ms) => atualizarFala(f.id, { fimMs: ms })} />

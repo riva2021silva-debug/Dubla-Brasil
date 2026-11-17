@@ -140,3 +140,19 @@ O administrador modera pela aba **Galeria** do painel (as mais denunciadas prime
 
 Para ativar no servidor: rode `supabase/galeria.sql` no SQL Editor e ligue **Allow anonymous sign-ins** em
 Authentication → Sign In / Providers. Teste: `node testes/e2e-galeria.cjs http://localhost:4174/`.
+
+## Separar falas automaticamente (IA)
+
+No editor, **✨ Separar falas** ouve o vídeo e cria as falas sozinho:
+
+1. **Whisper base** (`onnx-community/whisper-base`) transcreve e marca o tempo de cada fala, no idioma escolhido em
+   “Idioma das falas”. Vídeos em outros idiomas saem em inglês pelo próprio Whisper.
+2. Os tempos são refinados pelo volume da voz (o Whisper às vezes arredonda para o segundo).
+3. **Tradução para o português** com `Xenova/opus-mt-en-ROMANCE` (código `>>pt_br<<` inserido direto na entrada).
+   Vídeos em português não são traduzidos. O texto original fica guardado e aparece embaixo de cada fala no editor.
+4. Falas longas são divididas nas pontuações; cada fala recebe um personagem pelo tom de voz (agrupamento por semitons).
+
+Tudo roda no aparelho, num Web Worker. Os modelos (≈77 MB + 113 MB) vêm do Hugging Face e o motor ONNX Runtime da
+jsDelivr só na primeira vez, e não vão dentro do APK. Teste: `node testes/e2e-ia.cjs http://localhost:4174/`.
+
+No estúdio, a legenda em português aparece embaixo do vídeo no estilo karaokê (preenche conforme a fala passa).

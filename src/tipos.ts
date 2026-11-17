@@ -21,6 +21,8 @@ export interface Fala {
   texto: string;
   inicioMs: number;
   fimMs: number;
+  /** Texto no idioma original (quando a legenda foi traduzida automaticamente). */
+  original?: string;
 }
 
 export interface Cena {

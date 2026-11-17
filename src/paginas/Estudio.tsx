@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import Avatar from "../componentes/Avatar";
+import LegendaKaraoke from "../componentes/LegendaKaraoke";
 import FormaDeOnda, { type PontoAoVivo } from "../componentes/FormaDeOnda";
 import { useConfig } from "../config";
 import { db } from "../db";
@@ -353,10 +354,8 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
           </div>
         )}
         {contagem !== null && contagem <= 3 && <div className="contagem">{contagem}</div>}
-        {falaSel && !ocupado && (
-          <button className="botao-video" onClick={() => ouvir(falaSel, true)}>
-            🔊 Ouça o original
-          </button>
+        {cfg.mostrarLegendas && (
+          <LegendaKaraoke falas={cena.falas} personagens={cena.personagens} tempoMs={tempo} papeis={dub.papeis} proxima={modo === "gravando" ? proximaFala : falaSel} />
         )}
         {modo === "gravando" && <div className="barra-progresso" style={{ width: `${(decorrido / (janela.ate - janela.de)) * 100}%` }} />}
       </div>

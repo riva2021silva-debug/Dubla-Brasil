@@ -13,6 +13,7 @@
     "@capacitor/core": "^8.6.2",
     "@capacitor/filesystem": "^8.1.5",
     "@capacitor/share": "^8.0.3",
+    "@huggingface/transformers": "^4.3.2",
     "@supabase/supabase-js": "^2.119.0",
     "@vladmandic/face-api": "^1.7.15",
     "fflate": "^0.8.3",
