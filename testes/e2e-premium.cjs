@@ -96,6 +96,16 @@ function diferencaNoCantoDeBaixo(video) {
   await d.saveAs(video);
   const dif = diferencaNoCantoDeBaixo(video);
   console.log(`Vídeo do assinante sem marca d'água (canto de baixo igual ao original: diferença ${dif.toFixed(1)}; aviso escondido: ${semAviso}):`, dif < 10 && semAviso ? "ok" : "FALHOU");
+  await u.goto(BASE + "#/conta");
+  await u.getByRole("button", { name: "Excluir minha conta" }).click();
+  await u.getByRole("button", { name: "Sim, excluir minha conta" }).click();
+  await u.getByText("Sua conta e seus dados foram apagados.").waitFor();
+  await u.locator("#conta-email").fill("maria@teste.dev");
+  await u.locator("#conta-senha").fill("senha123");
+  await u.getByRole("tab", { name: "Entrar" }).click();
+  await u.getByRole("button", { name: "Entrar", exact: true }).last().click();
+  await u.getByText("E-mail ou senha incorretos.").waitFor();
+  console.log("Excluir minha conta apaga a conta (não entra mais com a mesma senha): ok");
   console.log(erros.length ? "ERROS:\n" + erros.join("\n") : "Sem erros no console.");
   await navegador.close();
 })().catch((e) => {

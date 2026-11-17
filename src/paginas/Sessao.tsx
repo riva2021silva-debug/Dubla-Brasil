@@ -28,6 +28,16 @@ export default function Sessao() {
   return <SessaoCarregada dub={dados.dado.dub} cena={dados.dado.cena} />;
 }
 
+/** Quadrado de cantos arredondados (roundRect não existe em iPhones com iOS antigo). */
+function retanguloArredondado(g: CanvasRenderingContext2D, x: number, y: number, lado: number, r: number) {
+  g.moveTo(x + r, y);
+  g.arcTo(x + lado, y, x + lado, y + lado, r);
+  g.arcTo(x + lado, y + lado, x, y + lado, r);
+  g.arcTo(x, y + lado, x, y, r);
+  g.arcTo(x, y, x + lado, y, r);
+  g.closePath();
+}
+
 function formatoDeExportacao(): { mime: string; ext: string } | null {
   if (typeof MediaRecorder === "undefined") return null;
   const opcoes = [
@@ -171,7 +181,9 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
     const destino = m.ctx.createMediaStreamDestination();
     m.saida.connect(destino);
     // O quadro só é enviado quando desenhamos um novo (sem quadros repetidos nem pulados por excesso de trabalho).
-    const porQuadro = "requestVideoFrameCallback" in HTMLVideoElement.prototype;
+    // (iPhone antigo sem requestFrame: usa 30 quadros por segundo fixos.)
+    const comRequestFrame = typeof CanvasCaptureMediaStreamTrack !== "undefined" && "requestFrame" in CanvasCaptureMediaStreamTrack.prototype;
+    const porQuadro = comRequestFrame && "requestVideoFrameCallback" in HTMLVideoElement.prototype;
     const trilha = tela.captureStream(porQuadro ? 0 : 30).getVideoTracks()[0] as MediaStreamTrack & { requestFrame?: () => void };
     const fluxo = new MediaStream([trilha, ...destino.stream.getAudioTracks()]);
     const gravador = new MediaRecorder(fluxo, { mimeType: formato.mime, videoBitsPerSecond: bitrate, audioBitsPerSecond: 128_000 });
@@ -199,11 +211,11 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
         const s = Math.min(p.videoWidth, p.videoHeight);
         g.save();
         g.beginPath();
-        g.roundRect(x - borda, y - borda, lado + borda * 2, lado + borda * 2, raio + borda);
+        retanguloArredondado(g, x - borda, y - borda, lado + borda * 2, raio + borda);
         g.fillStyle = "#ffffff";
         g.fill();
         g.beginPath();
-        g.roundRect(x, y, lado, lado, raio);
+        retanguloArredondado(g, x, y, lado, raio);
         g.clip();
         g.translate(x + lado, y);
         g.scale(-1, 1);

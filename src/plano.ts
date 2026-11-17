@@ -93,6 +93,21 @@ export async function criarConta(email: string, senha: string): Promise<"pronta"
   return data.session ? "pronta" : "confirmar";
 }
 
+/** Apaga a conta e tudo dela (exigência das lojas). Os vídeos da galeria saem antes, pela API de arquivos. */
+export async function apagarMinhaConta() {
+  const id = (await supabase.auth.getSession()).data.session?.user.id;
+  if (!id) return;
+  const { data } = await supabase.from("publicacoes").select("video_path,capa_path").eq("autor_id", id);
+  const arquivos = (data ?? []).flatMap((p: { video_path: string; capa_path: string | null }) => [p.video_path, ...(p.capa_path ? [p.capa_path] : [])]);
+  if (arquivos.length) await supabase.storage.from("dubs").remove(arquivos);
+  const { error } = await supabase.rpc("apagar_minha_conta");
+  if (error) {
+    if (naoAtivado(error)) throw new Error("A exclusão de conta ainda não foi ativada no servidor (arquivo conta.sql).");
+    throw new Error(error.message.startsWith("A conta") ? error.message : mensagemDeErro(error));
+  }
+  await supabase.auth.signOut();
+}
+
 export async function sairDaConta() {
   await supabase.auth.signOut();
 }

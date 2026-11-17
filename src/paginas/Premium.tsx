@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAdmin } from "../admin";
-import { criarConta, dataBr, emailDaConta, entrarNaConta, linkDeCheckout, PRECO, sairDaConta, usePlano } from "../plano";
+import { apagarMinhaConta, criarConta, dataBr, emailDaConta, entrarNaConta, linkDeCheckout, PRECO, sairDaConta, usePlano } from "../plano";
 
 /** Página de venda do Premium. */
 export default function Premium() {
@@ -91,6 +91,22 @@ export function Conta() {
   const [ocupado, setOcupado] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
+  const [confirmarExclusao, setConfirmarExclusao] = useState(false);
+
+  const excluir = async () => {
+    setErro(null);
+    setOcupado(true);
+    try {
+      await apagarMinhaConta();
+      setEmail(null);
+      setConfirmarExclusao(false);
+      setAviso("Sua conta e seus dados foram apagados.");
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : String(e));
+    } finally {
+      setOcupado(false);
+    }
+  };
 
   useEffect(() => {
     void emailDaConta().then(setEmail);
@@ -155,6 +171,29 @@ export function Conta() {
           <button className="botao botao-pequeno" style={{ alignSelf: "flex-start" }} onClick={() => void sairDaConta().then(() => setEmail(null))}>
             Sair da conta
           </button>
+          {erro && <p className="alerta">{erro}</p>}
+          {!admin.aberto &&
+            (confirmarExclusao ? (
+              <div className="cartao pilha" style={{ borderColor: "var(--perigo)" }}>
+                <b>Excluir a conta de vez?</b>
+                <span className="suave pequeno">
+                  Apaga seu apelido, seus dubs publicados, comentários e curtidas. Não dá para desfazer. Se você assina o Premium,
+                  cancele também a cobrança na loja ou na plataforma de pagamento.
+                </span>
+                <div className="linha">
+                  <button className="botao botao-perigo" disabled={ocupado} onClick={() => void excluir()}>
+                    Sim, excluir minha conta
+                  </button>
+                  <button className="botao" onClick={() => setConfirmarExclusao(false)}>
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button className="botao-link pequeno" style={{ alignSelf: "flex-start" }} onClick={() => setConfirmarExclusao(true)}>
+                Excluir minha conta
+              </button>
+            ))}
         </section>
       ) : (
         <form className="cartao pilha" onSubmit={(e) => void enviar(e)}>

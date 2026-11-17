@@ -1,0 +1,37 @@
+# Gera o app de iPhone na nuvem (Codemagic, em um Mac deles) e envia para o TestFlight / App Store.
+# Precisa: conta no Apple Developer Program e, no Codemagic, a chave de API da App Store Connect
+# cadastrada com o nome "Dubla Brasil" (Team settings → Integrations → Developer Portal).
+workflows:
+  ios-testflight:
+    name: iPhone (TestFlight)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: Dubla Brasil
+    environment:
+      node: 22
+      xcode: latest
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: br.com.dublabrasil.app
+    scripts:
+      - name: Instalar dependências
+        script: npm ci
+      - name: Gerar o app
+        script: npm run build
+      - name: Atualizar o projeto do iPhone
+        script: npx cap sync ios
+      - name: Número da versão (cada envio precisa de um número maior)
+        script: |
+          cd ios/App
+          agvtool new-version -all $((BUILD_NUMBER + 13))
+      - name: Assinatura da Apple
+        script: xcode-project use-profiles --project ios/App/App.xcodeproj
+      - name: Gerar o arquivo .ipa
+        script: xcode-project build-ipa --project ios/App/App.xcodeproj --scheme App
+    artifacts:
+      - build/ios/ipa/*.ipa
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true

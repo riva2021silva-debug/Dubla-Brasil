@@ -204,3 +204,15 @@ No estúdio, a legenda em português aparece embaixo do vídeo no estilo karaok�
   em `assinantes` com `origem = 'checkout'`. Isso é feito por uma Edge Function do Supabase, a ser escrita quando a
   plataforma for escolhida.
 - Teste: `node testes/e2e-premium.cjs`.
+
+## iPhone (iOS)
+
+- **Projeto:** está em `ios/`, com Capacitor 8 e Swift Package Manager (iOS 15 ou mais novo). Versão 2.2 (build 13).
+  Já tem as permissões de microfone, câmera e galeria.
+- **Ajustes para iPhone:** o quadradinho da câmera é desenhado sem `roundRect`. A gravação do vídeo cai para
+  30 quadros por segundo quando o aparelho não tem `requestFrame`.
+- **Gerar sem Mac:** `codemagic.yaml` gera o app num Mac na nuvem e envia ao TestFlight. Precisa da conta Apple
+  Developer e da chave da App Store Connect cadastrada no Codemagic.
+- **Gerar com Mac:** rode `npm ci && npm run build && npx cap sync ios`, abra `ios/App/App.xcodeproj` no Xcode,
+  escolha o time em *Signing & Capabilities* e use *Product → Archive*.
+- **Excluir minha conta:** exigida pela App Store e pela Google Play. Ativar com `supabase/conta.sql`.

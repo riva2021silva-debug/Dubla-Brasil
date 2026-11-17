@@ -430,3 +430,4 @@ kbd { background: var(--superficie-2); border: 1px solid var(--borda); border-bo
 .lista-assinantes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .lista-assinantes li { padding: 12px 14px; }
 @media (max-width: 720px) { .botao-premium { font-size: 13px; padding: 6px 10px; } }
+.botao-link { background: none; border: none; padding: 0; color: var(--texto-suave, #a78bfa); text-decoration: underline; cursor: pointer; font: inherit; }

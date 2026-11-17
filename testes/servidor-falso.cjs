@@ -214,6 +214,14 @@ const servidor = http.createServer(async (req, res) => {
     uso.set(u.id + hoje, n + 1);
     return responder(res, 200, { ok: true, premium: false, usadas: n + 1, limite: 3 });
   }
+  if (p === "/rest/v1/rpc/apagar_minha_conta") {
+    if (!u.id) return responder(res, 401, { message: "permission denied for function apagar_minha_conta" });
+    if (u.admin) return responder(res, 400, { message: "A conta do administrador não pode ser apagada pelo app." });
+    for (const [token, x] of usuarios) if (x.id === u.id) usuarios.delete(token);
+    dados.perfis.delete(u.id);
+    assinantes.delete(u.id);
+    return responder(res, 200, null);
+  }
   if (p === "/rest/v1/rpc/admin_definir_premium" || p === "/rest/v1/rpc/admin_listar_assinantes") {
     if (!u.admin) return responder(res, 400, { message: "Só o administrador pode fazer isso." });
     if (p.endsWith("listar_assinantes"))

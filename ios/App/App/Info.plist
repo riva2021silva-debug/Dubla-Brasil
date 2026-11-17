@@ -6,6 +6,8 @@
 	<string>O Dubla Brasil usa a câmera frontal (se você ligar) para gravar seu rosto no cantinho da dublagem.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>O Dubla Brasil usa o microfone para gravar a sua voz nas dublagens.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>O Dubla Brasil usa a galeria para salvar seus vídeos no álbum "Dubla Brasil AI" e para o administrador escolher fotos.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>O Dubla Brasil salva na sua galeria os vídeos que você dublou.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
