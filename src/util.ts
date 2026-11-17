@@ -133,6 +133,17 @@ const ALBUM = "Dubla Brasil AI";
  */
 export async function salvarVideoNaGaleria(blob: Blob, nome: string): Promise<"galeria" | "download" | "compartilhar"> {
   if (!Capacitor.isNativePlatform()) {
+    // Celular no navegador (iPhone pelo Safari, por exemplo): o menu de compartilhar tem "Salvar vídeo".
+    const arquivo = new File([blob], nome, { type: blob.type || "video/mp4" });
+    const celular = matchMedia("(pointer: coarse)").matches;
+    if (celular && navigator.canShare?.({ files: [arquivo] })) {
+      try {
+        await navigator.share({ files: [arquivo], title: nome });
+        return "compartilhar";
+      } catch (e) {
+        if ((e as DOMException)?.name === "AbortError") return "compartilhar";
+      }
+    }
     await baixarArquivo(blob, nome);
     return "download";
   }

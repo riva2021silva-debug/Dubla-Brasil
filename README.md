@@ -216,3 +216,10 @@ No estúdio, a legenda em português aparece embaixo do vídeo no estilo karaok�
 - **Gerar com Mac:** rode `npm ci && npm run build && npx cap sync ios`, abra `ios/App/App.xcodeproj` no Xcode,
   escolha o time em *Signing & Capabilities* e use *Product → Archive*.
 - **Excluir minha conta:** exigida pela App Store e pela Google Play. Ativar com `supabase/conta.sql`.
+
+## Versão em site (link para iPhone)
+
+- `netlify.toml` já tem tudo: no Netlify, *Add new site → Import from GitHub → Dubla-Brasil* e publicar.
+  Cada envio ao GitHub atualiza o site sozinho.
+- No iPhone: abrir o link no Safari → Compartilhar → "Adicionar à Tela de Início".
+- No celular pelo navegador, "Salvar na galeria" abre o menu de compartilhar, onde aparece "Salvar vídeo".
