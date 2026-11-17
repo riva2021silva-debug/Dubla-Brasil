@@ -37,6 +37,8 @@ export interface Cena {
   publicada?: boolean;
   /** Imagem de capa gerada a partir do vídeo. */
   capa?: FonteMidia | null;
+  /** Caminhos dos arquivos no servidor (pasta "midias"), quando a cena vem do servidor. */
+  caminhos?: { video: string; fundo: string | null; capa: string | null };
 }
 
 export const estaPublicada = (c: Cena) => c.publicada !== false;
@@ -71,6 +73,8 @@ export interface Som {
   duracaoMs: number;
   publicada: boolean;
   criadoEm: number;
+  /** Caminho do arquivo no servidor (pasta "midias"). */
+  caminho?: string;
 }
 
 /** Melhor tentativa da pessoa para um som. */

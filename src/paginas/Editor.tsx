@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import LinhaDoTempo from "../componentes/LinhaDoTempo";
 import Legenda from "../componentes/Legenda";
-import { db, urlDaMidia } from "../db";
+import { urlDaMidia } from "../db";
+import { mensagemDeErro, salvarCena } from "../nuvem";
 import { buscarCena, useTempoDoVideo } from "../ganchos";
 import { irPara } from "../audio/sincronia";
 import type { Cena, Fala, Personagem } from "../tipos";
@@ -48,6 +49,7 @@ export default function Editor() {
   const [sel, setSel] = useState<string | null>(null);
   const [previa, setPrevia] = useState<number | null>(null);
   const [salvando, setSalvando] = useState(false);
+  const [etapa, setEtapa] = useState<string | null>(null);
   const [problemas, setProblemas] = useState<string[]>([]);
   const [alterado, setAlterado] = useState(false);
   const entradaVideo = useRef<HTMLInputElement>(null);
@@ -209,42 +211,27 @@ export default function Editor() {
     if (p.length) return;
     setSalvando(true);
     try {
-      let c: Cena = { ...cena, falas: falasOrdenadas, atualizadaEm: Date.now() };
-      if (video?.novo) {
-        const chave = `${c.id}:video`;
-        await db.salvarMidia(chave, video.novo);
-        c = { ...c, video: { tipo: "blob", chave } };
-      }
-      const chaveFundo = `${c.id}:fundo`;
-      if (fundo?.novo) {
-        await db.salvarMidia(chaveFundo, fundo.novo);
-        c = { ...c, fundo: { tipo: "blob", chave: chaveFundo } };
-      } else if (!fundo && c.fundo) {
-        await db.excluirMidia(chaveFundo);
-        c = { ...c, fundo: null };
-      }
+      const c: Cena = { ...cena, falas: falasOrdenadas, atualizadaEm: Date.now() };
       // Capa: um quadro do vídeo no meio da primeira fala (se o vídeo mudou ou ainda não há capa).
+      let capa: Blob | undefined;
       if (video && (video.novo || !c.capa)) {
         const primeira = falasOrdenadas[0];
         const ms = primeira ? (primeira.inicioMs + primeira.fimMs) / 2 : Math.min(2000, c.duracaoMs / 2);
-        const foto = await gerarCapa(video.url, ms);
-        if (foto) {
-          const chaveCapa = `${c.id}:capa`;
-          await db.salvarMidia(chaveCapa, foto);
-          c = { ...c, capa: { tipo: "blob", chave: chaveCapa } };
-        }
+        capa = (await gerarCapa(video.url, ms)) ?? undefined;
       }
-      await db.salvarCena(c);
+      setEtapa(video?.novo || fundo?.novo ? "Enviando os arquivos para o servidor…" : "Salvando…");
+      await salvarCena(c, {
+        video: video?.novo,
+        fundo: fundo?.novo ? fundo.novo : !fundo && c.caminhos?.fundo ? null : undefined,
+        capa,
+      });
       setAlterado(false);
       navegar("/admin");
     } catch (e) {
-      setProblemas([
-        e instanceof Error && e.name === "QuotaExceededError"
-          ? "Sem espaço no navegador para salvar este vídeo. Use um arquivo menor."
-          : `Não foi possível salvar: ${e instanceof Error ? e.message : String(e)}`,
-      ]);
+      setProblemas([`Não foi possível salvar: ${mensagemDeErro(e)}`]);
     } finally {
       setSalvando(false);
+      setEtapa(null);
     }
   };
 
@@ -266,7 +253,7 @@ export default function Editor() {
             <span>Publicada no app</span>
           </label>
           <button className="botao botao-primario botao-grande" onClick={salvar} disabled={salvando}>
-            {salvando ? "Salvando…" : "💾 Salvar cena"}
+            {salvando ? (etapa ?? "Salvando…") : "💾 Salvar cena"}
           </button>
         </div>
       </div>
@@ -284,7 +271,7 @@ export default function Editor() {
           {video ? (
             <>
               <div className="palco">
-                <video ref={setEl} src={video.url} controls playsInline preload="auto" />
+                <video crossOrigin="anonymous" ref={setEl} src={video.url} controls playsInline preload="auto" />
                 <Legenda falas={cena.falas} personagens={cena.personagens} tempoMs={tempo} />
               </div>
               <LinhaDoTempo

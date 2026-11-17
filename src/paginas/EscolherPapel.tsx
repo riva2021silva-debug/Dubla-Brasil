@@ -52,7 +52,7 @@ export default function EscolherPapel() {
   return (
     <div className="duas-colunas">
       <div className="pilha">
-        <div className="palco">{urls && <video src={urls.video} controls playsInline preload="metadata" />}</div>
+        <div className="palco">{urls && <video crossOrigin="anonymous" src={urls.video} controls playsInline preload="metadata" />}</div>
         <div>
           <h1>{c.titulo}</h1>
           {c.descricao && <p className="suave">{c.descricao}</p>}

@@ -1,7 +1,8 @@
 // Pacote de cena (.dubla): um ZIP com cena.json, o vídeo e a trilha de fundo.
 // Serve para compartilhar uma cena com outra pessoa ou levar para outro navegador.
 import { unzip, zip } from "fflate";
-import { blobDaMidia, db } from "./db";
+import { blobDaMidia } from "./db";
+import { salvarCena } from "./nuvem";
 import type { Cena } from "./tipos";
 import { novoId } from "./util";
 
@@ -57,14 +58,8 @@ export async function importarPacote(arquivo: File): Promise<Cena> {
     return new Blob([d as Uint8Array<ArrayBuffer>], { type: TIPOS[ext] ?? "application/octet-stream" });
   };
   const id = novoId();
-  const chaveVideo = `${id}:video`;
-  await db.salvarMidia(chaveVideo, blobDe(c.video));
-  let fundo: Cena["fundo"] = null;
-  if (c.fundo) {
-    const chaveFundo = `${id}:fundo`;
-    await db.salvarMidia(chaveFundo, blobDe(c.fundo));
-    fundo = { tipo: "blob", chave: chaveFundo };
-  }
+  const video = blobDe(c.video);
+  const fundo = c.fundo ? blobDe(c.fundo) : null;
   const agora = Date.now();
   const cena: Cena = {
     id,
@@ -72,8 +67,8 @@ export async function importarPacote(arquivo: File): Promise<Cena> {
     descricao: String(c.descricao ?? ""),
     idioma: String(c.idioma ?? "Outro"),
     duracaoMs: Number(c.duracaoMs) || 0,
-    video: { tipo: "blob", chave: chaveVideo },
-    fundo,
+    video: { tipo: "blob", chave: "" },
+    fundo: null,
     personagens: Array.isArray(c.personagens) ? c.personagens : [],
     falas: Array.isArray(c.falas) ? c.falas : [],
     criadaEm: agora,
@@ -81,6 +76,6 @@ export async function importarPacote(arquivo: File): Promise<Cena> {
     publicada: false,
     capa: null,
   };
-  await db.salvarCena(cena);
-  return cena;
+  // Envia para o servidor como cena oculta, para o administrador revisar antes de publicar.
+  return salvarCena(cena, { video, fundo: fundo ?? undefined });
 }

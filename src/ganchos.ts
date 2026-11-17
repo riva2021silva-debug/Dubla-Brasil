@@ -1,15 +1,15 @@
 import { useEffect, useState } from "react";
 import { db, urlDaMidia } from "./db";
-import { estaPublicada, type Cena, type Dub, type FonteMidia } from "./tipos";
+import { listarCenas, obterCena } from "./nuvem";
+import type { Cena, Dub, FonteMidia } from "./tipos";
 
 export async function buscarCena(id: string): Promise<Cena | undefined> {
-  return db.obterCena(id);
+  return obterCena(id);
 }
 
-/** Cenas para quem usa o app (só publicadas) ou para o administrador (todas). */
+/** Cenas do servidor: só as publicadas, ou todas (para o administrador logado). */
 export async function todasAsCenas(incluirOcultas = false): Promise<Cena[]> {
-  const cenas = await db.listarCenas();
-  return cenas.filter((c) => incluirOcultas || estaPublicada(c)).sort((a, b) => b.atualizadaEm - a.atualizadaEm);
+  return listarCenas(incluirOcultas);
 }
 type Estado<T> = { carregando: true; dado?: undefined; erro?: undefined } | { carregando: false; dado?: T; erro?: string };
 

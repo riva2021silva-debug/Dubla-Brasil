@@ -14,11 +14,17 @@ fs.mkdirSync(SAIDA, { recursive: true });
   const erros = [];
   p.on("pageerror", (e) => erros.push(String(e)));
   p.on("console", (m) => m.type() === "error" && erros.push(m.text()));
+  p.on("response", (r) => r.status() >= 400 && erros.push(`${r.status()} ${r.request().method()} ${r.url()}`));
 
-  // Sem PIN, as rotas de edição voltam para a tela de PIN.
+  // Sem login, as rotas de edição voltam para a tela de login.
   await p.goto(BASE + "#/admin/cena/nova");
-  await p.getByRole("button", { name: "Criar PIN e entrar" }).waitFor();
+  await p.getByRole("button", { name: "Entrar" }).waitFor();
   console.log("Rota de edição protegida: ok");
+  await p.locator("#admin-email").fill("admin@teste.dev");
+  await p.locator("#admin-senha").fill("senha-errada");
+  await p.getByRole("button", { name: "Entrar" }).click();
+  await p.getByText("E-mail ou senha incorretos.").waitFor();
+  console.log("Senha errada recusada: ok");
 
   await entrarAdmin(p, BASE);
   await criarCenaTeste(p, "Teste do admin");
@@ -60,16 +66,19 @@ fs.mkdirSync(SAIDA, { recursive: true });
   await p.getByRole("heading", { name: "Falas (6)" }).waitFor();
   console.log("Reimportado no editor com 6 falas: ok");
 
-  // Sair do modo administrador.
+  // Sair.
   await p.goto(BASE + "#/admin");
-  await p.getByRole("button", { name: /Sair do modo administrador/ }).click();
+  await p.getByRole("button", { name: /Sair/ }).click();
   await p.getByRole("button", { name: "Entrar" }).waitFor();
-  await p.locator("#pin").fill("0000");
-  await p.getByRole("button", { name: "Entrar" }).click();
-  await p.getByText("PIN incorreto.").waitFor();
-  console.log("PIN errado recusado: ok");
+  console.log("Saída do administrador: ok");
 
-  console.log(erros.length ? "ERROS:\n" + erros.join("\n") : "Sem erros no console.");
+  // Os arquivos substituídos/excluídos não ficam sobrando no servidor.
+  const estado = await (await fetch("http://localhost:54399/__estado")).json();
+  console.log("No servidor:", estado.cenas.length, "cena(s),", estado.arquivos.length, "arquivo(s):", estado.arquivos.join(", "));
+
+  // A tentativa de senha errada (feita de propósito) gera um 400 esperado.
+  const inesperados = erros.filter((e) => !e.includes("/auth/v1/token") && !e.includes("400 (Bad Request)"));
+  console.log(inesperados.length ? "ERROS:\n" + inesperados.join("\n") : "Sem erros inesperados no console.");
   await navegador.close();
 })().catch((e) => {
   console.error("FALHOU:", e);

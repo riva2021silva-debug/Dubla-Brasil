@@ -1,62 +1,54 @@
-// Acesso de administrador protegido por PIN, guardado (como hash) só neste aparelho.
+// Acesso de administrador: login com e-mail e senha do Supabase + confirmação no banco (tabela administradores).
 import { useEffect, useState } from "react";
+import { entrarComoAdmin, sairDoAdmin, souAdmin, supabase } from "./nuvem";
 
-const CHAVE_PIN = "dubla-brasil:admin-pin";
-const CHAVE_SESSAO = "dubla-brasil:admin-aberto";
-const ouvintes = new Set<() => void>();
-
-async function hash(pin: string): Promise<string> {
-  const dados = new TextEncoder().encode(`dubla-brasil:${pin}`);
-  const h = await crypto.subtle.digest("SHA-256", dados);
-  return [...new Uint8Array(h)].map((b) => b.toString(16).padStart(2, "0")).join("");
+interface EstadoAdmin {
+  carregando: boolean;
+  aberto: boolean;
+  email: string | null;
 }
 
-function ler(chave: string, armazenamento: Storage): string | null {
-  try {
-    return armazenamento.getItem(chave);
-  } catch {
-    return null;
-  }
+let atual: EstadoAdmin = { carregando: true, aberto: false, email: null };
+const ouvintes = new Set<(e: EstadoAdmin) => void>();
+
+function publicar(e: EstadoAdmin) {
+  atual = e;
+  ouvintes.forEach((f) => f(e));
 }
 
-function gravar(chave: string, valor: string | null, armazenamento: Storage) {
-  try {
-    if (valor === null) armazenamento.removeItem(chave);
-    else armazenamento.setItem(chave, valor);
-  } catch {
-    /* armazenamento indisponível */
-  }
-  ouvintes.forEach((f) => f());
+async function conferir() {
+  const { data } = await supabase.auth.getSession();
+  const email = data.session?.user.email ?? null;
+  publicar({ carregando: false, aberto: email ? await souAdmin() : false, email });
 }
 
-export const temPin = () => ler(CHAVE_PIN, localStorage) !== null;
-export const adminAberto = () => ler(CHAVE_SESSAO, sessionStorage) === "1";
-
-export async function criarPin(pin: string) {
-  gravar(CHAVE_PIN, await hash(pin), localStorage);
-  gravar(CHAVE_SESSAO, "1", sessionStorage);
+let iniciado = false;
+function iniciar() {
+  if (iniciado) return;
+  iniciado = true;
+  void conferir();
+  supabase.auth.onAuthStateChange((evento) => {
+    if (evento === "SIGNED_IN" || evento === "SIGNED_OUT" || evento === "USER_UPDATED") void conferir();
+  });
 }
 
-export async function entrar(pin: string): Promise<boolean> {
-  const ok = (await hash(pin)) === ler(CHAVE_PIN, localStorage);
-  if (ok) gravar(CHAVE_SESSAO, "1", sessionStorage);
-  return ok;
+export async function entrar(email: string, senha: string) {
+  await entrarComoAdmin(email, senha);
+  await conferir();
 }
 
-export async function trocarPin(atual: string, novo: string): Promise<boolean> {
-  if ((await hash(atual)) !== ler(CHAVE_PIN, localStorage)) return false;
-  gravar(CHAVE_PIN, await hash(novo), localStorage);
-  return true;
+export async function sair() {
+  await sairDoAdmin();
+  publicar({ carregando: false, aberto: false, email: null });
 }
 
-export const sair = () => gravar(CHAVE_SESSAO, null, sessionStorage);
-
-export function useAdmin() {
-  const [estado, setEstado] = useState(() => ({ aberto: adminAberto(), temPin: temPin() }));
+export function useAdmin(): EstadoAdmin {
+  const [estado, setEstado] = useState(atual);
   useEffect(() => {
-    const f = () => setEstado({ aberto: adminAberto(), temPin: temPin() });
-    ouvintes.add(f);
-    return () => void ouvintes.delete(f);
+    iniciar();
+    ouvintes.add(setEstado);
+    setEstado(atual);
+    return () => void ouvintes.delete(setEstado);
   }, []);
   return estado;
 }

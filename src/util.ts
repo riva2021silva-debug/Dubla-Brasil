@@ -68,6 +68,7 @@ export function nomeArquivo(texto: string) {
 export function duracaoDoArquivo(url: string, tipo: "video" | "audio" = "video"): Promise<number> {
   return new Promise((resolve, reject) => {
     const el = document.createElement(tipo);
+    el.crossOrigin = "anonymous";
     el.preload = "metadata";
     el.onloadedmetadata = () => resolve(Math.round(el.duration * 1000));
     el.onerror = () => reject(new Error("Não foi possível ler este arquivo. Tente MP4 (H.264) ou WebM."));
@@ -112,6 +113,7 @@ export const noAplicativo = () => Capacitor.isNativePlatform();
 export function gerarCapa(urlVideo: string, ms: number, largura = 640): Promise<Blob | null> {
   return new Promise((resolve) => {
     const v = document.createElement("video");
+    v.crossOrigin = "anonymous";
     v.muted = true;
     v.playsInline = true;
     v.preload = "auto";

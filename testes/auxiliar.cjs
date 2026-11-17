@@ -1,23 +1,21 @@
 // Funções compartilhadas pelos testes de ponta a ponta.
 const path = require("path");
 const FIX = path.join(__dirname, "fixtures");
-const PIN = "2468";
+// Mesmo login do servidor simulado (testes/servidor-falso.cjs).
+const ADMIN = { email: "admin@teste.dev", senha: "senha-de-teste-123" };
 
-/** Entra na área do administrador (cria o PIN na primeira vez). */
+/** Entra na área do administrador com e-mail e senha. */
 async function entrarAdmin(p, base) {
   await p.goto(base + "#/admin");
-  const criar = p.getByRole("button", { name: "Criar PIN e entrar" });
-  const entrar = p.getByRole("button", { name: "Entrar" });
-  await Promise.race([criar.waitFor(), entrar.waitFor(), p.getByRole("heading", { name: "Administração" }).waitFor()]);
-  if (await criar.isVisible()) {
-    await p.locator("#pin").fill(PIN);
-    await p.locator("#pin-confirmacao").fill(PIN);
-    await criar.click();
-  } else if (await entrar.isVisible()) {
-    await p.locator("#pin").fill(PIN);
-    await entrar.click();
+  const titulo = p.getByRole("heading", { name: "Administração" });
+  const botao = p.getByRole("button", { name: "Entrar" });
+  await Promise.race([titulo.waitFor(), botao.waitFor()]);
+  if (await botao.isVisible()) {
+    await p.locator("#admin-email").fill(ADMIN.email);
+    await p.locator("#admin-senha").fill(ADMIN.senha);
+    await botao.click();
   }
-  await p.getByRole("heading", { name: "Administração" }).waitFor();
+  await titulo.waitFor();
 }
 
 /** Cria e publica a cena de teste (vídeo + fundo + legendas, Capivara e Tucano). */
@@ -43,4 +41,4 @@ async function criarCenaTeste(p, titulo = "Cadê meu chinelo?") {
   await p.getByText(titulo).first().waitFor();
 }
 
-module.exports = { entrarAdmin, criarCenaTeste, PIN };
+module.exports = { entrarAdmin, criarCenaTeste, ADMIN };

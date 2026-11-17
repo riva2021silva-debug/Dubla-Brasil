@@ -6,3 +6,4 @@ testes/saida
 *.apk
 *.zip
 chave-android/
+dist-teste

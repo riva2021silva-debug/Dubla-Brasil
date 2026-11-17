@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import OndaSimples from "../componentes/OndaSimples";
 import { useConfig } from "../config";
 import { blobDaMidia, db } from "../db";
+import { listarSons, obterSom } from "../nuvem";
 import { useCarregar } from "../ganchos";
 import { caracteristicas, comparar, rotuloDaNota, type Nota } from "../audio/analise";
 import { Microfone, paraWav } from "../audio/microfone";
@@ -15,10 +16,9 @@ type Fase = "pronto" | "contagem" | "gravando" | "original" | "minha" | "melhor"
 export default function ImitarSom() {
   const { id = "" } = useParams();
   const dados = useCarregar(async () => {
-    const som = await db.obterSom(id);
+    const som = await obterSom(id);
     if (!som) throw new Error("Som não encontrado.");
-    const [todos, melhor] = await Promise.all([db.listarSons(), db.obterImitacao(id)]);
-    const publicados = todos.filter((s) => s.publicada).sort((a, b) => b.criadoEm - a.criadoEm);
+    const [publicados, melhor] = await Promise.all([listarSons(), db.obterImitacao(id)]);
     const i = publicados.findIndex((s) => s.id === id);
     return { som, melhor, proximo: publicados[i + 1] ?? publicados[0] };
   }, [id]);

@@ -62,11 +62,24 @@ uma cena no editor, exporta o pacote, exclui e reimporta. As capturas de tela fi
   Sem trilha de fundo, o original fica no volume definido em Configurações.
 - O vídeo baixado é gerado em tempo real: o quadro do vídeo é desenhado num canvas e gravado junto com a mixagem.
 
-## Administração
+## Servidor (Supabase) e administração
 
-O app começa sem cenas. Em **Área do administrador** (link no rodapé), crie um PIN e use **Adicionar vídeo**
-para cadastrar cenas: vídeo, trilha de fundo opcional, personagens e falas. Só cenas marcadas como
-**Publicada no app** aparecem para os usuários. O PIN protege a área neste aparelho.
+Cenas e sons ficam no Supabase e aparecem para todos os usuários quando publicados. A estrutura do banco,
+da pasta de arquivos e das permissões está em `supabase/esquema.sql` (rode no SQL Editor do projeto).
+O endereço e a chave pública ficam em `src/nuvem-config.ts`.
+
+A **Área do administrador** (link no rodapé) usa o login do Supabase: o primeiro usuário criado em
+Authentication vira administrador. Visitantes só leem o que está publicado; só o administrador cadastra,
+edita e exclui. Dubs e notas da Imitação continuam salvos no aparelho de cada pessoa.
+
+Os testes rodam contra um servidor simulado (`testes/servidor-falso.cjs`), sem tocar no projeto real:
+
+```bash
+node testes/servidor-falso.cjs &
+VITE_SUPABASE_URL=http://localhost:54399 npx vite build --outDir dist-teste
+npx vite preview --outDir dist-teste --port 4174 &
+node testes/e2e-editor.cjs http://localhost:4174/
+```
 
 ## Cena de teste
 

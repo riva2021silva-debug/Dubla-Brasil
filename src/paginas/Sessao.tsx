@@ -204,6 +204,7 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
       <div className="palco">
         {urls && (
           <video
+            crossOrigin="anonymous"
             ref={setVideo}
             src={urls.video}
             playsInline

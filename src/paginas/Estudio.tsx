@@ -329,6 +329,7 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
       <div className={`palco ${modo === "gravando" ? "palco-gravando" : ""}`}>
         {urls && (
           <video
+            crossOrigin="anonymous"
             ref={setVideo}
             src={urls.video}
             playsInline

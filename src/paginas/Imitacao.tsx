@@ -1,13 +1,14 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { db } from "../db";
+import { listarSons } from "../nuvem";
 import { useCarregar } from "../ganchos";
 import { formatarTempo } from "../util";
 
 export default function Imitacao() {
   const dados = useCarregar(async () => {
-    const [sons, imitacoes] = await Promise.all([db.listarSons(), db.listarImitacoes()]);
-    return { sons: sons.filter((s) => s.publicada).sort((a, b) => b.criadoEm - a.criadoEm), imitacoes };
+    const [sons, imitacoes] = await Promise.all([listarSons(), db.listarImitacoes()]);
+    return { sons, imitacoes };
   }, []);
   const [categoria, setCategoria] = useState("Todas");
   const sons = dados.dado?.sons ?? [];
@@ -32,6 +33,8 @@ export default function Imitacao() {
       )}
       {dados.carregando ? (
         <p className="suave">Carregando…</p>
+      ) : dados.erro ? (
+        <p className="alerta">{dados.erro}</p>
       ) : visiveis.length === 0 ? (
         <div className="cartao vazio">
           <p style={{ margin: 0 }}>Nenhum som disponível ainda.</p>

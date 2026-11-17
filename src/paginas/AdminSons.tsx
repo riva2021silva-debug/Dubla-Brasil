@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
-import { db, excluirSomCompleto, urlDaMidia } from "../db";
+import { urlDaMidia } from "../db";
+import { excluirSom, listarSons, mensagemDeErro, publicarSom, salvarSom } from "../nuvem";
 import { useCarregar } from "../ganchos";
 import { contextoDeAudio, decodificar } from "../audio/mixer";
 import { CATEGORIAS_SOM, type Som } from "../tipos";
@@ -19,7 +20,7 @@ interface Rascunho {
 const vazio = (): Rascunho => ({ id: null, titulo: "", categoria: CATEGORIAS_SOM[0], emoji: "", arquivo: null, publicada: true });
 
 export default function AdminSons() {
-  const sons = useCarregar(async () => (await db.listarSons()).sort((a, b) => b.criadoEm - a.criadoEm), []);
+  const sons = useCarregar(() => listarSons(true), []);
   const [form, setForm] = useState<Rascunho | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
@@ -38,7 +39,6 @@ export default function AdminSons() {
     try {
       const id = form.id ?? novoId();
       let duracaoMs = existente?.duracaoMs ?? 0;
-      let midia = existente?.midia ?? { tipo: "blob" as const, chave: `${id}:som` };
       if (form.arquivo) {
         let buf: AudioBuffer;
         try {
@@ -48,24 +48,23 @@ export default function AdminSons() {
         }
         duracaoMs = Math.round(buf.duration * 1000);
         if (duracaoMs > LIMITE_MS) throw new Error(`O som tem ${formatarTempo(duracaoMs, false)}. Use trechos de até 20 segundos.`);
-        midia = { tipo: "blob", chave: `${id}:som` };
-        await db.salvarMidia(midia.chave, form.arquivo);
       }
       const som: Som = {
         id,
         titulo: form.titulo.trim(),
         categoria: form.categoria,
         emoji: form.emoji.trim().slice(0, 4),
-        midia,
+        midia: existente?.midia ?? { tipo: "url", url: "" },
         duracaoMs,
         publicada: form.publicada,
         criadoEm: existente?.criadoEm ?? Date.now(),
+        caminho: existente?.caminho,
       };
-      await db.salvarSom(som);
+      await salvarSom(som, form.arquivo ?? undefined);
       setForm(null);
       sons.recarregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : String(e));
+      setErro(mensagemDeErro(e));
     } finally {
       setSalvando(false);
     }
@@ -75,7 +74,9 @@ export default function AdminSons() {
     audio.current?.pause();
     if (tocando === s.id) return setTocando(null);
     const url = await urlDaMidia(s.midia);
-    const a = new Audio(url);
+    const a = new Audio();
+    a.crossOrigin = "anonymous";
+    a.src = url;
     audio.current = a;
     a.onended = () => setTocando(null);
     setTocando(s.id);
@@ -151,6 +152,8 @@ export default function AdminSons() {
         </div>
       )}
 
+      {erro && !form && <p className="alerta">{erro}</p>}
+      {sons.erro && <p className="alerta">{sons.erro}</p>}
       {lista.length === 0 && !form ? (
         <div className="cartao vazio">
           <p style={{ marginTop: 0 }}>Nenhum som cadastrado.</p>
@@ -180,8 +183,12 @@ export default function AdminSons() {
                   <button
                     className={`botao botao-pequeno ${s.publicada ? "" : "botao-verde"}`}
                     onClick={async () => {
-                      await db.salvarSom({ ...s, publicada: !s.publicada });
-                      sons.recarregar();
+                      try {
+                        await publicarSom(s.id, !s.publicada);
+                        sons.recarregar();
+                      } catch (e) {
+                        setErro(mensagemDeErro(e));
+                      }
                     }}
                   >
                     {s.publicada ? "Ocultar" : "Publicar"}
@@ -194,9 +201,13 @@ export default function AdminSons() {
                       <button
                         className="botao botao-pequeno botao-perigo"
                         onClick={async () => {
-                          await excluirSomCompleto(s);
-                          setConfirmar(null);
-                          sons.recarregar();
+                          try {
+                            await excluirSom(s);
+                            setConfirmar(null);
+                            sons.recarregar();
+                          } catch (e) {
+                            setErro(mensagemDeErro(e));
+                          }
                         }}
                       >
                         Confirmar exclusão
