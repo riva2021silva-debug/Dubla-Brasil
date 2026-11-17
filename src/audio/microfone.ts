@@ -39,7 +39,7 @@ export class Microfone {
     this.fonte = fonte;
     this.no = no;
     this.analisador = ctx.createAnalyser();
-    this.analisador.fftSize = 1024;
+    this.analisador.fftSize = 2048;
     this.bufferNivel = new Float32Array(this.analisador.fftSize);
     fonte.connect(this.analisador);
     no.port.onmessage = (e: MessageEvent<{ t: number; d: Float32Array }>) => {
@@ -115,6 +115,15 @@ export class Microfone {
     let pico = 0;
     for (const v of this.bufferNivel) pico = Math.max(pico, Math.abs(v));
     return pico;
+  }
+
+  /** Copia o trecho mais recente do microfone (2048 amostras), para detectar o tom em tempo real. */
+  lerAmostras(destino: Float32Array<ArrayBuffer>) {
+    this.analisador.getFloatTimeDomainData(destino);
+  }
+
+  get taxa() {
+    return this.ctx.sampleRate;
   }
 
   nomeDispositivo(): string {

@@ -15,7 +15,10 @@ Tudo roda no navegador e fica salvo no próprio computador (IndexedDB): não há
 - **Estúdio**: contagem regressiva, gravação fala por fala ou todas seguidas, regravar, ouvir, medidor do
   microfone e atalhos de teclado (`R` gravar, `O` ouvir, `↑`/`↓` escolher fala, `Espaço` tocar, `Esc` parar).
 - **Sessão**: assiste ao dub completo e baixa o vídeo (MP4 ou WebM, conforme o navegador) com legendas opcionais.
-- **Administração**: PIN, lista de cenas, publicar/ocultar, editar, exportar e excluir.
+- **Imitação**: sons curtos cadastrados pelo administrador; a pessoa imita e recebe uma nota de 0 a 100
+  (ritmo e entonação, comparados com alinhamento no tempo e independentes de a voz ser grave ou aguda).
+- **Jogos**: Voz no Alvo, em que o tom da voz controla a bolinha (com calibração grave/agudo e recorde).
+- **Administração**: PIN, cenas e sons; publicar/ocultar, editar, exportar e excluir.
 - **Editor de cenas**: envia o vídeo e a trilha de fundo opcional, cadastra personagens, marca início e fim
   de cada fala (`I`/`O`) ou importa legendas `.srt`.
 - **Pacotes `.dubla`**: exporta uma cena (ZIP com `cena.json`, vídeo e fundo) para usar em outro navegador ou mandar
@@ -45,6 +48,7 @@ Com `npx vite preview --port 4173` rodando:
 ```bash
 node testes/e2e.cjs
 node testes/e2e-editor.cjs
+node testes/e2e-imitacao.cjs
 ```
 
 O primeiro escolhe a cena de exemplo, grava com um microfone simulado, assiste e baixa o vídeo. O segundo cria

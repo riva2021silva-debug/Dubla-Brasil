@@ -60,3 +60,28 @@ export interface Dub {
   criadoEm: number;
   atualizadoEm: number;
 }
+
+/** Som curto para o Modo Imitação (cadastrado pelo administrador). */
+export interface Som {
+  id: string;
+  titulo: string;
+  categoria: string;
+  emoji: string;
+  midia: FonteMidia;
+  duracaoMs: number;
+  publicada: boolean;
+  criadoEm: number;
+}
+
+/** Melhor tentativa da pessoa para um som. */
+export interface Imitacao {
+  somId: string;
+  audio: Blob;
+  nota: number;
+  ritmo: number;
+  entonacao: number;
+  tentativas: number;
+  atualizadaEm: number;
+}
+
+export const CATEGORIAS_SOM = ["Bordões", "Animais", "Efeitos", "Música", "Personagens", "Outros"];

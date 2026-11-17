@@ -8,6 +8,10 @@ import MeusDubs from "./paginas/MeusDubs";
 import Editor from "./paginas/Editor";
 import Configuracoes from "./paginas/Configuracoes";
 import Admin, { SoAdmin } from "./paginas/Admin";
+import Imitacao from "./paginas/Imitacao";
+import ImitarSom from "./paginas/ImitarSom";
+import Jogos from "./paginas/Jogos";
+import VozNoAlvo from "./paginas/VozNoAlvo";
 import { useAdmin } from "./admin";
 
 function Layout() {
@@ -18,16 +22,42 @@ function Layout() {
         <Link to="/" className="marca" aria-label="Dubla Brasil AI, início">
           <img src="marca/logo-pequeno.webp" alt="Dubla Brasil AI" width={69} height={46} />
         </Link>
-        <nav className="nav">
+        <nav className="nav" aria-label="Menu principal">
           <NavLink to="/cenas">Cenas</NavLink>
+          <NavLink to="/imitar">Imitação</NavLink>
+          <NavLink to="/jogos">Jogos</NavLink>
           <NavLink to="/meus-dubs">Meus dubs</NavLink>
           <NavLink to="/configuracoes">Configurações</NavLink>
           {aberto && <NavLink to="/admin">Admin</NavLink>}
         </nav>
+        <div className="atalhos-topo">
+          {aberto && (
+            <NavLink to="/admin" className="botao botao-pequeno">
+              Admin
+            </NavLink>
+          )}
+          <NavLink to="/configuracoes" className="botao botao-pequeno botao-icone" aria-label="Configurações">
+            ⚙️
+          </NavLink>
+        </div>
       </header>
       <main className="pagina">
         <Outlet />
       </main>
+      <nav className="barra-inferior" aria-label="Menu">
+        {[
+          ["/", "🏠", "Início"],
+          ["/cenas", "🎬", "Cenas"],
+          ["/imitar", "🦜", "Imitar"],
+          ["/jogos", "🎯", "Jogos"],
+          ["/meus-dubs", "🎙️", "Meus dubs"],
+        ].map(([para, icone, nome]) => (
+          <NavLink key={para} to={para} end={para === "/"}>
+            <span aria-hidden>{icone}</span>
+            {nome}
+          </NavLink>
+        ))}
+      </nav>
       <footer className="rodape">
         Dubla Brasil AI · Sua voz. Seu talento. Sua dublagem. · <Link to="/admin">Área do administrador</Link>
       </footer>
@@ -57,6 +87,10 @@ export default function App() {
           <Route path="estudio/:dubId" element={<Estudio />} />
           <Route path="dub/:dubId" element={<Sessao />} />
           <Route path="meus-dubs" element={<MeusDubs />} />
+          <Route path="imitar" element={<Imitacao />} />
+          <Route path="imitar/:id" element={<ImitarSom />} />
+          <Route path="jogos" element={<Jogos />} />
+          <Route path="jogos/voz-no-alvo" element={<VozNoAlvo />} />
           <Route path="admin" element={<Admin />} />
           <Route path="admin/cena/nova" element={<SoAdmin><Editor /></SoAdmin>} />
           <Route path="admin/cena/:id" element={<SoAdmin><Editor /></SoAdmin>} />

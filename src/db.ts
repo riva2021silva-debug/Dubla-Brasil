@@ -1,8 +1,8 @@
 // Armazenamento local no navegador (IndexedDB). Nada sai do computador da pessoa.
-import type { Cena, Dub, FonteMidia } from "./tipos";
+import type { Cena, Dub, FonteMidia, Imitacao, Som } from "./tipos";
 
 const NOME_DB = "dubla-brasil";
-const VERSAO = 1;
+const VERSAO = 2;
 
 let conexao: Promise<IDBDatabase> | null = null;
 
@@ -15,6 +15,8 @@ function abrir(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains("cenas")) db.createObjectStore("cenas", { keyPath: "id" });
       if (!db.objectStoreNames.contains("dubs")) db.createObjectStore("dubs", { keyPath: "id" });
       if (!db.objectStoreNames.contains("midias")) db.createObjectStore("midias");
+      if (!db.objectStoreNames.contains("sons")) db.createObjectStore("sons", { keyPath: "id" });
+      if (!db.objectStoreNames.contains("imitacoes")) db.createObjectStore("imitacoes", { keyPath: "somId" });
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
@@ -48,6 +50,16 @@ export const db = {
   salvarDub: (d: Dub) => operar<IDBValidKey>("dubs", "readwrite", (s) => s.put(d)),
   excluirDub: (id: string) => operar<undefined>("dubs", "readwrite", (s) => s.delete(id)),
 
+  listarSons: () => operar<Som[]>("sons", "readonly", (s) => s.getAll()),
+  obterSom: (id: string) => operar<Som | undefined>("sons", "readonly", (s) => s.get(id)),
+  salvarSom: (som: Som) => operar<IDBValidKey>("sons", "readwrite", (s) => s.put(som)),
+  excluirSom: (id: string) => operar<undefined>("sons", "readwrite", (s) => s.delete(id)),
+
+  listarImitacoes: () => operar<Imitacao[]>("imitacoes", "readonly", (s) => s.getAll()),
+  obterImitacao: (somId: string) => operar<Imitacao | undefined>("imitacoes", "readonly", (s) => s.get(somId)),
+  salvarImitacao: (i: Imitacao) => operar<IDBValidKey>("imitacoes", "readwrite", (s) => s.put(i)),
+  excluirImitacao: (somId: string) => operar<undefined>("imitacoes", "readwrite", (s) => s.delete(somId)),
+
   salvarMidia: (chave: string, b: Blob) => operar<IDBValidKey>("midias", "readwrite", (s) => s.put(b, chave)),
   obterMidia: (chave: string) => operar<Blob | undefined>("midias", "readonly", (s) => s.get(chave)),
   excluirMidia: (chave: string) => operar<undefined>("midias", "readwrite", (s) => s.delete(chave)),
@@ -77,4 +89,10 @@ export async function excluirCenaCompleta(c: Cena) {
   const dubs = await db.listarDubs();
   for (const d of dubs) if (d.cenaId === c.id) await db.excluirDub(d.id);
   await db.excluirCena(c.id);
+}
+
+export async function excluirSomCompleto(som: Som) {
+  if (som.midia.tipo === "blob") await db.excluirMidia(som.midia.chave);
+  await db.excluirImitacao(som.id);
+  await db.excluirSom(som.id);
 }

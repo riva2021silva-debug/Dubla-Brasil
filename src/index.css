@@ -230,3 +230,52 @@ kbd { background: var(--superficie-2); border: 1px solid var(--borda); border-bo
   .linha-admin { grid-template-columns: 96px minmax(0, 1fr); }
   .acoes-admin { grid-column: 1 / -1; justify-content: flex-start; }
 }
+
+/* ===== Imitação e jogos ===== */
+.grade-sons { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
+.cartao-som { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; text-decoration: none; color: inherit; transition: transform .15s, border-color .15s; }
+.cartao-som:hover { transform: translateY(-3px); border-color: var(--roxo-claro); }
+.emoji-som { font-size: 2.2rem; line-height: 1; }
+.emoji-som.grande { font-size: 3.5rem; }
+.linha-som { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px; }
+.linha-som + .linha-som { border-top: 1px solid var(--borda); }
+@media (max-width: 760px) { .linha-som { grid-template-columns: 48px minmax(0, 1fr); } .linha-som .acoes-admin { grid-column: 1 / -1; justify-content: flex-start; } }
+.palco-imitar { min-height: 220px; display: grid; place-items: center; text-align: center; border-radius: var(--raio); border: 2px solid var(--borda); background: radial-gradient(400px 200px at 50% 0%, #2b1166, transparent), var(--superficie); padding: 20px; }
+.palco-imitar.gravando { border-color: var(--gravando); box-shadow: 0 0 0 4px rgb(239 68 68 / 0.18); }
+.contagem-imitar { font-family: var(--fonte-titulo); font-size: 6rem; font-weight: 800; color: var(--amarelo); }
+.resultado { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; }
+.nota-grande { font-family: var(--fonte-titulo); font-size: 4.5rem; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.rotulo-nota { font-weight: 800; font-size: 1.2rem; }
+.barras-nota { width: min(360px, 100%); display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.barra-nota { display: grid; grid-template-columns: 90px 1fr 32px; gap: 8px; align-items: center; font-size: 0.9rem; font-weight: 700; }
+.barra-nota .trilho { height: 10px; border-radius: 999px; background: var(--fundo); overflow: hidden; }
+.barra-nota .trilho div { height: 100%; background: linear-gradient(90deg, var(--roxo-claro), var(--amarelo)); }
+.barra-nota b { text-align: right; font-variant-numeric: tabular-nums; }
+.onda-simples { height: 64px; }
+.palco-jogo { position: relative; height: min(62vh, 520px); border-radius: var(--raio); overflow: hidden; border: 2px solid var(--borda); background: linear-gradient(180deg, #1a0a45, #08021f 70%, #0b2a1a); }
+.tela-jogo { width: 100%; height: 100%; display: block; }
+.hud { position: absolute; top: 10px; left: 14px; right: 14px; display: flex; justify-content: space-between; align-items: center; pointer-events: none; }
+.pontos-jogo { font-family: var(--fonte-titulo); font-size: 2.4rem; font-weight: 800; color: var(--amarelo); text-shadow: 0 2px 10px rgb(0 0 0 / 0.6); }
+.nota-voz { font-weight: 800; background: rgb(8 2 31 / 0.7); padding: 4px 10px; border-radius: 999px; }
+.sobreposicao { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 20px; text-align: center; background: rgb(8 2 31 / 0.78); backdrop-filter: blur(3px); }
+.sobreposicao p { max-width: 420px; margin: 0; }
+.titulo-cal { font-family: var(--fonte-titulo); font-size: 1.6rem; font-weight: 800; }
+
+/* ===== Navegação ===== */
+.atalhos-topo { display: none; margin-left: auto; gap: 6px; align-items: center; }
+.barra-inferior { display: none; }
+@media (max-width: 760px) {
+  .nav { display: none; }
+  .atalhos-topo { display: flex; }
+  .topo { flex-wrap: nowrap; }
+  .barra-inferior {
+    display: grid; grid-template-columns: repeat(5, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+    background: rgb(8 2 31 / 0.96); backdrop-filter: blur(10px); border-top: 1px solid var(--borda);
+    padding: 6px max(6px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left));
+  }
+  .barra-inferior a { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; border-radius: 12px; text-decoration: none; color: var(--texto-suave); font-size: 0.7rem; font-weight: 700; }
+  .barra-inferior a span { font-size: 1.3rem; line-height: 1; }
+  .barra-inferior a.active { color: var(--amarelo); background: var(--superficie-2); }
+  .pagina { padding-bottom: 110px; }
+  .rodape { padding-bottom: calc(90px + env(safe-area-inset-bottom)); }
+}

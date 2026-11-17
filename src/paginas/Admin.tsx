@@ -7,6 +7,7 @@ import { todasAsCenas, useCarregar } from "../ganchos";
 import { exportarPacote, importarPacote } from "../pacote";
 import { estaPublicada, type Cena } from "../tipos";
 import { baixarArquivo, dataCurta, formatarTempo, nomeArquivo } from "../util";
+import AdminSons from "./AdminSons";
 
 /** Protege uma página: só abre com o modo administrador desbloqueado. */
 export function SoAdmin({ children }: { children: React.ReactNode }) {
@@ -172,6 +173,30 @@ function LinhaCena({ cena, aoMudar }: { cena: Cena; aoMudar: () => void }) {
 }
 
 function Painel() {
+  const [aba, setAba] = useState<"cenas" | "sons">(() => (location.hash.includes("aba=sons") ? "sons" : "cenas"));
+  return (
+    <div className="pilha">
+      <h1 style={{ margin: 0 }}>Administração</h1>
+      <div className="abas" role="tablist">
+        <button role="tab" aria-selected={aba === "cenas"} className={aba === "cenas" ? "ativa" : ""} onClick={() => setAba("cenas")}>
+          🎬 Cenas
+        </button>
+        <button role="tab" aria-selected={aba === "sons"} className={aba === "sons" ? "ativa" : ""} onClick={() => setAba("sons")}>
+          🦜 Sons da Imitação
+        </button>
+      </div>
+      {aba === "cenas" ? <PainelCenas /> : <AdminSons />}
+      <div className="linha entre" style={{ marginTop: 8 }}>
+        <TrocarPin />
+        <button className="botao botao-pequeno" onClick={sair}>
+          🔒 Sair do modo administrador
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function PainelCenas() {
   const cenas = useCarregar(() => todasAsCenas(true), []);
   const [busca, setBusca] = useState("");
   const [erro, setErro] = useState<string | null>(null);
@@ -186,7 +211,6 @@ function Painel() {
     <div className="pilha">
       <div className="linha entre">
         <div>
-          <h1 style={{ margin: 0 }}>Administração</h1>
           <p className="suave" style={{ margin: 0 }}>
             {total} {total === 1 ? "cena" : "cenas"} · {publicadas} {publicadas === 1 ? "publicada" : "publicadas"} · {total - publicadas}{" "}
             {total - publicadas === 1 ? "oculta" : "ocultas"}
@@ -247,12 +271,6 @@ function Painel() {
         </div>
       )}
 
-      <div className="linha entre" style={{ marginTop: 8 }}>
-        <TrocarPin />
-        <button className="botao botao-pequeno" onClick={sair}>
-          🔒 Sair do modo administrador
-        </button>
-      </div>
       <p className="suave pequeno" style={{ margin: 0 }}>
         As cenas ficam guardadas neste aparelho. Para levar uma cena para outro aparelho, use 📦 para exportar o pacote e
         “Importar pacote” no outro.
