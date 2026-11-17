@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import Avatar from "../componentes/Avatar";
-import LegendaKaraoke from "../componentes/LegendaKaraoke";
 import FormaDeOnda, { type PontoAoVivo } from "../componentes/FormaDeOnda";
 import { useConfig } from "../config";
 import { db } from "../db";
@@ -44,10 +43,11 @@ function rotuloNivel(n: number) {
 }
 
 function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena }) {
-  const [cfg] = useConfig();
+  const [cfg, salvarCfg] = useConfig();
   const { urls, erro: erroMidia } = useMidiasDaCena(cena);
   const [video, setVideo] = useState<HTMLVideoElement | null>(null);
   const mixer = useRef<Mixer | null>(null);
+  const palco = useRef<HTMLDivElement>(null);
   const mic = useRef<Microfone | null>(null);
   const [micPronto, setMicPronto] = useState(false);
   const [nivel, setNivel] = useState(0);
@@ -191,6 +191,7 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
     await irPara(video, inicio);
     setAlvo({ falas, fimMs });
     setModo("gravando");
+    palco.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     mic.current.iniciar();
     await video.play();
   };
@@ -325,6 +326,14 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
             ))}
           </div>
         </div>
+        <button
+          className={`botao botao-pequeno botao-legenda ${cfg.mostrarLegendas ? "ligada" : ""}`}
+          aria-pressed={cfg.mostrarLegendas}
+          title={cfg.mostrarLegendas ? "Esconder a legenda" : "Mostrar a legenda"}
+          onClick={() => salvarCfg({ mostrarLegendas: !cfg.mostrarLegendas })}
+        >
+          💬 {cfg.mostrarLegendas ? "Legenda" : "Sem legenda"}
+        </button>
         <Link className={`botao botao-pequeno ${qtdFeitas === total && total > 0 ? "botao-verde" : ""}`} to={`/dub/${dub.id}`}>
           ▶ Resultado {qtdFeitas}/{total}
         </Link>
@@ -332,7 +341,7 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
 
       {erroMidia && <p className="alerta">{erroMidia}</p>}
 
-      <div className={`palco ${formato.vertical ? "vertical" : ""} ${modo === "gravando" ? "palco-gravando" : ""}`} style={formato.estilo}>
+      <div ref={palco} className={`palco ${formato.vertical ? "vertical" : ""} ${modo === "gravando" ? "palco-gravando" : ""}`} style={formato.estilo}>
         {urls && (
           <video
             crossOrigin="anonymous"
@@ -360,9 +369,6 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
         {contagem !== null && contagem <= 3 && <div className="contagem">{contagem}</div>}
         {modo === "gravando" && <div className="barra-progresso" style={{ width: `${(decorrido / (janela.ate - janela.de)) * 100}%` }} />}
       </div>
-      {cfg.mostrarLegendas && (
-        <LegendaKaraoke falas={cena.falas} personagens={cena.personagens} tempoMs={tempo} papeis={dub.papeis} proxima={modo === "gravando" ? proximaFala : falaSel} />
-      )}
 
       {total > 0 && (
         <div className="pontos-falas" role="tablist" aria-label="Suas falas">
@@ -392,7 +398,14 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
                 Fala {indice + 1} de {total} · {((falaSel.fimMs - falaSel.inicioMs) / 1000).toFixed(1)} s
               </span>
             </div>
-            <p className="texto-fala">{falaSel.texto || "…"}</p>
+            {cfg.mostrarLegendas && (
+              <p
+                className="texto-fala texto-karaoke"
+                style={{ "--progresso": `${Math.round(Math.min(1, Math.max(0, (tempo - falaSel.inicioMs) / Math.max(1, falaSel.fimMs - falaSel.inicioMs))) * 100)}%` } as React.CSSProperties}
+              >
+                {falaSel.texto || "…"}
+              </p>
+            )}
           </div>
 
           <div className={`painel-onda ${modo === "gravando" ? "gravando" : ""}`}>

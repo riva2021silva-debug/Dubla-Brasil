@@ -66,8 +66,11 @@ const estado = async () => (await fetch(`${SERVIDOR}/__estado`)).json();
   const beto = await nova({ ...devices["Pixel 7"] });
   await beto.goto(BASE + "#/galeria");
   await beto.getByText("@Voz_de_Ouro").waitFor();
-  await beto.getByRole("button", { name: /^Curtir/ }).click();
+  await beto.locator(".post-video").first().dblclick(); // toque duplo curte, como no TikTok
+  await beto.locator(".coracao-voador").first().waitFor();
   await beto.getByRole("button", { name: "Curtir (2)" }).waitFor();
+  console.log("Toque duplo no vídeo curte (com coração): ok");
+  await beto.screenshot({ path: path.join(SAIDA, "g4-toque-duplo.png") });
   await beto.getByRole("button", { name: /^Curtir/ }).click(); // desfaz
   await beto.getByRole("button", { name: "Curtir (1)" }).waitFor();
   await beto.getByRole("button", { name: /^Não curtir/ }).click();

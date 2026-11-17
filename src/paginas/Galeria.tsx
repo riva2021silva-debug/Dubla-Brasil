@@ -261,6 +261,28 @@ function ItemFeed(props: {
     return () => obs.disconnect();
   }, [ehUltimo, aoFicarVisivelUltimo]);
 
+  // Toque duplo curte (com coração animado); toque simples toca/pausa.
+  const [coracoes, setCoracoes] = useState<{ id: number; x: number; y: number }[]>([]);
+  const [progresso, setProgresso] = useState(0);
+  const [deitado, setDeitado] = useState(true);
+  const ultimoToque = useRef(0);
+  const toqueSimples = useRef<number | undefined>(undefined);
+  const aoTocarNoVideo = (e: React.MouseEvent<HTMLVideoElement>) => {
+    const agora = Date.now();
+    if (agora - ultimoToque.current < 300) {
+      window.clearTimeout(toqueSimples.current);
+      ultimoToque.current = 0;
+      const r = e.currentTarget.getBoundingClientRect();
+      const id = agora;
+      setCoracoes((c) => [...c, { id, x: e.clientX - r.left, y: e.clientY - r.top }]);
+      setTimeout(() => setCoracoes((c) => c.filter((x) => x.id !== id)), 900);
+      if (props.minha !== 1) props.aoReagir(1);
+      return;
+    }
+    ultimoToque.current = agora;
+    toqueSimples.current = window.setTimeout(tocarOuPausar, 260);
+  };
+
   const tocarOuPausar = () => {
     const v = video.current;
     if (!v) return;
@@ -285,7 +307,10 @@ function ItemFeed(props: {
         playsInline
         loop
         preload="metadata"
-        onClick={tocarOuPausar}
+        onClick={aoTocarNoVideo}
+        onTimeUpdate={(e) => setProgresso(e.currentTarget.currentTime / Math.max(0.1, e.currentTarget.duration || 1))}
+        onLoadedMetadata={(e) => setDeitado(e.currentTarget.videoWidth >= e.currentTarget.videoHeight)}
+        style={{ objectFit: deitado ? "contain" : "cover" }}
         onPlay={() => setPausado(false)}
         onPause={() => setPausado(true)}
       />
@@ -300,7 +325,18 @@ function ItemFeed(props: {
         </button>
       )}
 
+      {coracoes.map((c) => (
+        <span key={c.id} className="coracao-voador" style={{ left: c.x, top: c.y }} aria-hidden>
+          ❤️
+        </span>
+      ))}
+      <div className="post-progresso" aria-hidden>
+        <div style={{ width: `${progresso * 100}%` }} />
+      </div>
       <div className="post-acoes">
+        <span className="post-autor" aria-hidden title={`@${p.apelido}`}>
+          {p.apelido.slice(0, 1).toUpperCase()}
+        </span>
         <button className={`acao ${props.minha === 1 ? "ativa" : ""}`} onClick={() => props.aoReagir(1)} aria-label={`Curtir (${p.curtidas})`} aria-pressed={props.minha === 1}>
           <span>👍</span>
           {p.curtidas}

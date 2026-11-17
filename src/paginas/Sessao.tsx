@@ -39,7 +39,7 @@ function formatoDeExportacao(): { mime: string; ext: string } | null {
 }
 
 function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
-  const [cfg] = useConfig();
+  const [cfg, salvarCfg] = useConfig();
   const { urls, erro: erroMidia } = useMidiasDaCena(cena);
   const [video, setVideo] = useState<HTMLVideoElement | null>(null);
   const mixer = useRef<Mixer | null>(null);
@@ -226,7 +226,16 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
     <div className="pilha" style={{ maxWidth: 960, margin: "0 auto" }}>
       <div className="linha entre">
         <div>
-          <span className="etiqueta">🎬 Sessão de estreia</span>
+          <span className="linha" style={{ gap: 8 }}>
+            <span className="etiqueta">🎬 Sessão de estreia</span>
+            <button
+              className={`botao botao-pequeno botao-legenda ${cfg.mostrarLegendas ? "ligada" : ""}`}
+              aria-pressed={cfg.mostrarLegendas}
+              onClick={() => salvarCfg({ mostrarLegendas: !cfg.mostrarLegendas })}
+            >
+              💬 {cfg.mostrarLegendas ? "Legenda" : "Sem legenda"}
+            </button>
+          </span>
           <h1 style={{ marginTop: 8 }}>{cena.titulo}</h1>
           <span className="suave">
             Você dublou:{" "}

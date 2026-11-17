@@ -356,3 +356,49 @@ kbd { background: var(--superficie-2); border: 1px solid var(--borda); border-bo
 .palco video { object-fit: contain; }
 .palco.vertical { width: auto; max-width: 100%; height: min(62dvh, 640px); margin-inline: auto; }
 .palco.vertical video { width: 100%; height: 100%; }
+
+/* ===== Estúdio compacto: vídeo, fala, onda e botões juntos na tela ===== */
+.estudio { gap: 8px; }
+.estudio-topo { gap: 6px; }
+.estudio-titulo { font-size: 1rem; }
+.botao-legenda { opacity: 0.65; }
+.botao-legenda.ligada { opacity: 1; border-color: var(--amarelo); }
+.estudio .palco.vertical { height: min(42dvh, 520px); }
+.pontos-falas { padding: 4px 6px; gap: 4px; }
+.ponto-fala { height: 9px; }
+.cartao-fala { padding: 10px 12px; gap: 6px; border-radius: 14px; }
+.texto-fala { font-size: clamp(1.05rem, 4.2vw, 1.4rem); }
+.texto-fala.texto-karaoke { -webkit-background-clip: text; background-clip: text; color: transparent;
+  background-image: linear-gradient(90deg, var(--amarelo) var(--progresso, 0%), var(--texto) var(--progresso, 0%)); }
+.painel-onda { padding: 8px 10px; gap: 6px; border-radius: 14px; }
+.onda { height: 56px; }
+.botoes-redondos { padding: 0; gap: 6px; }
+.botao-redondo { width: 54px; height: 54px; font-size: 1.2rem; }
+.botao-gravar-grande { width: 72px; height: 72px; }
+.botao-gravar-grande .circulo { width: 28px; height: 28px; }
+.botao-gravar-grande .quadrado { width: 24px; height: 24px; }
+.rotulo-redondo { font-size: 0.8rem; }
+.botao-redondo-grupo { gap: 3px; }
+.nav-falas { padding-top: 4px; }
+.botao-texto { padding: 4px; }
+@media (max-width: 760px) {
+  .pagina:has(.estudio) { padding-top: 10px; }
+  .estudio .estudio-topo .suave.pequeno { display: none; }
+}
+/* Ao começar a gravar, o vídeo para logo abaixo do cabeçalho fixo (e não escondido atrás dele). */
+.estudio .palco { scroll-margin-top: calc(84px + env(safe-area-inset-top, 0px)); }
+
+/* ===== Galeria estilo TikTok: tela cheia no celular, toque duplo para curtir, progresso ===== */
+.coracao-voador { position: absolute; transform: translate(-50%, -50%); font-size: 4.5rem; pointer-events: none; animation: coracao .9s ease-out forwards; filter: drop-shadow(0 4px 12px rgb(0 0 0 / .5)); }
+@keyframes coracao { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.4) rotate(-12deg); } 20% { opacity: 1; transform: translate(-50%, -50%) scale(1.15) rotate(6deg); } 100% { opacity: 0; transform: translate(-50%, -140%) scale(1); } }
+.post-progresso { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: rgb(255 255 255 / .2); }
+.post-progresso div { height: 100%; background: var(--amarelo); transition: width .25s linear; }
+.post-autor { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; align-self: center; font-weight: 900; font-size: 1.2rem; color: #1e0b4b; background: linear-gradient(135deg, var(--amarelo), var(--verde)); border: 2px solid #fff; margin-bottom: 4px; }
+@media (max-width: 760px) {
+  .pagina:has(.galeria) { padding: 0; }
+  .pagina:has(.galeria) + .rodape { display: none; }
+  .galeria { max-width: none; }
+  .feed { height: calc(100dvh - 76px - 72px - env(safe-area-inset-bottom, 0px)); border-radius: 0; }
+  .galeria > .cartao.vazio { margin: 16px; }
+}
+@media (prefers-reduced-motion: reduce) { .coracao-voador { animation-duration: .01s; } }
