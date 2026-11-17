@@ -1,0 +1,66 @@
+# Dubla Brasil
+
+Dublagem de cenas com a sua voz, fala por fala, direto no navegador.
+
+Você escolhe uma cena, pega um ou mais personagens e grava cada fala enquanto o vídeo toca. Durante as suas
+falas, o áudio original some e entra a trilha de fundo (música e efeitos sem vozes). No fim você assiste ao
+resultado e baixa o vídeo dublado.
+
+Tudo roda no navegador e fica salvo no próprio computador (IndexedDB): não há servidor nem conta.
+
+## Funcionalidades
+
+- **Cenas**: biblioteca com busca, cena de exemplo original e as cenas que você criar.
+- **Escolher papel**: dublar um personagem ou vários; os outros continuam com a voz original.
+- **Estúdio**: contagem regressiva, gravação fala por fala ou todas seguidas, regravar, ouvir, medidor do
+  microfone e atalhos de teclado (`R` gravar, `O` ouvir, `↑`/`↓` escolher fala, `Espaço` tocar, `Esc` parar).
+- **Sessão**: assiste ao dub completo e baixa o vídeo (MP4 ou WebM, conforme o navegador) com legendas opcionais.
+- **Criar cena (editor)**: envia o vídeo e a trilha de fundo opcional, cadastra personagens, marca início e fim
+  de cada fala (`I`/`O`) ou importa legendas `.srt`.
+- **Pacotes `.dubla`**: exporta uma cena (ZIP com `cena.json`, vídeo e fundo) para usar em outro navegador ou mandar
+  para outra pessoa, e importa pacotes recebidos.
+- **Configurações**: escolha e teste do microfone, ajuste de sincronia, tempo antes da fala, volumes e legendas.
+
+## Como rodar
+
+Requisitos: Node.js 22 ou mais recente.
+
+```bash
+npm install
+npm run dev
+```
+
+Para gerar a versão de produção (arquivos estáticos em `dist/`, que funcionam em qualquer hospedagem, inclusive
+em subpastas):
+
+```bash
+npm run build
+```
+
+## Testes
+
+Com `npx vite preview --port 4173` rodando:
+
+```bash
+node testes/e2e.cjs
+node testes/e2e-editor.cjs
+```
+
+O primeiro escolhe a cena de exemplo, grava com um microfone simulado, assiste e baixa o vídeo. O segundo cria
+uma cena no editor, exporta o pacote, exclui e reimporta. As capturas de tela ficam em `testes/saida/`.
+
+## Como funciona a mixagem
+
+- Cada gravação guarda o momento exato da cena em que começou (o microfone é lido por um AudioWorklet com o
+  relógio do áudio), descontando a latência de saída do sistema e o ajuste manual de sincronia.
+- Fora das suas falas toca o áudio original. Durante elas, o original é silenciado e entra a trilha de fundo.
+  Sem trilha de fundo, o original fica no volume definido em Configurações.
+- O vídeo baixado é gerado em tempo real: o quadro do vídeo é desenhado num canvas e gravado junto com a mixagem.
+
+## Cena de exemplo
+
+A cena "Cadê meu chinelo?" é conteúdo original, gerado por `scripts/gerar-exemplo.sh` com o ffmpeg.
+
+## Direitos autorais
+
+Use apenas vídeos e áudios que você tem direito de usar.

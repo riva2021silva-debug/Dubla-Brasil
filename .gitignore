@@ -1,0 +1,5 @@
+node_modules
+dist
+testes/saida
+*.log
+.DS_Store
