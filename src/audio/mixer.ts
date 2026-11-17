@@ -40,6 +40,8 @@ export class Mixer {
   private ativas: AudioBufferSourceNode[] = [];
   private ancora: { ctx: number; cenaMs: number } | null = null;
   private ignorar = new Set<string>();
+  /** Toca a cena como ela é: sem silenciar o original e sem as suas tomadas. */
+  private modoOriginal = false;
   volumeOriginalNaMinhaFala = 0;
   private limpar: () => void;
 
@@ -115,6 +117,11 @@ export class Mixer {
     this.reagendarSeTocando();
   }
 
+  definirModoOriginal(ligado: boolean) {
+    this.modoOriginal = ligado;
+    this.reagendarSeTocando();
+  }
+
   /** Não toca estas tomadas (ex.: a fala que está sendo regravada). */
   ignorarTomadas(ids: string[]) {
     this.ignorar = new Set(ids);
@@ -164,12 +171,12 @@ export class Mixer {
     const originalNaJanela = temFundo ? 0 : this.volumeOriginalNaMinhaFala;
 
     // Estado inicial e transições do original x fundo.
-    const dentro = this.janelas.some((j) => s0 >= j.inicioMs && s0 < j.fimMs);
+    const dentro = !this.modoOriginal && this.janelas.some((j) => s0 >= j.inicioMs && s0 < j.fimMs);
     const gv = this.ganhoVideo.gain;
     const gf = this.ganhoFundo.gain;
     gv.setValueAtTime(dentro ? originalNaJanela : 1, t0);
     gf.setValueAtTime(dentro && temFundo ? 1 : 0, t0);
-    for (const j of this.janelas) {
+    for (const j of this.modoOriginal ? [] : this.janelas) {
       if (j.fimMs <= s0) continue;
       if (j.inicioMs > s0) {
         gv.setTargetAtTime(originalNaJanela, emCtx(j.inicioMs), SUAVIZACAO_S);
@@ -187,7 +194,7 @@ export class Mixer {
       this.ativas.push(f);
     }
 
-    for (const t of this.tomadas) {
+    for (const t of this.modoOriginal ? [] : this.tomadas) {
       if (this.ignorar.has(t.falaId)) continue;
       const fimMs = t.inicioMs + t.buffer.duration * 1000;
       if (fimMs <= s0) continue;

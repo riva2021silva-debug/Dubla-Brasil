@@ -27,24 +27,29 @@ fs.mkdirSync(SAIDA, { recursive: true });
   await p.getByRole("button", { name: /Capivara/ }).click();
   await foto("2-papel");
   await p.getByRole("button", { name: /Ir para o estúdio/ }).click();
-  await p.getByRole("heading", { name: /Estúdio/ }).waitFor();
+  await p.locator(".estudio").waitFor();
   await p.waitForFunction(() => document.querySelector("video")?.readyState >= 2);
-  await p.getByRole("button", { name: /Ativar microfone/ }).click();
-  await p.locator(".medidor").waitFor();
   await foto("3-estudio");
 
   // Grava uma fala sozinha e confere a contagem.
-  await p.getByRole("button", { name: /^● Gravar R$/ }).click();
-  await p.locator(".contagem").waitFor({ timeout: 5000 });
+  await p.getByRole("button", { name: "Gravar esta fala" }).click();
+  await p.locator(".contagem").waitFor({ timeout: 8000 });
   await foto("4-contagem");
-  await p.locator(".aviso-gravando").waitFor();
-  await p.getByText("1/3 gravadas").waitFor({ timeout: 15000 });
+  await p.waitForTimeout(2200);
+  await foto("4b-gravando");
+  await p.getByText("Gravada ✓").waitFor({ timeout: 15000 });
+  await foto("4c-gravada");
+
+  // Ouve a própria tomada e o original.
+  await p.getByRole("button", { name: "Ouvir a minha tomada" }).click();
+  await p.waitForTimeout(800);
+  await p.getByRole("button", { name: "Ouvir a minha tomada" }).click();
+  await p.getByRole("button", { name: /Próxima/ }).click();
 
   // Grava todas seguidas.
+  await p.getByText("Mais opções").click();
   await p.getByRole("button", { name: /Gravar todas seguidas/ }).click();
-  await p.waitForTimeout(3000);
-  await foto("5-gravando");
-  await p.getByText("3/3 gravadas").waitFor({ timeout: 30000 });
+  await p.getByRole("link", { name: /Resultado 3\/3/ }).waitFor({ timeout: 40000 });
   const tomadas = await p.evaluate(async () => {
     const db = await new Promise((r) => { const q = indexedDB.open("dubla-brasil"); q.onsuccess = () => r(q.result); });
     const dubs = await new Promise((r) => { const q = db.transaction("dubs").objectStore("dubs").getAll(); q.onsuccess = () => r(q.result); });
@@ -52,7 +57,7 @@ fs.mkdirSync(SAIDA, { recursive: true });
   });
   console.log("Tomadas salvas:", JSON.stringify(tomadas));
 
-  await p.getByRole("link", { name: /Ver resultado/ }).click();
+  await p.getByRole("link", { name: /Resultado 3\/3/ }).click();
   await p.getByText("Sessão de estreia").waitFor();
   await p.waitForFunction(() => !document.querySelector(".controles button")?.disabled);
   await p.getByRole("button", { name: /Assistir/ }).click();
