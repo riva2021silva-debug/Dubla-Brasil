@@ -7,8 +7,10 @@ export default function Inicio() {
     <>
       <section className="heroi">
         <div>
-          <span className="etiqueta">🎙️ Grátis, direto no navegador</span>
-          <h1 style={{ marginTop: 14 }}>
+          <img className="logo-heroi" src="marca/logo.webp" alt="Dubla Brasil AI — Sua voz. Seu talento. Sua dublagem." width={900} height={600} />
+        </div>
+        <div>
+          <h1>
             Sua voz no lugar <span className="destaque">da dublagem.</span>
           </h1>
           <p className="suave" style={{ fontSize: "1.15rem", maxWidth: 560 }}>
@@ -24,8 +26,16 @@ export default function Inicio() {
             </Link>
           </div>
         </div>
-        {CENAS_EXEMPLO[0] && <CartaoCena cena={CENAS_EXEMPLO[0]} />}
       </section>
+
+      {CENAS_EXEMPLO[0] && (
+        <section style={{ marginBottom: 24 }}>
+          <h2>Comece por aqui</h2>
+          <div className="grade">
+            <CartaoCena cena={CENAS_EXEMPLO[0]} />
+          </div>
+        </section>
+      )}
 
       <section className="cartao">
         <h2>Como funciona</h2>

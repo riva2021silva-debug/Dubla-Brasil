@@ -64,3 +64,36 @@ A cena "Cadê meu chinelo?" é conteúdo original, gerado por `scripts/gerar-exe
 ## Direitos autorais
 
 Use apenas vídeos e áudios que você tem direito de usar.
+
+## Aplicativo para Android e iOS
+
+O app é empacotado com o [Capacitor](https://capacitorjs.com). As pastas `android/` e `ios/` são os projetos nativos.
+
+Depois de qualquer mudança no código:
+
+```bash
+npm run build
+npx cap sync
+```
+
+**Android (APK):** precisa do Android Studio (ou do Android SDK) e do Java 21.
+
+```bash
+cd android
+./gradlew assembleDebug
+```
+
+O APK fica em `android/app/build/outputs/apk/debug/app-debug.apk`. Para publicar na Google Play, gere um
+pacote assinado (`./gradlew bundleRelease`) com a sua chave de assinatura, ou use o Android Studio
+(Build → Generate Signed App Bundle).
+
+**iOS:** precisa de um Mac com Xcode e de uma conta Apple Developer para instalar no iPhone ou publicar na
+App Store.
+
+```bash
+npx cap open ios
+```
+
+No Xcode, escolha o seu time em Signing & Capabilities e clique em ▶ para rodar no iPhone conectado.
+
+Os ícones e a tela de abertura são gerados a partir de `assets/` com `npx capacitor-assets generate`.

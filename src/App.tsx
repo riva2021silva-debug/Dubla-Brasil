@@ -12,11 +12,8 @@ function Layout() {
   return (
     <>
       <header className="topo">
-        <Link to="/" className="marca" aria-label="Dubla Brasil, início">
-          <span className="marca-selo" aria-hidden />
-          <span>
-            Dubla <b>Brasil</b>
-          </span>
+        <Link to="/" className="marca" aria-label="Dubla Brasil AI, início">
+          <img src="marca/logo-pequeno.webp" alt="Dubla Brasil AI" width={69} height={46} />
         </Link>
         <nav className="nav">
           <NavLink to="/cenas">Cenas</NavLink>
@@ -29,7 +26,7 @@ function Layout() {
         <Outlet />
       </main>
       <footer className="rodape">
-        Dubla Brasil · tudo fica salvo só neste navegador · use apenas vídeos que você tem direito de usar
+        Dubla Brasil AI · Sua voz. Seu talento. Sua dublagem. · tudo fica salvo só neste aparelho · use apenas vídeos que você tem direito de usar
       </footer>
     </>
   );

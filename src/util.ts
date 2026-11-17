@@ -1,3 +1,7 @@
+import { Capacitor } from "@capacitor/core";
+import { Directory, Filesystem } from "@capacitor/filesystem";
+import { Share } from "@capacitor/share";
+
 export const novoId = () =>
   (crypto.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36)).replace(/-/g, "").slice(0, 16);
 
@@ -28,7 +32,17 @@ export function dataCurta(ts: number) {
   return new Date(ts).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
 }
 
-export function baixarArquivo(blob: Blob, nome: string) {
+/**
+ * Salva um arquivo: no navegador, faz o download; no aplicativo (Android/iOS), grava no aparelho
+ * e abre a janela de compartilhar (WhatsApp, Galeria, Arquivos, etc.).
+ */
+export async function baixarArquivo(blob: Blob, nome: string) {
+  if (Capacitor.isNativePlatform()) {
+    const dados = await blobParaBase64(blob);
+    const salvo = await Filesystem.writeFile({ path: nome, data: dados, directory: Directory.Cache });
+    await Share.share({ title: nome, files: [salvo.uri], dialogTitle: "Salvar ou compartilhar" });
+    return;
+  }
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -82,3 +96,14 @@ export function lerSrt(texto: string): { texto: string; inicioMs: number; fimMs:
   }
   return saida;
 }
+
+function blobParaBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const leitor = new FileReader();
+    leitor.onload = () => resolve(String(leitor.result).split(",")[1] ?? "");
+    leitor.onerror = () => reject(leitor.error);
+    leitor.readAsDataURL(blob);
+  });
+}
+
+export const noAplicativo = () => Capacitor.isNativePlatform();

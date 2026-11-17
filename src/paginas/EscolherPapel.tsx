@@ -72,7 +72,7 @@ export default function EscolherPapel() {
               onClick={async () => {
                 setOcupado(true);
                 try {
-                  baixarArquivo(await exportarPacote(c), `${nomeArquivo(c.titulo)}.dubla`);
+                  await baixarArquivo(await exportarPacote(c), `${nomeArquivo(c.titulo)}.dubla`);
                 } finally {
                   setOcupado(false);
                 }

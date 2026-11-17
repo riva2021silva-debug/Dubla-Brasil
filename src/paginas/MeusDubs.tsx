@@ -15,7 +15,7 @@ export default function MeusDubs() {
   return (
     <>
       <h1>Meus dubs</h1>
-      <p className="suave">Tudo o que você gravou fica guardado neste navegador.</p>
+      <p className="suave">Tudo o que você gravou fica guardado neste aparelho.</p>
       {dubs.length === 0 ? (
         <div className="vazio">
           <p>Você ainda não gravou nenhum dub.</p>

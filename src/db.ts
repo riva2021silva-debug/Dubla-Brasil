@@ -57,14 +57,14 @@ export const db = {
 export async function urlDaMidia(f: FonteMidia): Promise<string> {
   if (f.tipo === "url") return f.url;
   const blob = await db.obterMidia(f.chave);
-  if (!blob) throw new Error("Arquivo da cena não encontrado neste navegador.");
+  if (!blob) throw new Error("Arquivo da cena não encontrado neste aparelho.");
   return URL.createObjectURL(blob);
 }
 
 export async function blobDaMidia(f: FonteMidia): Promise<Blob> {
   if (f.tipo === "blob") {
     const blob = await db.obterMidia(f.chave);
-    if (!blob) throw new Error("Arquivo da cena não encontrado neste navegador.");
+    if (!blob) throw new Error("Arquivo da cena não encontrado neste aparelho.");
     return blob;
   }
   const r = await fetch(f.url);

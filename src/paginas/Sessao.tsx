@@ -98,7 +98,7 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
     const m = mixer.current;
     const formato = formatoDeExportacao();
     if (!video || !m) return;
-    if (!formato) return setErro("Este navegador não consegue gerar vídeos. Use o Chrome ou o Edge no computador.");
+    if (!formato) return setErro("Este aparelho não consegue gerar vídeos. Atualize o sistema ou use o Chrome no computador.");
     setErro(null);
     await m.ctx.resume();
     video.pause();
@@ -159,7 +159,10 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
       fluxo.getTracks().forEach((t) => t.stop());
       setExportando(null);
       cancelar.current = () => {};
-      if (!cancelado) baixarArquivo(new Blob(partes, { type: formato.mime.split(";")[0] }), `${nomeArquivo(dub.nome)}.${formato.ext}`);
+      if (!cancelado)
+        baixarArquivo(new Blob(partes, { type: formato.mime.split(";")[0] }), `${nomeArquivo(dub.nome)}.${formato.ext}`).catch(
+          (e) => setErro(`Não foi possível salvar o vídeo: ${e instanceof Error ? e.message : String(e)}`),
+        );
     };
     video.addEventListener("ended", terminar);
     gravador.start(1000);

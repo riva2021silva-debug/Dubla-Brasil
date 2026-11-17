@@ -50,7 +50,7 @@ export default function Configuracoes() {
     <div className="pilha" style={{ maxWidth: 720 }}>
       <h1>Configurações</h1>
       <p className="suave" style={{ margin: 0 }}>
-        Ficam salvas neste navegador e valem para todas as cenas.
+        Ficam salvas neste aparelho e valem para todas as cenas.
       </p>
 
       <section className="cartao pilha">

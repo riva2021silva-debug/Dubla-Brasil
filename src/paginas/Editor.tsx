@@ -460,7 +460,7 @@ export default function Editor() {
             })}
           </section>
           <p className="suave pequeno">
-            Use apenas vídeos e áudios que você tem direito de usar. A cena fica salva só neste navegador; para mandar para
+            Use apenas vídeos e áudios que você tem direito de usar. A cena fica salva só neste aparelho; para mandar para
             outra pessoa, use “Exportar pacote” na página da cena.
           </p>
         </div>

@@ -3,3 +3,5 @@ dist
 testes/saida
 *.log
 .DS_Store
+*.apk
+*.zip
