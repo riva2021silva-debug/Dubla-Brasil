@@ -13,6 +13,8 @@ const LIMITE_BYTES = 50 * 1024 * 1024;
 /** Transforma erros do servidor em mensagens em português. */
 export function mensagemDeErro(e: unknown): string {
   const texto = e instanceof Error ? e.message : typeof e === "object" && e && "message" in e ? String((e as { message: unknown }).message) : String(e);
+  if (/Could not find the table|relation .* does not exist|schema cache/i.test(texto))
+    return "Esta parte ainda não foi ativada no servidor. O administrador precisa rodar o arquivo SQL dela no Supabase.";
   if (/row-level security|permission denied|not authorized|JWT|403/i.test(texto)) return "Sem permissão: entre de novo como administrador.";
   if (/payload too large|exceeded the maximum|413|too large/i.test(texto)) return "Arquivo grande demais: o limite é 50 MB por arquivo.";
   if (/mime type|invalid_mime|not supported/i.test(texto)) return "Tipo de arquivo não aceito. Use MP4/WebM para vídeo, MP3/M4A/WAV/OGG para áudio.";

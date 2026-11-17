@@ -1,13 +1,87 @@
-// Servidor que imita o Supabase (login, tabelas com as mesmas regras de permissão e pasta de arquivos),
-// para os testes automáticos não mexerem no projeto real. Uso: node testes/servidor-falso.cjs [porta]
+// Servidor que imita o Supabase (login, tabelas com as mesmas regras de permissão dos arquivos .sql e as pastas
+// de arquivos), para os testes automáticos não mexerem no projeto real. Uso: node testes/servidor-falso.cjs [porta]
 const http = require("http");
+const crypto = require("crypto");
 const { URL } = require("url");
 
 const PORTA = Number(process.argv[2] || 54399);
 const ADMIN = { id: "00000000-0000-4000-8000-000000000001", email: "admin@teste.dev", senha: "senha-de-teste-123" };
 const TOKEN_ADMIN = "token-admin-de-teste";
-const tabelas = { cenas: new Map(), sons: new Map() };
-const arquivos = new Map(); // caminho -> { tipo, dados }
+const usuarios = new Map([[TOKEN_ADMIN, { id: ADMIN.id, email: ADMIN.email, admin: true }]]);
+const arquivos = new Map(); // "pasta/caminho" -> { tipo, dados }
+const dados = { cenas: new Map(), sons: new Map(), perfis: new Map(), publicacoes: new Map(), reacoes: new Map(), comentarios: new Map(), denuncias: new Map() };
+
+const temPerfil = (u) => !!u.id && dados.perfis.has(u.id);
+const regras = {
+  cenas: { pk: ["id"], ler: (l, u) => l.publicada || u.admin, inserir: (l, u) => u.admin, atualizar: (l, u) => u.admin, apagar: (l, u) => u.admin },
+  sons: { pk: ["id"], ler: (l, u) => l.publicada || u.admin, inserir: (l, u) => u.admin, atualizar: (l, u) => u.admin, apagar: (l, u) => u.admin },
+  perfis: {
+    pk: ["user_id"],
+    padrao: (u) => ({ user_id: u.id, criado_em: agora() }),
+    ler: () => true,
+    inserir: (l, u) => !!u.id && l.user_id === u.id,
+    atualizar: (l, u) => l.user_id === u.id,
+    apagar: () => false,
+    validar: (l) => {
+      if (!/^[A-Za-z0-9_.À-ÿ]{3,20}$/.test(l.apelido || "")) return 'new row for relation "perfis" violates check constraint "apelido_caracteres"';
+      for (const o of dados.perfis.values()) if (o.user_id !== l.user_id && o.apelido.toLowerCase() === l.apelido.toLowerCase()) return 'duplicate key value violates unique constraint "perfis_apelido_unico"';
+      return null;
+    },
+  },
+  publicacoes: {
+    pk: ["id"],
+    padrao: (u) => ({ id: crypto.randomUUID(), autor_id: u.id, oculta: false, curtidas: 0, descurtidas: 0, comentarios: 0, denuncias: 0, papeis: [], capa_path: null, criada_em: agora() }),
+    ler: (l, u) => !l.oculta || l.autor_id === u.id || u.admin,
+    inserir: (l, u) => !!u.id && l.autor_id === u.id && temPerfil(u) && !l.oculta && !l.curtidas && !l.descurtidas && !l.comentarios && !l.denuncias,
+    atualizar: (l, u) => u.admin,
+    apagar: (l, u) => l.autor_id === u.id || u.admin,
+  },
+  reacoes: {
+    pk: ["publicacao_id", "user_id"],
+    padrao: (u) => ({ user_id: u.id }),
+    ler: (l, u) => l.user_id === u.id,
+    inserir: (l, u) => !!u.id && l.user_id === u.id,
+    atualizar: (l, u) => l.user_id === u.id,
+    apagar: (l, u) => l.user_id === u.id,
+  },
+  comentarios: {
+    pk: ["id"],
+    padrao: (u) => ({ id: crypto.randomUUID(), autor_id: u.id, criado_em: agora() }),
+    ler: () => true,
+    inserir: (l, u) => l.autor_id === u.id && temPerfil(u) && (l.texto || "").trim().length >= 1 && l.texto.length <= 300,
+    atualizar: () => false,
+    apagar: (l, u) => l.autor_id === u.id || u.admin,
+  },
+  denuncias: {
+    pk: ["publicacao_id", "user_id"],
+    padrao: (u) => ({ user_id: u.id, criada_em: agora() }),
+    ler: (l, u) => l.user_id === u.id || u.admin,
+    inserir: (l, u) => !!u.id && l.user_id === u.id,
+    atualizar: () => false,
+    apagar: () => false,
+  },
+};
+
+let relogio = Date.now();
+function agora() {
+  relogio = Math.max(relogio + 1, Date.now()); // datas sempre crescentes (a ordem do feed fica estável)
+  return new Date(relogio).toISOString();
+}
+const chave = (tabela, l) => regras[tabela].pk.map((k) => l[k]).join("|");
+
+function contar(pubId) {
+  const p = dados.publicacoes.get(pubId);
+  if (!p) return;
+  const r = [...dados.reacoes.values()].filter((x) => x.publicacao_id === pubId);
+  p.curtidas = r.filter((x) => x.valor === 1).length;
+  p.descurtidas = r.filter((x) => x.valor === -1).length;
+  p.comentarios = [...dados.comentarios.values()].filter((x) => x.publicacao_id === pubId).length;
+  p.denuncias = [...dados.denuncias.values()].filter((x) => x.publicacao_id === pubId).length;
+}
+
+function apagarEmCascata(tabela, l) {
+  if (tabela === "publicacoes") for (const t of ["reacoes", "comentarios", "denuncias"]) for (const [k, x] of dados[t]) if (x.publicacao_id === l.id) dados[t].delete(k);
+}
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -15,39 +89,68 @@ const CORS = {
   "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS,HEAD",
   "Access-Control-Expose-Headers": "Content-Range, Content-Length, Accept-Ranges",
 };
+function responder(res, status, corpo, cab = {}) {
+  res.writeHead(status, { ...CORS, "Content-Type": "application/json", ...cab });
+  res.end(corpo === undefined ? "" : JSON.stringify(corpo));
+}
+const lerCorpo = (req) => new Promise((ok) => { const p = []; req.on("data", (d) => p.push(d)); req.on("end", () => ok(Buffer.concat(p))); });
+const quem = (req) => usuarios.get((req.headers.authorization || "").replace("Bearer ", "")) || { id: null, admin: false };
 
-function responder(res, status, corpo, cabecalhos = {}) {
-  const json = corpo === undefined ? "" : JSON.stringify(corpo);
-  res.writeHead(status, { ...CORS, "Content-Type": "application/json", ...cabecalhos });
-  res.end(json);
+function sessao(token, u) {
+  return {
+    access_token: token, token_type: "bearer", expires_in: 3600, expires_at: Math.floor(Date.now() / 1000) + 3600, refresh_token: "r-" + token,
+    user: { id: u.id, email: u.email ?? "", aud: "authenticated", role: "authenticated", is_anonymous: !u.email, app_metadata: {}, user_metadata: {}, created_at: new Date().toISOString() },
+  };
 }
 
-function lerCorpo(req) {
-  return new Promise((ok) => {
-    const partes = [];
-    req.on("data", (p) => partes.push(p));
-    req.on("end", () => ok(Buffer.concat(partes)));
-  });
-}
-
-const ehAdmin = (req) => (req.headers.authorization || "") === `Bearer ${TOKEN_ADMIN}`;
-const usuario = { id: ADMIN.id, email: ADMIN.email, aud: "authenticated", role: "authenticated", app_metadata: {}, user_metadata: {}, created_at: new Date().toISOString() };
-
+// ----- Consultas: filtros, ordem, limite e projeção (inclui "perfis(apelido)") -----
 function filtrar(linhas, params) {
   let r = [...linhas];
   for (const [k, v] of params) {
-    if (["select", "order", "limit", "on_conflict", "columns"].includes(k)) continue;
-    if (v.startsWith("eq.")) {
-      const alvo = v.slice(3);
-      r = r.filter((l) => String(l[k]) === alvo);
+    if (["select", "order", "limit", "offset", "on_conflict", "columns"].includes(k)) continue;
+    const [op, ...resto] = v.split(".");
+    const alvo = resto.join(".");
+    if (op === "eq") r = r.filter((l) => String(l[k]) === alvo);
+    else if (op === "lt") r = r.filter((l) => String(l[k]) < alvo);
+    else if (op === "in") {
+      const lista = alvo.replace(/^\(|\)$/g, "").split(",").map((s) => s.replace(/^"|"$/g, ""));
+      r = r.filter((l) => lista.includes(String(l[k])));
     }
   }
   const ordem = params.get("order");
   if (ordem) {
-    const [col, dir] = ordem.split(".");
-    r.sort((a, b) => (a[col] < b[col] ? -1 : a[col] > b[col] ? 1 : 0) * (dir === "desc" ? -1 : 1));
+    const crits = ordem.split(",").map((o) => o.split("."));
+    r.sort((a, b) => {
+      for (const [col, dir] of crits) {
+        const c = a[col] < b[col] ? -1 : a[col] > b[col] ? 1 : 0;
+        if (c) return dir === "desc" ? -c : c;
+      }
+      return 0;
+    });
   }
-  return r;
+  const limite = params.get("limit");
+  return limite ? r.slice(0, Number(limite)) : r;
+}
+
+function projetar(l, select) {
+  if (!select) return { ...l };
+  const campos = [];
+  let nivel = 0, atual = "";
+  for (const ch of select) {
+    if (ch === "(") nivel++;
+    if (ch === ")") nivel--;
+    if (ch === "," && nivel === 0) { campos.push(atual.trim()); atual = ""; } else atual += ch;
+  }
+  if (atual.trim()) campos.push(atual.trim());
+  const out = {};
+  for (const c of campos) {
+    if (c === "*") Object.assign(out, l);
+    else if (c.startsWith("perfis(")) {
+      const p = dados.perfis.get(l.autor_id);
+      out.perfis = p ? { apelido: p.apelido } : null;
+    } else out[c] = l[c];
+  }
+  return out;
 }
 
 function multipart(corpo, tipo) {
@@ -60,11 +163,9 @@ function multipart(corpo, tipo) {
     if (fimCab === -1) break;
     const cab = corpo.slice(i, fimCab).toString();
     const prox = corpo.indexOf(limite, fimCab);
-    const dados = corpo.slice(fimCab + 4, prox - 2);
-    if (/filename=|name=""/.test(cab) || /Content-Type:/i.test(cab)) {
-      const ct = /Content-Type:\s*([^\r\n]+)/i.exec(cab);
-      if (dados.length > 0 || ct) return { dados, tipo: ct ? ct[1].trim() : "application/octet-stream" };
-    }
+    const d = corpo.slice(fimCab + 4, prox - 2);
+    const ct = /Content-Type:\s*([^\r\n]+)/i.exec(cab);
+    if (ct && d.length > 0) return { dados: d, tipo: ct[1].trim() };
     i = prox;
   }
   return null;
@@ -76,61 +177,87 @@ const servidor = http.createServer(async (req, res) => {
   if (req.method === "OPTIONS") return responder(res, 204);
   const corpo = await lerCorpo(req);
   const json = () => (corpo.length ? JSON.parse(corpo.toString()) : {});
+  const u = quem(req);
 
   // ----- Login -----
   if (p === "/auth/v1/token" && req.method === "POST") {
     const { email, password } = json();
-    if (email === ADMIN.email && password === ADMIN.senha)
-      return responder(res, 200, { access_token: TOKEN_ADMIN, token_type: "bearer", expires_in: 3600, expires_at: Math.floor(Date.now() / 1000) + 3600, refresh_token: "r", user: usuario });
+    if (email === ADMIN.email && password === ADMIN.senha) return responder(res, 200, sessao(TOKEN_ADMIN, usuarios.get(TOKEN_ADMIN)));
     return responder(res, 400, { code: 400, error_code: "invalid_credentials", msg: "Invalid login credentials" });
   }
-  if (p === "/auth/v1/user") {
-    if (!ehAdmin(req)) return responder(res, 401, { msg: "JWT expired" });
-    return responder(res, 200, usuario);
+  if (p === "/auth/v1/signup" && req.method === "POST") {
+    const novo = { id: crypto.randomUUID(), email: null, admin: false };
+    const token = "token-anon-" + novo.id;
+    usuarios.set(token, novo);
+    return responder(res, 200, sessao(token, novo));
   }
+  if (p === "/auth/v1/user") return u.id ? responder(res, 200, sessao("x", u).user) : responder(res, 401, { msg: "JWT expired" });
   if (p === "/auth/v1/logout") return responder(res, 204);
+  if (p === "/rest/v1/rpc/eh_admin") return responder(res, 200, !!u.admin);
 
-  // ----- Funções -----
-  if (p === "/rest/v1/rpc/eh_admin") return responder(res, 200, ehAdmin(req));
-
-  // ----- Tabelas (com as mesmas regras de permissão do esquema.sql) -----
-  const t = /^\/rest\/v1\/(cenas|sons)$/.exec(p);
-  if (t) {
-    const tabela = tabelas[t[1]];
+  // ----- Tabelas -----
+  const t = /^\/rest\/v1\/([a-z_]+)$/.exec(p);
+  if (t && regras[t[1]]) {
+    const nome = t[1];
+    const regra = regras[nome];
+    const tabela = dados[nome];
+    const prefer = req.headers.prefer || "";
     const umSo = (req.headers.accept || "").includes("vnd.pgrst.object");
-    const visiveis = () => filtrar([...tabela.values()].filter((l) => l.publicada || ehAdmin(req)), url.searchParams);
-    const entregar = (linhas) => {
-      if (!umSo) return responder(res, 200, linhas);
-      if (linhas.length !== 1) return responder(res, 406, { code: "PGRST116", message: "JSON object requested, multiple (or no) rows returned" });
-      return responder(res, 200, linhas[0]);
+    const select = url.searchParams.get("select");
+    const entregar = (linhas, status = 200) => {
+      const saida = linhas.map((l) => projetar(l, select));
+      if (!umSo) return responder(res, status, saida);
+      if (saida.length !== 1) return responder(res, 406, { code: "PGRST116", message: "JSON object requested, multiple (or no) rows returned" });
+      return responder(res, status, saida[0]);
     };
-    if (req.method === "GET" || req.method === "HEAD") return entregar(visiveis());
-    if (!ehAdmin(req)) return responder(res, 403, { code: "42501", message: `new row violates row-level security policy for table "${t[1]}"` });
-    const agora = new Date().toISOString();
+    const visiveis = () => [...tabela.values()].filter((l) => regra.ler(l, u));
+
+    if (req.method === "GET" || req.method === "HEAD") return entregar(filtrar(visiveis(), url.searchParams));
+
     if (req.method === "POST") {
-      const linhas = [].concat(json()).map((l) => {
-        const antes = tabela.get(l.id);
-        const nova = { criada_em: agora, ...antes, ...l, atualizada_em: agora };
-        tabela.set(l.id, nova);
-        return nova;
-      });
-      return entregar(linhas);
+      const upsert = prefer.includes("resolution=merge-duplicates");
+      const novas = [];
+      for (const entrada of [].concat(json())) {
+        const base = regra.padrao ? regra.padrao(u) : {};
+        const candidata = { ...base, ...entrada };
+        const k = chave(nome, candidata);
+        const antes = tabela.get(k);
+        if (antes && !upsert) return responder(res, 409, { code: "23505", message: `duplicate key value violates unique constraint "${nome}_pkey"` });
+        const linha = antes ? { ...antes, ...entrada, atualizada_em: agora() } : { criada_em: agora(), ...candidata, atualizada_em: agora() };
+        const pode = antes ? regra.atualizar(antes, u) && regra.atualizar(linha, u) : regra.inserir(linha, u);
+        if (!pode) return responder(res, 403, { code: "42501", message: `new row violates row-level security policy for table "${nome}"` });
+        const problema = regra.validar ? regra.validar(linha) : null;
+        if (problema) return responder(res, 409, { code: "23505", message: problema });
+        novas.push(linha);
+      }
+      for (const l of novas) {
+        tabela.set(chave(nome, l), l);
+        if (l.publicacao_id) contar(l.publicacao_id);
+      }
+      return prefer.includes("return=representation") ? entregar(novas, 201) : responder(res, 201);
     }
     if (req.method === "PATCH") {
-      const alvo = filtrar([...tabela.values()], url.searchParams);
-      alvo.forEach((l) => tabela.set(l.id, { ...l, ...json(), atualizada_em: agora }));
+      for (const l of filtrar(visiveis(), url.searchParams)) {
+        const nova = { ...l, ...json() };
+        if (regra.atualizar(l, u) && regra.atualizar(nova, u)) tabela.set(chave(nome, l), nova);
+      }
       return responder(res, 204);
     }
     if (req.method === "DELETE") {
-      filtrar([...tabela.values()], url.searchParams).forEach((l) => tabela.delete(l.id));
+      for (const l of filtrar(visiveis(), url.searchParams))
+        if (regra.apagar(l, u)) {
+          tabela.delete(chave(nome, l));
+          apagarEmCascata(nome, l);
+          if (l.publicacao_id) contar(l.publicacao_id);
+        }
       return responder(res, 204);
     }
   }
 
-  // ----- Pasta de arquivos -----
-  const pub = /^\/storage\/v1\/object\/public\/midias\/(.+)$/.exec(p);
+  // ----- Pastas de arquivos ("midias": só admin; "dubs": cada pessoa na própria pasta) -----
+  const pub = /^\/storage\/v1\/object\/public\/(midias|dubs)\/(.+)$/.exec(p);
   if (pub) {
-    const a = arquivos.get(decodeURIComponent(pub[1]));
+    const a = arquivos.get(`${pub[1]}/${decodeURIComponent(pub[2])}`);
     if (!a) return responder(res, 400, { statusCode: "404", error: "not_found", message: "Object not found" });
     const total = a.dados.length;
     const faixa = /bytes=(\d*)-(\d*)/.exec(req.headers.range || "");
@@ -143,29 +270,36 @@ const servidor = http.createServer(async (req, res) => {
     res.writeHead(200, { ...CORS, "Content-Type": a.tipo, "Accept-Ranges": "bytes", "Content-Length": total });
     return res.end(req.method === "HEAD" ? undefined : a.dados);
   }
-  const obj = /^\/storage\/v1\/object\/midias\/(.+)$/.exec(p);
+  const podeEscrever = (pasta, caminho) => (pasta === "midias" ? u.admin : !!u.id && caminho.split("/")[0] === u.id);
+  const podeApagar = (pasta, caminho) => (pasta === "midias" ? u.admin : u.admin || (!!u.id && caminho.split("/")[0] === u.id));
+  const obj = /^\/storage\/v1\/object\/(midias|dubs)\/(.+)$/.exec(p);
   if (obj && req.method === "POST") {
-    if (!ehAdmin(req)) return responder(res, 403, { statusCode: "403", error: "Unauthorized", message: "new row violates row-level security policy" });
+    const caminho = decodeURIComponent(obj[2]);
+    if (!podeEscrever(obj[1], caminho)) return responder(res, 403, { statusCode: "403", error: "Unauthorized", message: "new row violates row-level security policy" });
     const parte = multipart(corpo, req.headers["content-type"]);
-    const dados = parte ? parte.dados : corpo;
-    const tipo = parte ? parte.tipo : req.headers["content-type"];
-    if (dados.length > 50 * 1024 * 1024) return responder(res, 413, { statusCode: "413", error: "Payload too large", message: "The object exceeded the maximum allowed size" });
-    const caminho = decodeURIComponent(obj[1]);
-    arquivos.set(caminho, { tipo, dados });
-    return responder(res, 200, { Key: `midias/${caminho}`, Id: caminho });
+    const d = parte ? parte.dados : corpo;
+    const limite = obj[1] === "dubs" ? 15 : 50;
+    if (d.length > limite * 1024 * 1024) return responder(res, 413, { statusCode: "413", error: "Payload too large", message: "The object exceeded the maximum allowed size" });
+    arquivos.set(`${obj[1]}/${caminho}`, { tipo: parte ? parte.tipo : req.headers["content-type"], dados: d });
+    return responder(res, 200, { Key: `${obj[1]}/${caminho}`, Id: caminho });
   }
-  if (p === "/storage/v1/object/midias" && req.method === "DELETE") {
-    if (!ehAdmin(req)) return responder(res, 403, { message: "Unauthorized" });
+  const del = /^\/storage\/v1\/object\/(midias|dubs)$/.exec(p);
+  if (del && req.method === "DELETE") {
     const { prefixes = [] } = json();
-    prefixes.forEach((c) => arquivos.delete(c));
-    return responder(res, 200, prefixes.map((name) => ({ name })));
+    const apagados = prefixes.filter((c) => podeApagar(del[1], c));
+    apagados.forEach((c) => arquivos.delete(`${del[1]}/${c}`));
+    return responder(res, 200, apagados.map((name) => ({ name })));
   }
 
   // ----- Inspeção para os testes -----
-  if (p === "/__estado") return responder(res, 200, { cenas: [...tabelas.cenas.values()], sons: [...tabelas.sons.values()], arquivos: [...arquivos.keys()] });
+  if (p === "/__estado")
+    return responder(res, 200, {
+      cenas: [...dados.cenas.values()], sons: [...dados.sons.values()], perfis: [...dados.perfis.values()],
+      publicacoes: [...dados.publicacoes.values()], comentarios: [...dados.comentarios.values()],
+      reacoes: [...dados.reacoes.values()], denuncias: [...dados.denuncias.values()], arquivos: [...arquivos.keys()],
+    });
 
   responder(res, 404, { message: `rota não simulada: ${req.method} ${p}` });
 });
 
 servidor.listen(PORTA, () => console.log(`servidor falso na porta ${PORTA}`));
-module.exports = { ADMIN };

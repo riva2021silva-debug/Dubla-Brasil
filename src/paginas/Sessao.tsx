@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import PedirApelido from "../componentes/PedirApelido";
+import { meuApelido, publicar } from "../galeria";
 import Legenda, { falaNoTempo } from "../componentes/Legenda";
 import LinhaDoTempo from "../componentes/LinhaDoTempo";
 import { useConfig } from "../config";
@@ -8,7 +10,7 @@ import { buscarCena, useCarregar, useMidiasDaCena, useTempoDoVideo } from "../ga
 import { decodificar, Mixer } from "../audio/mixer";
 import { irPara } from "../audio/sincronia";
 import type { Cena, Dub } from "../tipos";
-import { baixarArquivo, formatarTempo, nomeArquivo } from "../util";
+import { baixarArquivo, formatarTempo, gerarCapa, nomeArquivo } from "../util";
 
 export default function Sessao() {
   const { dubId = "" } = useParams();
@@ -46,6 +48,10 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
   const [exportando, setExportando] = useState<number | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const cancelar = useRef<() => void>(() => {});
+  const [acao, setAcao] = useState<"baixar" | "publicar" | null>(null);
+  const [pedirApelido, setPedirApelido] = useState(false);
+  const [etapaPublicar, setEtapaPublicar] = useState<string | null>(null);
+  const navegar = useNavigate();
   const tempo = useTempoDoVideo(video);
 
   const minhas = useMemo(() => cena.falas.filter((f) => dub.papeis.includes(f.personagemId)), [cena, dub.papeis]);
@@ -94,18 +100,23 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
     } else video.pause();
   };
 
-  const exportar = async () => {
+  /** Toca a cena do começo ao fim gravando imagem + mixagem; devolve o vídeo (ou null se cancelado). */
+  const gerarVideo = async (larguraMax: number, bitrate: number): Promise<{ blob: Blob; ext: string } | null> => {
     const m = mixer.current;
     const formato = formatoDeExportacao();
-    if (!video || !m) return;
-    if (!formato) return setErro("Este aparelho não consegue gerar vídeos. Atualize o sistema ou use o Chrome no computador.");
+    if (!video || !m) return null;
+    if (!formato) {
+      setErro("Este aparelho não consegue gerar vídeos. Atualize o sistema ou use o Chrome no computador.");
+      return null;
+    }
     setErro(null);
     await m.ctx.resume();
     video.pause();
     await irPara(video, 0);
 
-    const largura = video.videoWidth || 1280;
-    const altura = video.videoHeight || 720;
+    const escala = Math.min(1, larguraMax / (video.videoWidth || 1280));
+    const largura = Math.round(((video.videoWidth || 1280) * escala) / 2) * 2;
+    const altura = Math.round(((video.videoHeight || 720) * escala) / 2) * 2;
     const tela = document.createElement("canvas");
     tela.width = largura;
     tela.height = altura;
@@ -113,7 +124,7 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
     const destino = m.ctx.createMediaStreamDestination();
     m.saida.connect(destino);
     const fluxo = new MediaStream([...tela.captureStream(30).getVideoTracks(), ...destino.stream.getAudioTracks()]);
-    const gravador = new MediaRecorder(fluxo, { mimeType: formato.mime, videoBitsPerSecond: 5_000_000 });
+    const gravador = new MediaRecorder(fluxo, { mimeType: formato.mime, videoBitsPerSecond: bitrate, audioBitsPerSecond: 128_000 });
     const partes: Blob[] = [];
     gravador.ondataavailable = (e) => e.data.size && partes.push(e.data);
 
@@ -139,7 +150,7 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
       g.font = `700 ${Math.round(altura * 0.028)}px Inter, system-ui, sans-serif`;
       g.textAlign = "right";
       g.fillStyle = "rgba(250,204,21,0.9)";
-      g.fillText("Dubla Brasil", largura - 16, Math.round(altura * 0.05));
+      g.fillText("Dubla Brasil AI", largura - 16, Math.round(altura * 0.05));
       setExportando(Math.min(1, ms / Math.max(1, cena.duracaoMs)));
       raf = requestAnimationFrame(desenhar);
     };
@@ -154,20 +165,60 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
       video.pause();
       terminar();
     };
-    gravador.onstop = () => {
-      m.saida.disconnect(destino);
-      fluxo.getTracks().forEach((t) => t.stop());
-      setExportando(null);
-      cancelar.current = () => {};
-      if (!cancelado)
-        baixarArquivo(new Blob(partes, { type: formato.mime.split(";")[0] }), `${nomeArquivo(dub.nome)}.${formato.ext}`).catch(
-          (e) => setErro(`Não foi possível salvar o vídeo: ${e instanceof Error ? e.message : String(e)}`),
-        );
-    };
+    const pronto = new Promise<{ blob: Blob; ext: string } | null>((resolve) => {
+      gravador.onstop = () => {
+        m.saida.disconnect(destino);
+        fluxo.getTracks().forEach((t) => t.stop());
+        setExportando(null);
+        cancelar.current = () => {};
+        resolve(cancelado ? null : { blob: new Blob(partes, { type: formato.mime.split(";")[0] }), ext: formato.ext });
+      };
+    });
     video.addEventListener("ended", terminar);
     gravador.start(1000);
     desenhar();
     await video.play();
+    return pronto;
+  };
+
+  const baixar = async () => {
+    setAcao("baixar");
+    try {
+      const v = await gerarVideo(1280, 5_000_000);
+      if (v) await baixarArquivo(v.blob, `${nomeArquivo(dub.nome)}.${v.ext}`);
+    } catch (e) {
+      setErro(`Não foi possível salvar o vídeo: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setAcao(null);
+    }
+  };
+
+  const publicarNaGaleria = async (apelidoConfirmado?: string) => {
+    setErro(null);
+    try {
+      const apelido = apelidoConfirmado ?? (await meuApelido());
+      if (!apelido) return setPedirApelido(true);
+      setAcao("publicar");
+      const v = await gerarVideo(720, 1_500_000);
+      if (!v) return;
+      setEtapaPublicar("Enviando para a galeria…");
+      const primeira = minhas.find((f) => dub.tomadas[f.id]) ?? minhas[0];
+      const capa = urls ? await gerarCapa(urls.video, primeira ? (primeira.inicioMs + primeira.fimMs) / 2 : 1000, 480) : null;
+      const id = await publicar({
+        video: v.blob,
+        capa,
+        cenaId: cena.id,
+        cenaTitulo: cena.titulo,
+        papeis: cena.personagens.filter((p) => dub.papeis.includes(p.id)).map((p) => p.nome),
+        duracaoMs: cena.duracaoMs,
+      });
+      navegar(`/galeria?p=${id}`);
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : String(e));
+    } finally {
+      setAcao(null);
+      setEtapaPublicar(null);
+    }
   };
 
   const nomes = cena.personagens.filter((p) => dub.papeis.includes(p.id));
@@ -231,24 +282,42 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
         <button className="botao botao-primario botao-grande" onClick={alternar} disabled={!pronto || exportando !== null}>
           {tocando ? "⏸ Pausar" : "▶ Assistir"}
         </button>
-        {exportando === null ? (
-          <button className="botao botao-grande" onClick={exportar} disabled={!pronto}>
-            ⬇ Baixar vídeo
-          </button>
+        {exportando === null && !etapaPublicar ? (
+          <>
+            <button className="botao botao-verde botao-grande" onClick={() => void publicarNaGaleria()} disabled={!pronto || !!acao}>
+              🌎 Publicar na galeria
+            </button>
+            <button className="botao botao-grande" onClick={() => void baixar()} disabled={!pronto || !!acao}>
+              ⬇ Baixar vídeo
+            </button>
+          </>
         ) : (
           <>
-            <span className="etiqueta">Gerando vídeo… {Math.round(exportando * 100)}%</span>
-            <button className="botao botao-perigo" onClick={() => cancelar.current()}>
-              Cancelar
-            </button>
+            <span className="etiqueta">
+              {etapaPublicar ?? `${acao === "publicar" ? "Preparando a publicação" : "Gerando o vídeo"}… ${Math.round((exportando ?? 1) * 100)}%`}
+            </span>
+            {exportando !== null && (
+              <button className="botao botao-perigo" onClick={() => cancelar.current()}>
+                Cancelar
+              </button>
+            )}
           </>
         )}
         <span className="tempo">
           {formatarTempo(tempo)} / {formatarTempo(cena.duracaoMs)}
         </span>
       </div>
+      {pedirApelido && (
+        <PedirApelido
+          aoFechar={() => setPedirApelido(false)}
+          aoConfirmar={(a) => {
+            setPedirApelido(false);
+            void publicarNaGaleria(a);
+          }}
+        />
+      )}
       {exportando !== null && (
-        <p className="suave pequeno">O vídeo é gerado em tempo real: deixe esta aba aberta até terminar.</p>
+        <p className="suave pequeno">O vídeo é gerado em tempo real: deixe esta tela aberta até terminar.</p>
       )}
     </div>
   );

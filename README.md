@@ -131,3 +131,12 @@ com o modelo *tiny face detector* da biblioteca [@vladmandic/face-api](https://g
 (licença MIT), carregado só no editor.
 
 O vídeo de teste `testes/fixtures/cena-rostos/video.mp4` usa as fotos de exemplo dessa biblioteca (MIT).
+
+## Galeria de dubs
+
+Quem termina um dub pode tocar em **Publicar na galeria**. Na primeira vez o app pede um apelido (login anônimo
+do Supabase, sem e-mail). A galeria é uma rolagem vertical com 👍/👎, comentários, compartilhar e denunciar.
+O administrador modera pela aba **Galeria** do painel (as mais denunciadas primeiro) ou direto na galeria.
+
+Para ativar no servidor: rode `supabase/galeria.sql` no SQL Editor e ligue **Allow anonymous sign-ins** em
+Authentication → Sign In / Providers. Teste: `node testes/e2e-galeria.cjs http://localhost:4174/`.

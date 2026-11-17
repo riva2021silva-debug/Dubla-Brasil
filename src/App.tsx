@@ -12,6 +12,7 @@ import Imitacao from "./paginas/Imitacao";
 import ImitarSom from "./paginas/ImitarSom";
 import Jogos from "./paginas/Jogos";
 import VozNoAlvo from "./paginas/VozNoAlvo";
+import Galeria from "./paginas/Galeria";
 import { useAdmin } from "./admin";
 
 function Layout() {
@@ -24,6 +25,7 @@ function Layout() {
         </Link>
         <nav className="nav" aria-label="Menu principal">
           <NavLink to="/cenas">Cenas</NavLink>
+          <NavLink to="/galeria">Galeria</NavLink>
           <NavLink to="/imitar">Imitação</NavLink>
           <NavLink to="/jogos">Jogos</NavLink>
           <NavLink to="/meus-dubs">Meus dubs</NavLink>
@@ -46,8 +48,8 @@ function Layout() {
       </main>
       <nav className="barra-inferior" aria-label="Menu">
         {[
-          ["/", "🏠", "Início"],
           ["/cenas", "🎬", "Cenas"],
+          ["/galeria", "🌎", "Galeria"],
           ["/imitar", "🦜", "Imitar"],
           ["/jogos", "🎯", "Jogos"],
           ["/meus-dubs", "🎙️", "Meus dubs"],
@@ -87,6 +89,7 @@ export default function App() {
           <Route path="estudio/:dubId" element={<Estudio />} />
           <Route path="dub/:dubId" element={<Sessao />} />
           <Route path="meus-dubs" element={<MeusDubs />} />
+          <Route path="galeria" element={<Galeria />} />
           <Route path="imitar" element={<Imitacao />} />
           <Route path="imitar/:id" element={<ImitarSom />} />
           <Route path="jogos" element={<Jogos />} />
