@@ -7,7 +7,7 @@ import { mensagemDeErro, salvarCena } from "../nuvem";
 import { gerarRostos, rostoDaImagem, rostoDoQuadro } from "../rostos";
 import type { Progresso } from "../transcricao";
 import Avatar from "../componentes/Avatar";
-import { buscarCena, useTempoDoVideo } from "../ganchos";
+import { buscarCena, useFormatoDoVideo, useTempoDoVideo, useUrlDaMidia } from "../ganchos";
 import { irPara } from "../audio/sincronia";
 import type { Cena, Fala, Personagem } from "../tipos";
 import { estaPublicada } from "../tipos";
@@ -60,6 +60,20 @@ export default function Editor() {
   const [previas, setPrevias] = useState<Record<string, string>>({});
   const [rostoOcupado, setRostoOcupado] = useState<string | null>(null);
   const [progressoIa, setProgressoIa] = useState<Progresso | null>(null);
+  const [novaCapa, setNovaCapa] = useState<Blob | null>(null);
+  const [previaCapa, setPreviaCapa] = useState<string | null>(null);
+  const [avisoCapa, setAvisoCapa] = useState<string | null>(null);
+  const entradaCapa = useRef<HTMLInputElement>(null);
+  const capaAtual = useUrlDaMidia(cena?.capa);
+  const definirCapa = (b: Blob) => {
+    setNovaCapa(b);
+    setPreviaCapa((u) => {
+      if (u) URL.revokeObjectURL(u);
+      return URL.createObjectURL(b);
+    });
+    setAlterado(true);
+    setAvisoCapa(null);
+  };
   const [avisoIa, setAvisoIa] = useState<string | null>(null);
   const [confirmarSubstituir, setConfirmarSubstituir] = useState(false);
   const [avisoRosto, setAvisoRosto] = useState<string | null>(null);
@@ -69,6 +83,7 @@ export default function Editor() {
   const entradaFundo = useRef<HTMLInputElement>(null);
   const entradaSrt = useRef<HTMLInputElement>(null);
   const tempo = useTempoDoVideo(el);
+  const formato = useFormatoDoVideo(el);
 
   // Carrega uma cena existente.
   useEffect(() => {
@@ -308,8 +323,8 @@ export default function Editor() {
     try {
       const c: Cena = { ...cena, falas: falasOrdenadas, atualizadaEm: Date.now() };
       // Capa: um quadro do vídeo no meio da primeira fala (se o vídeo mudou ou ainda não há capa).
-      let capa: Blob | undefined;
-      if (video && (video.novo || !c.capa)) {
+      let capa: Blob | undefined = novaCapa ?? undefined;
+      if (!capa && video && (video.novo || !c.capa)) {
         const primeira = falasOrdenadas[0];
         const ms = primeira ? (primeira.inicioMs + primeira.fimMs) / 2 : Math.min(2000, c.duracaoMs / 2);
         capa = (await gerarCapa(video.url, ms)) ?? undefined;
@@ -368,7 +383,7 @@ export default function Editor() {
         <div className="pilha">
           {video ? (
             <>
-              <div className="palco">
+              <div className={`palco ${formato.vertical ? "vertical" : ""}`} style={formato.estilo}>
                 <video crossOrigin="anonymous" ref={setEl} src={video.url} controls playsInline preload="auto" />
                 <Legenda falas={cena.falas} personagens={cena.personagens} tempoMs={tempo} />
               </div>
@@ -562,6 +577,39 @@ export default function Editor() {
               </span>
             </div>
             {fundo && <audio src={fundo.url} controls style={{ width: "100%" }} />}
+            <div className="linha" style={{ alignItems: "flex-start", flexWrap: "nowrap" }}>
+              <div className="capa capa-editor">
+                {previaCapa || capaAtual ? <img src={previaCapa ?? capaAtual!} alt="Capa da cena" crossOrigin="anonymous" /> : <span aria-hidden>🎬</span>}
+              </div>
+              <div className="pilha" style={{ gap: 6, minWidth: 0 }}>
+                <span>
+                  <strong>Capa (miniatura)</strong>
+                  <br />
+                  <span className="suave pequeno">{previaCapa ? "nova capa escolhida" : capaAtual ? "capa atual" : "gerada sozinha ao salvar, ou escolha"}</span>
+                </span>
+                <div className="linha" style={{ gap: 6 }}>
+                  <button
+                    className="botao botao-pequeno"
+                    disabled={!el}
+                    title="Pause o vídeo no quadro que quer usar"
+                    onClick={async () => {
+                      if (!el) return;
+                      el.pause();
+                      const { fotografar, quadroEscuro, telaParaJpeg } = await import("../quadros");
+                      const tela = fotografar(el, 960);
+                      if (quadroEscuro(tela)) return setAvisoCapa("Esse quadro está escuro. Toque o vídeo e pause numa imagem bonita.");
+                      definirCapa(await telaParaJpeg(tela));
+                    }}
+                  >
+                    📷 Quadro atual
+                  </button>
+                  <button className="botao botao-pequeno" onClick={() => entradaCapa.current?.click()}>
+                    🖼 Enviar imagem
+                  </button>
+                </div>
+                {avisoCapa && <span className="pequeno" style={{ color: "var(--perigo)" }}>{avisoCapa}</span>}
+              </div>
+            </div>
             <p className="suave pequeno" style={{ margin: 0 }}>
               Com a trilha de fundo, a música continua tocando enquanto a pessoa dubla. Ela precisa começar junto com o
               vídeo. Ferramentas de separação de voz (como o Demucs) geram essa trilha a partir do áudio original.
@@ -671,6 +719,35 @@ export default function Editor() {
             setAvisoRosto(err instanceof Error ? err.message : String(err));
           } finally {
             setRostoOcupado(null);
+          }
+        }}
+      />
+      <input
+        ref={entradaCapa}
+        type="file"
+        accept="image/*"
+        className="oculto"
+        onChange={async (e) => {
+          const f = e.target.files?.[0];
+          e.target.value = "";
+          if (!f) return;
+          // Reduz para no máximo 960 px de largura, em JPEG (capa leve para carregar rápido).
+          const url = URL.createObjectURL(f);
+          try {
+            const img = new Image();
+            img.src = url;
+            await img.decode();
+            const escala = Math.min(1, 960 / img.width);
+            const tela = document.createElement("canvas");
+            tela.width = Math.round(img.width * escala);
+            tela.height = Math.round(img.height * escala);
+            tela.getContext("2d")!.drawImage(img, 0, 0, tela.width, tela.height);
+            const { telaParaJpeg } = await import("../quadros");
+            definirCapa(await telaParaJpeg(tela));
+          } catch {
+            setAvisoCapa("Não foi possível abrir essa imagem.");
+          } finally {
+            URL.revokeObjectURL(url);
           }
         }}
       />

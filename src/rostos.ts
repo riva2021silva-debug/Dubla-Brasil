@@ -1,6 +1,7 @@
 // Rostos dos personagens: encontra o rosto de quem fala no vídeo e recorta uma foto redonda.
 // O detector (face-api, modelo "tiny face detector", 190 KB) roda no próprio aparelho e só é
 // carregado quando o administrador usa o editor.
+import { abrirVideoOculto, fotoBoa, fotografar, quadroEscuro } from "./quadros";
 import type { Fala, Personagem } from "./tipos";
 
 const TAMANHO = 256;
@@ -34,42 +35,7 @@ function carregarDetector(): Promise<Detector> {
   return detector;
 }
 
-/** Abre o vídeo num elemento invisível, para tirar fotos de quadros específicos. */
-function abrirVideo(url: string): Promise<HTMLVideoElement> {
-  return new Promise((resolve, reject) => {
-    const v = document.createElement("video");
-    v.crossOrigin = "anonymous";
-    v.muted = true;
-    v.playsInline = true;
-    v.preload = "auto";
-    v.onloadeddata = () => resolve(v);
-    v.onerror = () => reject(new Error("Não foi possível abrir o vídeo para encontrar os rostos."));
-    v.src = url;
-  });
-}
-
-function irPara(v: HTMLVideoElement, ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    const alvo = Math.min(Math.max(0, ms / 1000), Math.max(0, v.duration - 0.05));
-    const pronto = () => {
-      v.removeEventListener("seeked", pronto);
-      resolve();
-    };
-    v.addEventListener("seeked", pronto);
-    v.currentTime = alvo;
-    setTimeout(pronto, 4000);
-  });
-}
-
-/** Foto do quadro atual do vídeo, em tamanho reduzido (mais rápido para detectar). */
-export function fotografar(v: HTMLVideoElement, larguraMax = 640): HTMLCanvasElement {
-  const escala = Math.min(1, larguraMax / Math.max(1, v.videoWidth));
-  const tela = document.createElement("canvas");
-  tela.width = Math.max(1, Math.round(v.videoWidth * escala));
-  tela.height = Math.max(1, Math.round(v.videoHeight * escala));
-  tela.getContext("2d")!.drawImage(v, 0, 0, tela.width, tela.height);
-  return tela;
-}
+export { fotografar } from "./quadros";
 
 /** Recorta um quadrado em volta do rosto (com folga para cabelo e queixo). Sem rosto, recorta o centro. */
 function recortar(tela: HTMLCanvasElement, caixa: Caixa | null): Promise<Blob> {
@@ -103,7 +69,9 @@ function melhor(caixas: Caixa[]): Caixa | null {
 /** Usa o quadro que está na tela: procura o rosto nele e recorta. */
 export async function rostoDoQuadro(v: HTMLVideoElement): Promise<{ foto: Blob; achouRosto: boolean }> {
   const tela = fotografar(v);
-  const caixa = melhor(await (await carregarDetector())(tela));
+  if (quadroEscuro(tela)) throw new Error("O quadro está escuro. Toque o vídeo um pouco e pause no rosto.");
+  const detectar = await carregarDetector().catch(() => null);
+  const caixa = detectar ? melhor(await detectar(tela)) : null;
   return { foto: await recortar(tela, caixa), achouRosto: !!caixa };
 }
 
@@ -142,8 +110,9 @@ export async function gerarRostos(
   falas: Fala[],
   aoProgredir?: (feitos: number, total: number) => void,
 ): Promise<Record<string, { foto: Blob; achouRosto: boolean }>> {
-  const detectar = await carregarDetector();
-  const v = await abrirVideo(urlVideo);
+  // Se o detector não carregar (aparelho antigo, sem internet), ainda assim cada personagem ganha uma foto.
+  const detectar = await carregarDetector().catch(() => null);
+  const v = await abrirVideoOculto(urlVideo);
   const saida: Record<string, { foto: Blob; achouRosto: boolean }> = {};
   try {
     let feitos = 0;
@@ -153,14 +122,16 @@ export async function gerarRostos(
       let reserva: HTMLCanvasElement | null = null;
       for (const f of dele) {
         for (const fracao of [0.35, 0.65]) {
-          await irPara(v, f.inicioMs + (f.fimMs - f.inicioMs) * fracao);
-          const tela = fotografar(v);
+          const tela = await fotoBoa(v, f.inicioMs + (f.fimMs - f.inicioMs) * fracao);
+          if (quadroEscuro(tela)) continue;
           reserva ??= tela;
+          if (!detectar) break;
           const caixa = melhor(await detectar(tela));
           if (!caixa) continue;
           const nota = caixa.largura * caixa.altura * caixa.confianca;
           if (!escolhido || nota > escolhido.nota) escolhido = { tela, caixa, nota };
         }
+        if (!detectar && reserva) break;
       }
       if (escolhido) saida[p.id] = { foto: await recortar(escolhido.tela, escolhido.caixa), achouRosto: true };
       else if (reserva) saida[p.id] = { foto: await recortar(reserva, null), achouRosto: false };

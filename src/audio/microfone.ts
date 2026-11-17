@@ -50,7 +50,7 @@ export class Microfone {
 
   static async abrir(
     ctx: AudioContext,
-    opcoes: { microfoneId: string; cancelamentoEco: boolean },
+    opcoes: { microfoneId: string; cancelamentoEco: boolean; reducaoRuido?: boolean },
   ): Promise<Microfone> {
     if (!navigator.mediaDevices?.getUserMedia)
       throw new Error("Este navegador não permite usar o microfone. Use o Chrome, Edge ou Firefox atualizados.");
@@ -60,7 +60,7 @@ export class Microfone {
         audio: {
           deviceId: opcoes.microfoneId ? { exact: opcoes.microfoneId } : undefined,
           echoCancellation: opcoes.cancelamentoEco,
-          noiseSuppression: false,
+          noiseSuppression: opcoes.reducaoRuido ?? true,
           autoGainControl: false,
           channelCount: 1,
         },

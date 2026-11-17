@@ -5,7 +5,7 @@ import LegendaKaraoke from "../componentes/LegendaKaraoke";
 import FormaDeOnda, { type PontoAoVivo } from "../componentes/FormaDeOnda";
 import { useConfig } from "../config";
 import { db } from "../db";
-import { buscarCena, useCarregar, useMidiasDaCena, useTempoDoVideo } from "../ganchos";
+import { buscarCena, useCarregar, useFormatoDoVideo, useMidiasDaCena, useTempoDoVideo } from "../ganchos";
 import { Microfone } from "../audio/microfone";
 import { decodificar, Mixer, type TomadaTocavel } from "../audio/mixer";
 import { compensacao, fatiarEmTomadas, FOLGA_FIM_MS, irPara, picoDe } from "../audio/sincronia";
@@ -60,6 +60,7 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
   const [erro, setErro] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const tempo = useTempoDoVideo(video);
+  const formato = useFormatoDoVideo(video);
 
   const minhas = useMemo(
     () => cena.falas.filter((f) => dub.papeis.includes(f.personagemId)).sort((a, b) => a.inicioMs - b.inicioMs),
@@ -213,7 +214,10 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
       return;
     }
     if (picoDe(g) < 0.01) setAviso("A gravação ficou quase muda. O microfone certo está selecionado?");
-    const novas = fatiarEmTomadas(g, cenaInicio, falas, compensacao(m, cfg.latenciaMs));
+    const novas = fatiarEmTomadas(g, cenaInicio, falas, compensacao(m, cfg.latenciaMs), {
+      limpar: cfg.limparVoz,
+      alinharCom: cfg.alinharVoz ? original : null,
+    });
     const atualizado: Dub = { ...dub, tomadas: { ...dub.tomadas, ...novas }, atualizadoEm: Date.now() };
     setDub(atualizado);
     setBuffers((b) => {
@@ -222,7 +226,7 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
       return c;
     });
     void db.salvarDub(atualizado);
-  }, [tempo, alvo, modo, video, dub, cfg.latenciaMs, parar]);
+  }, [tempo, alvo, modo, video, dub, cfg.latenciaMs, cfg.limparVoz, cfg.alinharVoz, original, parar]);
 
   const ouvir = async (f: Fala, comoOriginal: boolean) => {
     if (!video || !mixer.current) return;
@@ -328,7 +332,7 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
 
       {erroMidia && <p className="alerta">{erroMidia}</p>}
 
-      <div className={`palco ${modo === "gravando" ? "palco-gravando" : ""}`}>
+      <div className={`palco ${formato.vertical ? "vertical" : ""} ${modo === "gravando" ? "palco-gravando" : ""}`} style={formato.estilo}>
         {urls && (
           <video
             crossOrigin="anonymous"
@@ -354,11 +358,11 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
           </div>
         )}
         {contagem !== null && contagem <= 3 && <div className="contagem">{contagem}</div>}
-        {cfg.mostrarLegendas && (
-          <LegendaKaraoke falas={cena.falas} personagens={cena.personagens} tempoMs={tempo} papeis={dub.papeis} proxima={modo === "gravando" ? proximaFala : falaSel} />
-        )}
         {modo === "gravando" && <div className="barra-progresso" style={{ width: `${(decorrido / (janela.ate - janela.de)) * 100}%` }} />}
       </div>
+      {cfg.mostrarLegendas && (
+        <LegendaKaraoke falas={cena.falas} personagens={cena.personagens} tempoMs={tempo} papeis={dub.papeis} proxima={modo === "gravando" ? proximaFala : falaSel} />
+      )}
 
       {total > 0 && (
         <div className="pontos-falas" role="tablist" aria-label="Suas falas">

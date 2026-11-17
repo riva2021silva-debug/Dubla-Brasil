@@ -13,8 +13,16 @@ export interface Configuracoes {
   /** Volume da sua voz no resultado (0 a 2). */
   volumeVoz: number;
   mostrarLegendas: boolean;
-  /** Desligar o cancelamento de eco preserva a qualidade da voz; use fones de ouvido. */
+  /** Tira do microfone o som que sai do alto-falante (evita eco quando não há fone de ouvido). */
   cancelamentoEco: boolean;
+  /** Reduz ruídos constantes do ambiente durante a gravação. */
+  reducaoRuido: boolean;
+  /** Depois de gravar: corta graves de ruído, abafa o chiado nas pausas e equilibra o volume. */
+  limparVoz: boolean;
+  /** Depois de gravar: ajusta a voz no tempo para casar com a fala original (até 0,3 s). */
+  alinharVoz: boolean;
+  /** Versão das preferências (para ligar padrões novos em quem já usava o app). */
+  versao?: number;
 }
 
 export const PADRAO: Configuracoes = {
@@ -24,7 +32,11 @@ export const PADRAO: Configuracoes = {
   volumeOriginalNaMinhaFala: 0,
   volumeVoz: 1,
   mostrarLegendas: true,
-  cancelamentoEco: false,
+  cancelamentoEco: true,
+  reducaoRuido: true,
+  limparVoz: true,
+  alinharVoz: true,
+  versao: 2,
 };
 
 const CHAVE = "dubla-brasil:config";
@@ -33,7 +45,11 @@ const ouvintes = new Set<(c: Configuracoes) => void>();
 export function lerConfig(): Configuracoes {
   try {
     const salvo = localStorage.getItem(CHAVE);
-    return salvo ? { ...PADRAO, ...JSON.parse(salvo) } : { ...PADRAO };
+    if (!salvo) return { ...PADRAO };
+    const lido = JSON.parse(salvo) as Partial<Configuracoes>;
+    // Versão 2: eco e ruído passam a vir ligados também para quem já tinha preferências salvas.
+    if ((lido.versao ?? 1) < 2) Object.assign(lido, { cancelamentoEco: true, reducaoRuido: true, limparVoz: true, alinharVoz: true, versao: 2 });
+    return { ...PADRAO, ...lido };
   } catch {
     return { ...PADRAO };
   }

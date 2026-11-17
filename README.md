@@ -156,3 +156,18 @@ Tudo roda no aparelho, num Web Worker. Os modelos (≈77 MB + 113 MB) vêm do Hu
 jsDelivr só na primeira vez, e não vão dentro do APK. Teste: `node testes/e2e-ia.cjs http://localhost:4174/`.
 
 No estúdio, a legenda em português aparece embaixo do vídeo no estilo karaokê (preenche conforme a fala passa).
+
+## Versão 1.8: ajustes de uso
+
+- **Legenda fora da imagem:** no estúdio e no resultado, a legenda em português fica numa barra embaixo do vídeo.
+  O vídeo salvo sai sem legenda por cima.
+- **Marca d'água:** o vídeo salvo leva a logo pequena no canto de baixo, à direita.
+- **Salvar na galeria:** no celular, o vídeo vai direto para a galeria (álbum "Dubla Brasil AI"), com o plugin
+  `@capacitor-community/media`. Se a galeria recusar, abre o compartilhar.
+- **Microfone:** cancelamento de eco e redução de ruído ligados por padrão. Depois de gravar, a voz é limpa
+  (passa-altas de 80 Hz, porta de ruído suave, volume até −1 dB) e alinhada com a fala original pelo desenho do
+  volume (até ±0,3 s, só quando a semelhança é clara). Tudo pode ser desligado em Configurações.
+- **Capa:** no editor, escolha a capa pelo quadro atual do vídeo ou envie uma imagem.
+- **Fotos sem quadro preto:** antes de fotografar, o app espera o quadro ser desenhado e descarta quadros escuros
+  (problema do Android). Se o detector de rostos não carregar, cada personagem ainda ganha uma foto.
+- **Vídeos 9:16:** o player se ajusta ao formato do vídeo (em pé ou deitado). Teste: `node testes/e2e-melhorias.cjs`.

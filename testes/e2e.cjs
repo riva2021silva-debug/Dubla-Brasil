@@ -79,7 +79,7 @@ fs.mkdirSync(SAIDA, { recursive: true });
   await p.getByRole("button", { name: /Pausar/ }).click();
 
   const download = p.waitForEvent("download", { timeout: 60000 });
-  await p.getByRole("button", { name: /Baixar vídeo/ }).click();
+  await p.getByRole("button", { name: /Salvar na galeria/ }).click();
   await p.waitForTimeout(1500);
   await foto("7-exportando");
   const d = await download;

@@ -94,7 +94,25 @@ export default function Configuracoes() {
         <label className="linha">
           <input type="checkbox" checked={cfg.cancelamentoEco} onChange={(e) => salvar({ cancelamentoEco: e.target.checked })} />
           <span>
-            Cancelamento de eco <span className="suave pequeno">(ligue só se não tiver fones de ouvido; a voz fica com qualidade menor)</span>
+            Cancelamento de eco <span className="suave pequeno">(tira do microfone o som do vídeo que sai pelo alto-falante)</span>
+          </span>
+        </label>
+        <label className="linha">
+          <input type="checkbox" checked={cfg.reducaoRuido} onChange={(e) => salvar({ reducaoRuido: e.target.checked })} />
+          <span>
+            Redução de ruído <span className="suave pequeno">(ventilador, ar-condicionado, barulho de rua)</span>
+          </span>
+        </label>
+        <label className="linha">
+          <input type="checkbox" checked={cfg.limparVoz} onChange={(e) => salvar({ limparVoz: e.target.checked })} />
+          <span>
+            Limpar a voz depois de gravar <span className="suave pequeno">(corta graves de ruído, abafa o chiado nas pausas e equilibra o volume)</span>
+          </span>
+        </label>
+        <label className="linha">
+          <input type="checkbox" checked={cfg.alinharVoz} onChange={(e) => salvar({ alinharVoz: e.target.checked })} />
+          <span>
+            Alinhar a voz com a fala original <span className="suave pequeno">(corrige até 0,3 s de adiantado ou atrasado)</span>
           </span>
         </label>
       </section>

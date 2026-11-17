@@ -341,12 +341,18 @@ kbd { background: var(--superficie-2); border: 1px solid var(--borda); border-bo
 /* ===== Separar falas com IA ===== */
 .cartao-ia { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 12px; border: 1px dashed var(--roxo-claro); background: linear-gradient(135deg, rgb(124 58 237 / 0.18), rgb(20 83 45 / 0.12)); }
 
-/* ===== Legenda karaokê ===== */
-.legenda-karaoke { position: absolute; left: 50%; bottom: 6%; transform: translateX(-50%); width: max-content; max-width: 92%; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 16px; border-radius: 12px; background: rgb(0 0 0 / 0.72); text-align: center; pointer-events: none; }
-.legenda-karaoke .quem { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; }
+/* ===== Legenda karaokê (embaixo do vídeo, sem cobrir a imagem) ===== */
+.legenda-karaoke { display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 64px; justify-content: center; padding: 8px 16px; border-radius: 12px; background: var(--superficie); border: 1px solid var(--borda); text-align: center; }
+.legenda-karaoke.vazia { border-color: transparent; background: transparent; }
 .texto-karaoke { font-weight: 800; font-size: clamp(1rem, 3.6vw, 1.55rem); line-height: 1.25; text-wrap: balance;
   background: linear-gradient(90deg, var(--amarelo) var(--progresso, 0%), #ffffff var(--progresso, 0%)); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .legenda-karaoke:not(.minha) .texto-karaoke { background: linear-gradient(90deg, #c4b5fd var(--progresso, 0%), #ffffff var(--progresso, 0%)); -webkit-background-clip: text; background-clip: text; }
 .legenda-karaoke.minha { border: 2px solid var(--amarelo); }
 .legenda-karaoke.em-breve { opacity: 0.85; }
 .legenda-karaoke.em-breve .texto-karaoke { background: none; color: #fff; }
+.capa-editor { width: 140px; flex: none; border-radius: 10px; font-size: 1.8rem; }
+
+/* ===== Vídeos em pé (9:16) ===== */
+.palco video { object-fit: contain; }
+.palco.vertical { width: auto; max-width: 100%; height: min(62dvh, 640px); margin-inline: auto; }
+.palco.vertical video { width: 100%; height: 100%; }

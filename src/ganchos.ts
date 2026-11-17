@@ -95,3 +95,22 @@ export function useUrlDaMidia(fonte: FonteMidia | null | undefined): string | nu
   }, [fonte]);
   return url;
 }
+
+/**
+ * Formato do vídeo (largura/altura), para o player se ajustar a vídeos deitados (16:9) e em pé (9:16).
+ * Devolve as props para o contêiner do vídeo.
+ */
+export function useFormatoDoVideo(video: HTMLVideoElement | null) {
+  const [proporcao, setProporcao] = useState(16 / 9);
+  useEffect(() => {
+    if (!video) return;
+    const ler = () => video.videoWidth && video.videoHeight && setProporcao(video.videoWidth / video.videoHeight);
+    ler();
+    video.addEventListener("loadedmetadata", ler);
+    return () => video.removeEventListener("loadedmetadata", ler);
+  }, [video]);
+  return {
+    vertical: proporcao < 1,
+    estilo: { aspectRatio: String(proporcao), "--proporcao": String(proporcao) } as React.CSSProperties,
+  };
+}

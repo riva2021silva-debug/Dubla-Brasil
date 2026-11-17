@@ -1,5 +1,6 @@
 // Utilitários para controlar o vídeo e transformar gravações em tomadas alinhadas à cena.
 import type { Fala, Tomada } from "../tipos";
+import { estimarAtrasoMs, limparVoz } from "./limpeza";
 import { paraWav, type Gravacao } from "./microfone";
 import type { Mixer } from "./mixer";
 
@@ -29,6 +30,7 @@ export function fatiarEmTomadas(
   cenaDaPrimeiraAmostra: number,
   falas: Fala[],
   compensacaoMs: number,
+  opcoes: { limpar?: boolean; alinharCom?: AudioBuffer | null } = {},
 ): Record<string, Tomada> {
   const inicioReal = cenaDaPrimeiraAmostra - compensacaoMs;
   const saida: Record<string, Tomada> = {};
@@ -38,10 +40,14 @@ export function fatiarEmTomadas(
     const i = Math.max(0, Math.round(((de - inicioReal) / 1000) * g.taxa));
     const z = Math.min(g.amostras.length, Math.round(((ate - inicioReal) / 1000) * g.taxa));
     if (z - i < g.taxa * 0.1) continue;
-    const amostras = g.amostras.slice(i, z);
+    const bruta = g.amostras.slice(i, z);
+    const amostras = opcoes.limpar ? limparVoz(bruta, g.taxa) : bruta;
+    let inicioMs = inicioReal + (i / g.taxa) * 1000;
+    // Alinha com a fala original: se a voz entrou atrasada (ou adiantada), puxa para o tempo certo.
+    if (opcoes.alinharCom) inicioMs -= estimarAtrasoMs(opcoes.alinharCom, inicioMs, amostras, g.taxa);
     saida[f.id] = {
       audio: paraWav(amostras, g.taxa),
-      inicioMs: inicioReal + (i / g.taxa) * 1000,
+      inicioMs,
       duracaoMs: (amostras.length / g.taxa) * 1000,
       gravadaEm: Date.now(),
     };

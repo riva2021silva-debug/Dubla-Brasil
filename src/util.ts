@@ -109,42 +109,54 @@ function blobParaBase64(blob: Blob): Promise<string> {
 
 export const noAplicativo = () => Capacitor.isNativePlatform();
 
-/** Tira uma foto (JPEG) do vídeo no instante indicado, para usar como capa da cena. */
-export function gerarCapa(urlVideo: string, ms: number, largura = 640): Promise<Blob | null> {
-  return new Promise((resolve) => {
-    const v = document.createElement("video");
-    v.crossOrigin = "anonymous";
-    v.muted = true;
-    v.playsInline = true;
-    v.preload = "auto";
-    const desistir = setTimeout(() => resolve(null), 8000);
-    v.onloadeddata = () => {
-      v.currentTime = Math.min(Math.max(0, ms / 1000), Math.max(0, v.duration - 0.1));
-    };
-    v.onseeked = () => {
-      try {
-        const alt = Math.round((v.videoHeight / Math.max(1, v.videoWidth)) * largura) || Math.round(largura * 0.5625);
-        const tela = document.createElement("canvas");
-        tela.width = largura;
-        tela.height = alt;
-        tela.getContext("2d")!.drawImage(v, 0, 0, largura, alt);
-        tela.toBlob(
-          (b) => {
-            clearTimeout(desistir);
-            resolve(b);
-          },
-          "image/jpeg",
-          0.82,
-        );
-      } catch {
-        clearTimeout(desistir);
-        resolve(null);
+/** Tira uma foto (JPEG) do vídeo no instante indicado, para usar como capa da cena (sem quadro preto). */
+export async function gerarCapa(urlVideo: string, ms: number, largura = 640): Promise<Blob | null> {
+  try {
+    const { abrirVideoOculto, fotoBoa, telaParaJpeg } = await import("./quadros");
+    const v = await abrirVideoOculto(urlVideo);
+    try {
+      return await telaParaJpeg(await fotoBoa(v, ms, largura), 0.82);
+    } finally {
+      v.removeAttribute("src");
+      v.load();
+    }
+  } catch {
+    return null;
+  }
+}
+
+const ALBUM = "Dubla Brasil AI";
+
+/**
+ * Salva um vídeo direto na galeria do celular (álbum "Dubla Brasil AI").
+ * No navegador do computador, faz o download normal. Devolve onde ficou salvo.
+ */
+export async function salvarVideoNaGaleria(blob: Blob, nome: string): Promise<"galeria" | "download" | "compartilhar"> {
+  if (!Capacitor.isNativePlatform()) {
+    await baixarArquivo(blob, nome);
+    return "download";
+  }
+  const { Media } = await import("@capacitor-community/media");
+  const salvo = await Filesystem.writeFile({ path: nome, data: await blobParaBase64(blob), directory: Directory.Cache });
+  const semExtensao = nome.replace(/\.[^.]+$/, "");
+  try {
+    if (Capacitor.getPlatform() === "android") {
+      const { path } = await Media.getAlbumsPath();
+      const identificador = `${path}/${ALBUM}`;
+      const { albums } = await Media.getAlbums();
+      if (!albums.some((a) => a.identifier === identificador || a.name === ALBUM)) {
+        await Media.createAlbum({ name: ALBUM }).catch(() => {});
       }
-    };
-    v.onerror = () => {
-      clearTimeout(desistir);
-      resolve(null);
-    };
-    v.src = urlVideo;
-  });
+      await Media.saveVideo({ path: salvo.uri, albumIdentifier: identificador, fileName: semExtensao });
+    } else {
+      await Media.saveVideo({ path: salvo.uri, fileName: semExtensao });
+    }
+    return "galeria";
+  } catch {
+    // Se a galeria recusar (permissão negada, por exemplo), abre o compartilhar para a pessoa escolher onde salvar.
+    await Share.share({ title: nome, files: [salvo.uri], dialogTitle: "Salvar ou compartilhar" });
+    return "compartilhar";
+  } finally {
+    Filesystem.deleteFile({ path: nome, directory: Directory.Cache }).catch(() => {});
+  }
 }

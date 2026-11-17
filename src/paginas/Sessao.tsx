@@ -2,15 +2,15 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import PedirApelido from "../componentes/PedirApelido";
 import { meuApelido, publicar } from "../galeria";
-import Legenda, { falaNoTempo } from "../componentes/Legenda";
+import LegendaKaraoke from "../componentes/LegendaKaraoke";
 import LinhaDoTempo from "../componentes/LinhaDoTempo";
 import { useConfig } from "../config";
 import { db } from "../db";
-import { buscarCena, useCarregar, useMidiasDaCena, useTempoDoVideo } from "../ganchos";
+import { buscarCena, useCarregar, useFormatoDoVideo, useMidiasDaCena, useTempoDoVideo } from "../ganchos";
 import { decodificar, Mixer } from "../audio/mixer";
 import { irPara } from "../audio/sincronia";
 import type { Cena, Dub } from "../tipos";
-import { baixarArquivo, formatarTempo, gerarCapa, nomeArquivo } from "../util";
+import { formatarTempo, gerarCapa, nomeArquivo, salvarVideoNaGaleria } from "../util";
 
 export default function Sessao() {
   const { dubId = "" } = useParams();
@@ -49,10 +49,12 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
   const [erro, setErro] = useState<string | null>(null);
   const cancelar = useRef<() => void>(() => {});
   const [acao, setAcao] = useState<"baixar" | "publicar" | null>(null);
+  const [salvo, setSalvo] = useState<string | null>(null);
   const [pedirApelido, setPedirApelido] = useState(false);
   const [etapaPublicar, setEtapaPublicar] = useState<string | null>(null);
   const navegar = useNavigate();
   const tempo = useTempoDoVideo(video);
+  const formato = useFormatoDoVideo(video);
 
   const minhas = useMemo(() => cena.falas.filter((f) => dub.papeis.includes(f.personagemId)), [cena, dub.papeis]);
   const faltando = minhas.filter((f) => !dub.tomadas[f.id]).length;
@@ -125,6 +127,9 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
     m.saida.connect(destino);
     const fluxo = new MediaStream([...tela.captureStream(30).getVideoTracks(), ...destino.stream.getAudioTracks()]);
     const gravador = new MediaRecorder(fluxo, { mimeType: formato.mime, videoBitsPerSecond: bitrate, audioBitsPerSecond: 128_000 });
+    const logo = new Image();
+    logo.src = "marca/logo-pequeno.webp";
+    await logo.decode().catch(() => {});
     const partes: Blob[] = [];
     gravador.ondataavailable = (e) => e.data.size && partes.push(e.data);
 
@@ -133,24 +138,15 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
     const desenhar = () => {
       g.drawImage(video, 0, 0, largura, altura);
       const ms = video.currentTime * 1000;
-      if (cfg.mostrarLegendas) {
-        const f = falaNoTempo(cena.falas, ms);
-        if (f?.texto.trim()) {
-          const tam = Math.round(altura * 0.045);
-          g.font = `800 ${tam}px Inter, system-ui, sans-serif`;
-          g.textAlign = "center";
-          const texto = f.texto;
-          const w = Math.min(largura * 0.9, g.measureText(texto).width + tam);
-          g.fillStyle = "rgba(0,0,0,0.72)";
-          g.fillRect((largura - w) / 2, altura * 0.86 - tam * 1.1, w, tam * 1.5);
-          g.fillStyle = "#fff";
-          g.fillText(texto, largura / 2, altura * 0.86, largura * 0.88);
-        }
+      // Marca d'água: a logo pequena no canto de baixo, à direita (sem legenda por cima da imagem).
+      if (logo.complete && logo.naturalWidth) {
+        const lw = Math.round(Math.min(largura, altura) * 0.2);
+        const lh = Math.round((lw * logo.naturalHeight) / logo.naturalWidth);
+        const m = Math.round(Math.min(largura, altura) * 0.03);
+        g.globalAlpha = 0.85;
+        g.drawImage(logo, largura - lw - m, altura - lh - m, lw, lh);
+        g.globalAlpha = 1;
       }
-      g.font = `700 ${Math.round(altura * 0.028)}px Inter, system-ui, sans-serif`;
-      g.textAlign = "right";
-      g.fillStyle = "rgba(250,204,21,0.9)";
-      g.fillText("Dubla Brasil AI", largura - 16, Math.round(altura * 0.05));
       setExportando(Math.min(1, ms / Math.max(1, cena.duracaoMs)));
       raf = requestAnimationFrame(desenhar);
     };
@@ -185,7 +181,10 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
     setAcao("baixar");
     try {
       const v = await gerarVideo(1280, 5_000_000);
-      if (v) await baixarArquivo(v.blob, `${nomeArquivo(dub.nome)}.${v.ext}`);
+      if (v) {
+        const onde = await salvarVideoNaGaleria(v.blob, `${nomeArquivo(dub.nome)}.${v.ext}`);
+        setSalvo(onde === "galeria" ? "✅ Vídeo salvo na galeria do celular (álbum Dubla Brasil AI)." : onde === "download" ? "✅ Vídeo baixado." : null);
+      }
     } catch (e) {
       setErro(`Não foi possível salvar o vídeo: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
@@ -251,8 +250,9 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
       )}
       {erroMidia && <p className="alerta">{erroMidia}</p>}
       {erro && <p className="alerta">{erro}</p>}
+      {salvo && <p className="info">{salvo}</p>}
 
-      <div className="palco">
+      <div className={`palco ${formato.vertical ? "vertical" : ""}`} style={formato.estilo}>
         {urls && (
           <video
             crossOrigin="anonymous"
@@ -265,8 +265,8 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
             onClick={alternar}
           />
         )}
-        {cfg.mostrarLegendas && <Legenda falas={cena.falas} personagens={cena.personagens} tempoMs={tempo} />}
       </div>
+      {cfg.mostrarLegendas && <LegendaKaraoke falas={cena.falas} personagens={cena.personagens} tempoMs={tempo} papeis={dub.papeis} />}
 
       <LinhaDoTempo
         duracaoMs={cena.duracaoMs}
@@ -288,7 +288,7 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
               🌎 Publicar na galeria
             </button>
             <button className="botao botao-grande" onClick={() => void baixar()} disabled={!pronto || !!acao}>
-              ⬇ Baixar vídeo
+              ⬇ Salvar na galeria
             </button>
           </>
         ) : (

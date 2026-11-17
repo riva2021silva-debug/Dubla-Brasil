@@ -5,7 +5,7 @@ import Avatar from "../componentes/Avatar";
 import { Capa } from "../componentes/CartaoCena";
 import TesteMicrofone from "../componentes/TesteMicrofone";
 import { db } from "../db";
-import { buscarCena, dubsDaCena, useCarregar, useMidiasDaCena } from "../ganchos";
+import { buscarCena, dubsDaCena, useCarregar, useFormatoDoVideo, useMidiasDaCena } from "../ganchos";
 import { estaPublicada, type Cena, type Dub } from "../tipos";
 import { dataCurta, formatarTempo, novoId } from "../util";
 
@@ -33,6 +33,8 @@ function Pronto({ c }: { c: Cena }) {
   // Como no modo solo: começa com todos os personagens; toque para tirar quem você não quer dublar.
   const [papeis, setPapeis] = useState<string[]>(() => c.personagens.map((p) => p.id));
   const [verCena, setVerCena] = useState(false);
+  const [previa, setPrevia] = useState<HTMLVideoElement | null>(null);
+  const formato = useFormatoDoVideo(previa);
   const admin = useAdmin();
   const navegar = useNavigate();
 
@@ -118,7 +120,9 @@ function Pronto({ c }: { c: Cena }) {
       </div>
 
       {verCena ? (
-        <div className="palco">{urls && <video crossOrigin="anonymous" src={urls.video} controls autoPlay playsInline preload="metadata" />}</div>
+        <div className={`palco ${formato.vertical ? "vertical" : ""}`} style={formato.estilo}>
+          {urls && <video ref={setPrevia} crossOrigin="anonymous" src={urls.video} controls autoPlay playsInline preload="metadata" />}
+        </div>
       ) : (
         <button className="cartao previa-cena" onClick={() => setVerCena(true)} aria-label="Assistir à cena original">
           <Capa cena={c} />

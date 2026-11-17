@@ -19,7 +19,13 @@ export default function LegendaKaraoke({
 }) {
   const agora = falas.find((f) => tempoMs >= f.inicioMs && tempoMs < f.fimMs);
   const f = agora ?? (proxima && tempoMs < proxima.inicioMs && proxima.inicioMs - tempoMs < 3000 ? proxima : null);
-  if (!f || !f.texto.trim()) return null;
+  if (!f || !f.texto.trim())
+    return (
+      <div className="legenda-karaoke vazia" aria-hidden>
+        <span className="quem">&nbsp;</span>
+        <span className="texto-karaoke">&nbsp;</span>
+      </div>
+    );
   const p = personagens.find((x) => x.id === f.personagemId);
   const minha = papeis.includes(f.personagemId);
   const progresso = agora ? Math.min(1, (tempoMs - f.inicioMs) / Math.max(1, f.fimMs - f.inicioMs)) : 0;
