@@ -1,8 +1,11 @@
 import { Link } from "react-router-dom";
 import CartaoCena from "../componentes/CartaoCena";
-import { CENAS_EXEMPLO } from "../exemplos";
+import { todasAsCenas, useCarregar } from "../ganchos";
 
 export default function Inicio() {
+  const cenas = useCarregar(() => todasAsCenas(), []);
+  const novas = (cenas.dado ?? []).slice(0, 6);
+
   return (
     <>
       <section className="heroi">
@@ -21,28 +24,46 @@ export default function Inicio() {
             <Link className="botao botao-primario botao-grande" to="/cenas">
               Escolher uma cena →
             </Link>
-            <Link className="botao botao-grande" to="/editor">
-              Criar minha cena
+            <Link className="botao botao-grande" to="/meus-dubs">
+              Meus dubs
             </Link>
           </div>
         </div>
       </section>
 
-      {CENAS_EXEMPLO[0] && (
-        <section style={{ marginBottom: 24 }}>
-          <h2>Comece por aqui</h2>
-          <div className="grade">
-            <CartaoCena cena={CENAS_EXEMPLO[0]} />
+      <section style={{ marginBottom: 24 }}>
+        <div className="linha entre" style={{ marginBottom: 12 }}>
+          <h2 style={{ margin: 0 }}>Cenas novas</h2>
+          {novas.length > 0 && (
+            <Link to="/cenas" className="pequeno">
+              Ver todas →
+            </Link>
+          )}
+        </div>
+        {cenas.carregando ? (
+          <p className="suave">Carregando…</p>
+        ) : novas.length === 0 ? (
+          <div className="cartao vazio">
+            <p style={{ marginTop: 0 }}>Nenhuma cena disponível ainda.</p>
+            <p className="pequeno" style={{ margin: 0 }}>
+              As cenas são adicionadas pelo administrador.
+            </p>
           </div>
-        </section>
-      )}
+        ) : (
+          <div className="grade">
+            {novas.map((c) => (
+              <CartaoCena key={c.id} cena={c} />
+            ))}
+          </div>
+        )}
+      </section>
 
       <section className="cartao">
         <h2>Como funciona</h2>
         <div className="passos">
           <div className="passo">
             <h3>Escolha a cena</h3>
-            <p className="suave">Use uma cena de exemplo ou crie a sua com um vídeo e as legendas.</p>
+            <p className="suave">Navegue pelas cenas e escolha a que você quer dublar.</p>
           </div>
           <div className="passo">
             <h3>Pegue um papel</h3>
@@ -50,14 +71,14 @@ export default function Inicio() {
           </div>
           <div className="passo">
             <h3>Grave fala por fala</h3>
-            <p className="suave">O vídeo toca, a contagem aparece e você fala na hora certa. Regrave quantas vezes quiser.</p>
+            <p className="suave">Ouça o original, grave na contagem e ouça a sua tomada. Regrave quantas vezes quiser.</p>
           </div>
           <div className="passo">
             <h3>Assista e baixe</h3>
-            <p className="suave">Veja a sua dublagem sobre as imagens e baixe o vídeo pronto para compartilhar.</p>
+            <p className="suave">Veja a sua dublagem sobre as imagens e compartilhe o vídeo pronto.</p>
           </div>
         </div>
-        <p className="info pequeno" style={{ marginTop: 16 }}>
+        <p className="info pequeno" style={{ marginTop: 16, marginBottom: 0 }}>
           🎧 Use fones de ouvido: assim o microfone grava só a sua voz, e não o som do vídeo.
         </p>
       </section>

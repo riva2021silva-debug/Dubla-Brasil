@@ -24,7 +24,7 @@ export async function exportarPacote(cena: Cena): Promise<Blob> {
   const meta = {
     formato: "dubla-brasil",
     versao: VERSAO_PACOTE,
-    cena: { ...cena, video: nomeVideo, fundo: nomeFundo, exemplo: undefined },
+    cena: { ...cena, video: nomeVideo, fundo: nomeFundo, capa: undefined, publicada: undefined },
   };
   const arquivos: Record<string, Uint8Array> = {
     "cena.json": new TextEncoder().encode(JSON.stringify(meta, null, 2)),
@@ -78,6 +78,8 @@ export async function importarPacote(arquivo: File): Promise<Cena> {
     falas: Array.isArray(c.falas) ? c.falas : [],
     criadaEm: agora,
     atualizadaEm: agora,
+    publicada: false,
+    capa: null,
   };
   await db.salvarCena(cena);
   return cena;

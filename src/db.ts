@@ -73,7 +73,7 @@ export async function blobDaMidia(f: FonteMidia): Promise<Blob> {
 }
 
 export async function excluirCenaCompleta(c: Cena) {
-  for (const f of [c.video, c.fundo]) if (f?.tipo === "blob") await db.excluirMidia(f.chave);
+  for (const f of [c.video, c.fundo, c.capa]) if (f?.tipo === "blob") await db.excluirMidia(f.chave);
   const dubs = await db.listarDubs();
   for (const d of dubs) if (d.cenaId === c.id) await db.excluirDub(d.id);
   await db.excluirCena(c.id);

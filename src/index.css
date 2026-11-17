@@ -216,3 +216,17 @@ kbd { background: var(--superficie-2); border: 1px solid var(--borda); border-bo
 .botao-texto.destaque-nav { color: var(--amarelo); }
 .mais-opcoes summary { cursor: pointer; font-weight: 800; }
 @media (prefers-reduced-motion: reduce) { .botao-gravar-grande.gravando, .aviso-gravando { animation: none; } }
+
+/* ===== Administração ===== */
+.linha-admin { display: grid; grid-template-columns: 120px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 10px; border-radius: 12px; }
+.linha-admin + .linha-admin { border-top: 1px solid var(--borda); border-radius: 0; }
+.linha-admin .miniatura .capa { border-radius: 10px; font-size: 1.6rem; }
+.titulo-admin { font-size: 1.05rem; overflow-wrap: anywhere; }
+.acoes-admin { justify-content: flex-end; gap: 6px; }
+.etiqueta-ok { color: var(--verde); border-color: var(--verde); }
+.interruptor { gap: 8px; font-weight: 700; cursor: pointer; }
+.interruptor input { width: 20px; height: 20px; accent-color: var(--verde); }
+@media (max-width: 760px) {
+  .linha-admin { grid-template-columns: 96px minmax(0, 1fr); }
+  .acoes-admin { grid-column: 1 / -1; justify-content: flex-start; }
+}

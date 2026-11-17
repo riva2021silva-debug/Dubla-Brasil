@@ -107,3 +107,42 @@ function blobParaBase64(blob: Blob): Promise<string> {
 }
 
 export const noAplicativo = () => Capacitor.isNativePlatform();
+
+/** Tira uma foto (JPEG) do vídeo no instante indicado, para usar como capa da cena. */
+export function gerarCapa(urlVideo: string, ms: number, largura = 640): Promise<Blob | null> {
+  return new Promise((resolve) => {
+    const v = document.createElement("video");
+    v.muted = true;
+    v.playsInline = true;
+    v.preload = "auto";
+    const desistir = setTimeout(() => resolve(null), 8000);
+    v.onloadeddata = () => {
+      v.currentTime = Math.min(Math.max(0, ms / 1000), Math.max(0, v.duration - 0.1));
+    };
+    v.onseeked = () => {
+      try {
+        const alt = Math.round((v.videoHeight / Math.max(1, v.videoWidth)) * largura) || Math.round(largura * 0.5625);
+        const tela = document.createElement("canvas");
+        tela.width = largura;
+        tela.height = alt;
+        tela.getContext("2d")!.drawImage(v, 0, 0, largura, alt);
+        tela.toBlob(
+          (b) => {
+            clearTimeout(desistir);
+            resolve(b);
+          },
+          "image/jpeg",
+          0.82,
+        );
+      } catch {
+        clearTimeout(desistir);
+        resolve(null);
+      }
+    };
+    v.onerror = () => {
+      clearTimeout(desistir);
+      resolve(null);
+    };
+    v.src = urlVideo;
+  });
+}

@@ -5,6 +5,7 @@ const fs = require("fs");
 const path = require("path");
 const BASE = process.argv[2] || "http://localhost:4173/";
 const SAIDA = path.join(__dirname, "saida");
+const { entrarAdmin, criarCenaTeste } = require("./auxiliar.cjs");
 fs.mkdirSync(SAIDA, { recursive: true });
 
 (async () => {
@@ -20,6 +21,16 @@ fs.mkdirSync(SAIDA, { recursive: true });
 
   await p.goto(BASE);
   await p.getByRole("heading", { name: /Sua voz no lugar/ }).waitFor();
+  await p.getByText("Nenhuma cena disponível ainda.").waitFor();
+  await foto("0-inicio-vazio");
+
+  // O administrador cadastra e publica a cena.
+  await entrarAdmin(p, BASE);
+  await criarCenaTeste(p);
+  await foto("0b-admin");
+  await p.goto(BASE);
+  await p.getByRole("heading", { name: /Sua voz no lugar/ }).waitFor();
+  await p.locator(".cartao-cena img").first().waitFor();
   await foto("1-inicio");
 
   await p.getByRole("link", { name: /Escolher uma cena/ }).click();

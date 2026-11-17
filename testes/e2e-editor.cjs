@@ -1,10 +1,11 @@
-// Teste do editor: cria uma cena com vídeo + fundo + .srt, salva, exporta e reimporta o pacote.
+// Teste do administrador: PIN, cadastrar, ocultar/publicar, editar, exportar, excluir e reimportar.
 const { chromium } = require("playwright");
 const fs = require("fs");
 const path = require("path");
+const { entrarAdmin, criarCenaTeste } = require("./auxiliar.cjs");
 const BASE = process.argv[2] || "http://localhost:4173/";
 const SAIDA = path.join(__dirname, "saida");
-const MIDIA = path.join(__dirname, "..", "public", "exemplos", "capivara-tucano");
+fs.mkdirSync(SAIDA, { recursive: true });
 
 (async () => {
   const navegador = await chromium.launch();
@@ -13,53 +14,64 @@ const MIDIA = path.join(__dirname, "..", "public", "exemplos", "capivara-tucano"
   const erros = [];
   p.on("pageerror", (e) => erros.push(String(e)));
   p.on("console", (m) => m.type() === "error" && erros.push(m.text()));
-  p.on("dialog", (d) => { erros.push("diálogo inesperado: " + d.message()); d.dismiss(); });
 
-  await p.goto(BASE + "#/editor");
-  await p.getByRole("heading", { name: "Criar cena" }).waitFor();
+  // Sem PIN, as rotas de edição voltam para a tela de PIN.
+  await p.goto(BASE + "#/admin/cena/nova");
+  await p.getByRole("button", { name: "Criar PIN e entrar" }).waitFor();
+  console.log("Rota de edição protegida: ok");
+
+  await entrarAdmin(p, BASE);
+  await criarCenaTeste(p, "Teste do admin");
+  await p.screenshot({ path: path.join(SAIDA, "9-admin.png") });
+
+  // Ocultar: some da lista pública.
+  await p.getByRole("button", { name: "Ocultar" }).click();
+  await p.getByText("Oculta", { exact: true }).first().waitFor();
+  await p.goto(BASE + "#/cenas");
+  await p.getByText("Nenhuma cena disponível ainda.").waitFor();
+  console.log("Cena oculta não aparece para usuários: ok");
+  await p.goto(BASE + "#/admin");
+  await p.getByRole("button", { name: "Publicar" }).click();
+  await p.goto(BASE + "#/cenas");
+  await p.getByText("Teste do admin").waitFor();
+  console.log("Cena publicada aparece para usuários: ok");
+
+  // Editar o título.
+  await p.goto(BASE + "#/admin");
+  await p.getByRole("link", { name: /Editar/ }).click();
+  await p.getByLabel("Título").fill("Teste do admin (editado)");
   await p.getByRole("button", { name: /Salvar cena/ }).click();
-  await p.getByText("Escolha o vídeo da cena.").waitFor();
+  await p.getByText("Teste do admin (editado)").waitFor();
+  console.log("Edição salva: ok");
 
-  const [v] = await Promise.all([p.waitForEvent("filechooser"), p.getByRole("button", { name: /Escolher o vídeo da cena/ }).click()]);
-  await v.setFiles(path.join(MIDIA, "video.mp4"));
-  await p.locator(".palco video").waitFor();
-  const [f] = await Promise.all([p.waitForEvent("filechooser"), p.locator("section", { hasText: "Arquivos" }).getByRole("button", { name: "Escolher" }).click()]);
-  await f.setFiles(path.join(MIDIA, "fundo.m4a"));
-  await p.getByText("carregada").waitFor();
-  const [s] = await Promise.all([p.waitForEvent("filechooser"), p.getByRole("button", { name: /Importar legendas/ }).click()]);
-  await s.setFiles(path.join(__dirname, "legendas-exemplo.srt"));
-  await p.getByRole("heading", { name: "Falas (2)" }).waitFor();
-
-  await p.getByLabel("Título").fill("Teste do editor");
-  const nomes = p.getByLabel("Nome do personagem");
-  await nomes.nth(0).fill("Capivara");
-  await nomes.nth(1).fill("Tucano");
-  await p.getByLabel("Personagem").nth(1).selectOption({ label: "Tucano" });
-  await p.screenshot({ path: path.join(SAIDA, "9-editor.png") });
-  await p.getByRole("button", { name: /Salvar cena/ }).click();
-  await p.getByRole("heading", { name: "Teste do editor" }).waitFor();
-  await p.getByText("Quem você vai dublar?").waitFor();
-  console.log("Cena salva e aberta.");
-
+  // Exportar, excluir e reimportar.
   const down = p.waitForEvent("download");
-  await p.getByRole("button", { name: /Exportar pacote/ }).click();
+  await p.getByTitle("Baixar a cena como pacote .dubla").click();
   const d = await down;
   const pacote = path.join(SAIDA, d.suggestedFilename());
   await d.saveAs(pacote);
   console.log("Pacote exportado:", d.suggestedFilename(), fs.statSync(pacote).size, "bytes");
-
-  p.removeAllListeners("dialog");
-  p.on("dialog", (dlg) => dlg.accept());
-  await p.getByRole("button", { name: "Excluir cena" }).click();
-  await p.getByRole("heading", { name: "Cenas" }).waitFor();
-
+  await p.getByRole("button", { name: /Excluir/ }).click();
+  await p.getByRole("button", { name: "Confirmar exclusão" }).click();
+  await p.getByText("Nenhuma cena cadastrada.").waitFor();
   const [imp] = await Promise.all([p.waitForEvent("filechooser"), p.getByRole("button", { name: /Importar pacote/ }).click()]);
   await imp.setFiles(pacote);
-  await p.getByRole("heading", { name: "Teste do editor" }).waitFor();
-  await p.waitForFunction(() => document.querySelector("video")?.readyState >= 1);
-  const falas = await p.getByText(/^\d+ falas$/).allInnerTexts();
-  console.log("Reimportado com sucesso; falas por papel:", falas.join(", "));
+  await p.getByRole("heading", { name: "Editar cena" }).waitFor();
+  await p.getByRole("heading", { name: "Falas (6)" }).waitFor();
+  console.log("Reimportado no editor com 6 falas: ok");
+
+  // Sair do modo administrador.
+  await p.goto(BASE + "#/admin");
+  await p.getByRole("button", { name: /Sair do modo administrador/ }).click();
+  await p.getByRole("button", { name: "Entrar" }).waitFor();
+  await p.locator("#pin").fill("0000");
+  await p.getByRole("button", { name: "Entrar" }).click();
+  await p.getByText("PIN incorreto.").waitFor();
+  console.log("PIN errado recusado: ok");
 
   console.log(erros.length ? "ERROS:\n" + erros.join("\n") : "Sem erros no console.");
   await navegador.close();
-})().catch((e) => { console.error("FALHOU:", e); process.exit(1); });
+})().catch((e) => {
+  console.error("FALHOU:", e);
+  process.exit(1);
+});

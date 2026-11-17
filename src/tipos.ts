@@ -33,9 +33,13 @@ export interface Cena {
   falas: Fala[];
   criadaEm: number;
   atualizadaEm: number;
-  /** Cenas de exemplo que vêm com o app não podem ser editadas nem excluídas. */
-  exemplo?: boolean;
+  /** Só cenas publicadas aparecem para quem usa o app. Ausente = publicada (cenas antigas). */
+  publicada?: boolean;
+  /** Imagem de capa gerada a partir do vídeo. */
+  capa?: FonteMidia | null;
 }
+
+export const estaPublicada = (c: Cena) => c.publicada !== false;
 
 export interface Tomada {
   /** Áudio WAV gravado pelo microfone. */

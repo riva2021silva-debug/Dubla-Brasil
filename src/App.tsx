@@ -7,8 +7,11 @@ import Sessao from "./paginas/Sessao";
 import MeusDubs from "./paginas/MeusDubs";
 import Editor from "./paginas/Editor";
 import Configuracoes from "./paginas/Configuracoes";
+import Admin, { SoAdmin } from "./paginas/Admin";
+import { useAdmin } from "./admin";
 
 function Layout() {
+  const { aberto } = useAdmin();
   return (
     <>
       <header className="topo">
@@ -18,15 +21,15 @@ function Layout() {
         <nav className="nav">
           <NavLink to="/cenas">Cenas</NavLink>
           <NavLink to="/meus-dubs">Meus dubs</NavLink>
-          <NavLink to="/editor">Criar cena</NavLink>
           <NavLink to="/configuracoes">Configurações</NavLink>
+          {aberto && <NavLink to="/admin">Admin</NavLink>}
         </nav>
       </header>
       <main className="pagina">
         <Outlet />
       </main>
       <footer className="rodape">
-        Dubla Brasil AI · Sua voz. Seu talento. Sua dublagem. · tudo fica salvo só neste aparelho · use apenas vídeos que você tem direito de usar
+        Dubla Brasil AI · Sua voz. Seu talento. Sua dublagem. · <Link to="/admin">Área do administrador</Link>
       </footer>
     </>
   );
@@ -54,8 +57,9 @@ export default function App() {
           <Route path="estudio/:dubId" element={<Estudio />} />
           <Route path="dub/:dubId" element={<Sessao />} />
           <Route path="meus-dubs" element={<MeusDubs />} />
-          <Route path="editor" element={<Editor />} />
-          <Route path="editor/:id" element={<Editor />} />
+          <Route path="admin" element={<Admin />} />
+          <Route path="admin/cena/nova" element={<SoAdmin><Editor /></SoAdmin>} />
+          <Route path="admin/cena/:id" element={<SoAdmin><Editor /></SoAdmin>} />
           <Route path="configuracoes" element={<Configuracoes />} />
           <Route path="*" element={<NaoEncontrada />} />
         </Route>

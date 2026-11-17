@@ -1,7 +1,0 @@
-1
-00:00:01,000 --> 00:00:03,200
-Tucano, você viu meu chinelo?
-
-2
-00:00:03,800 --> 00:00:06,200
-Vi sim. Tá no telhado.

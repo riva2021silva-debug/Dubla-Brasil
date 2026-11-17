@@ -1,7 +1,7 @@
 #!/bin/bash
-# Gera a cena de exemplo original do Dubla Brasil (vídeo, áudio original e trilha de fundo).
+# Gera a cena de teste usada pelos testes automáticos (vídeo, áudio original e trilha de fundo).
 set -e
-OUT="$(dirname "$0")/../public/exemplos/capivara-tucano"
+OUT="$(dirname "$0")/../testes/fixtures/cena-teste"
 mkdir -p "$OUT"
 FONTE=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf
 D=20

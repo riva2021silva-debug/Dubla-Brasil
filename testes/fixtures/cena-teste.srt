@@ -1,0 +1,23 @@
+1
+00:00:01,000 --> 00:00:03,200
+Tucano, você viu meu chinelo?
+
+2
+00:00:03,800 --> 00:00:06,200
+Vi sim. Tá no telhado, como sempre.
+
+3
+00:00:06,800 --> 00:00:09,400
+No telhado? Quem coloca chinelo no telhado?
+
+4
+00:00:10,000 --> 00:00:12,600
+Sua avó. Pra você não sair de casa.
+
+5
+00:00:13,200 --> 00:00:16,000
+Então eu fico aqui. Passa o pão de queijo!
+
+6
+00:00:16,600 --> 00:00:18,600
+Acabou. Mas tem café.

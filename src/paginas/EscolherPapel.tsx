@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { db, excluirCenaCompleta } from "../db";
+import { useAdmin } from "../admin";
+import { db } from "../db";
 import { buscarCena, dubsDaCena, useCarregar, useMidiasDaCena } from "../ganchos";
-import { exportarPacote } from "../pacote";
-import type { Dub } from "../tipos";
-import { baixarArquivo, dataCurta, formatarTempo, nomeArquivo, novoId } from "../util";
+import { estaPublicada, type Dub } from "../tipos";
+import { dataCurta, formatarTempo, novoId } from "../util";
 
 export default function EscolherPapel() {
   const { id = "" } = useParams();
@@ -12,7 +12,7 @@ export default function EscolherPapel() {
   const dubs = useCarregar(() => dubsDaCena(id), [id]);
   const { urls } = useMidiasDaCena(cena.dado);
   const [papeis, setPapeis] = useState<string[]>([]);
-  const [ocupado, setOcupado] = useState(false);
+  const admin = useAdmin();
   const navegar = useNavigate();
 
   if (cena.carregando) return <p className="suave">Carregando…</p>;
@@ -61,35 +61,12 @@ export default function EscolherPapel() {
             {!c.fundo && <span className="etiqueta">Sem trilha de fundo</span>}
           </div>
         </div>
-        {!c.exemplo && (
+        {admin.aberto && (
           <div className="linha">
-            <Link className="botao botao-pequeno" to={`/editor/${c.id}`}>
+            <span className="etiqueta">{estaPublicada(c) ? "Publicada" : "Oculta"}</span>
+            <Link className="botao botao-pequeno" to={`/admin/cena/${c.id}`}>
               ✏️ Editar cena
             </Link>
-            <button
-              className="botao botao-pequeno"
-              disabled={ocupado}
-              onClick={async () => {
-                setOcupado(true);
-                try {
-                  await baixarArquivo(await exportarPacote(c), `${nomeArquivo(c.titulo)}.dubla`);
-                } finally {
-                  setOcupado(false);
-                }
-              }}
-            >
-              📦 Exportar pacote
-            </button>
-            <button
-              className="botao botao-pequeno botao-perigo"
-              onClick={async () => {
-                if (!confirm(`Excluir a cena "${c.titulo}" e todos os dubs dela? Isso não pode ser desfeito.`)) return;
-                await excluirCenaCompleta(c);
-                navegar("/cenas");
-              }}
-            >
-              Excluir cena
-            </button>
           </div>
         )}
       </div>

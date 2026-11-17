@@ -6,7 +6,8 @@ import { db, urlDaMidia } from "../db";
 import { buscarCena, useTempoDoVideo } from "../ganchos";
 import { irPara } from "../audio/sincronia";
 import type { Cena, Fala, Personagem } from "../tipos";
-import { corLivre, duracaoDoArquivo, formatarTempo, IDIOMAS, lerSrt, novoId } from "../util";
+import { estaPublicada } from "../tipos";
+import { corLivre, duracaoDoArquivo, formatarTempo, gerarCapa, IDIOMAS, lerSrt, novoId } from "../util";
 
 interface Arquivo {
   url: string;
@@ -31,6 +32,8 @@ function rascunhoVazio(): Cena {
     falas: [],
     criadaEm: agora,
     atualizadaEm: agora,
+    publicada: true,
+    capa: null,
   };
 }
 
@@ -59,7 +62,6 @@ export default function Editor() {
     (async () => {
       const c = await buscarCena(id);
       if (!c) throw new Error("Cena não encontrada.");
-      if (c.exemplo) throw new Error("As cenas de exemplo não podem ser editadas. Crie uma cena nova com o seu vídeo.");
       const v = await urlDaMidia(c.video);
       const f = c.fundo ? await urlDaMidia(c.fundo) : null;
       if (!vivo) return;
@@ -127,7 +129,7 @@ export default function Editor() {
     return (
       <div className="vazio">
         <p className="alerta">{erroCarga}</p>
-        <Link className="botao" to="/editor">
+        <Link className="botao" to="/admin/cena/nova">
           Criar cena nova
         </Link>
       </div>
@@ -221,9 +223,20 @@ export default function Editor() {
         await db.excluirMidia(chaveFundo);
         c = { ...c, fundo: null };
       }
+      // Capa: um quadro do vídeo no meio da primeira fala (se o vídeo mudou ou ainda não há capa).
+      if (video && (video.novo || !c.capa)) {
+        const primeira = falasOrdenadas[0];
+        const ms = primeira ? (primeira.inicioMs + primeira.fimMs) / 2 : Math.min(2000, c.duracaoMs / 2);
+        const foto = await gerarCapa(video.url, ms);
+        if (foto) {
+          const chaveCapa = `${c.id}:capa`;
+          await db.salvarMidia(chaveCapa, foto);
+          c = { ...c, capa: { tipo: "blob", chave: chaveCapa } };
+        }
+      }
       await db.salvarCena(c);
       setAlterado(false);
-      navegar(`/cena/${c.id}`);
+      navegar("/admin");
     } catch (e) {
       setProblemas([
         e instanceof Error && e.name === "QuotaExceededError"
@@ -239,14 +252,23 @@ export default function Editor() {
     <div className="pilha">
       <div className="linha entre">
         <div>
-          <h1>{id ? "Editar cena" : "Criar cena"}</h1>
+          <Link to="/admin" className="pequeno">
+            ← Administração
+          </Link>
+          <h1>{id ? "Editar cena" : "Adicionar vídeo"}</h1>
           <p className="suave" style={{ margin: 0 }}>
             Envie o vídeo, cadastre os personagens e marque quando cada fala começa e termina.
           </p>
         </div>
-        <button className="botao botao-primario botao-grande" onClick={salvar} disabled={salvando}>
-          {salvando ? "Salvando…" : "💾 Salvar cena"}
-        </button>
+        <div className="linha">
+          <label className="linha interruptor">
+            <input id="publicada" type="checkbox" checked={estaPublicada(cena)} onChange={(e) => atualizar((c) => ({ ...c, publicada: e.target.checked }))} />
+            <span>Publicada no app</span>
+          </label>
+          <button className="botao botao-primario botao-grande" onClick={salvar} disabled={salvando}>
+            {salvando ? "Salvando…" : "💾 Salvar cena"}
+          </button>
+        </div>
       </div>
 
       {problemas.length > 0 && (
@@ -460,8 +482,8 @@ export default function Editor() {
             })}
           </section>
           <p className="suave pequeno">
-            Use apenas vídeos e áudios que você tem direito de usar. A cena fica salva só neste aparelho; para mandar para
-            outra pessoa, use “Exportar pacote” na página da cena.
+            Use apenas vídeos e áudios que você tem direito de usar. Desmarque “Publicada no app” para guardar a cena
+            como rascunho, sem aparecer para quem usa o app.
           </p>
         </div>
       </div>

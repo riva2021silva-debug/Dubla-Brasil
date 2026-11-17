@@ -15,7 +15,8 @@ Tudo roda no navegador e fica salvo no próprio computador (IndexedDB): não há
 - **Estúdio**: contagem regressiva, gravação fala por fala ou todas seguidas, regravar, ouvir, medidor do
   microfone e atalhos de teclado (`R` gravar, `O` ouvir, `↑`/`↓` escolher fala, `Espaço` tocar, `Esc` parar).
 - **Sessão**: assiste ao dub completo e baixa o vídeo (MP4 ou WebM, conforme o navegador) com legendas opcionais.
-- **Criar cena (editor)**: envia o vídeo e a trilha de fundo opcional, cadastra personagens, marca início e fim
+- **Administração**: PIN, lista de cenas, publicar/ocultar, editar, exportar e excluir.
+- **Editor de cenas**: envia o vídeo e a trilha de fundo opcional, cadastra personagens, marca início e fim
   de cada fala (`I`/`O`) ou importa legendas `.srt`.
 - **Pacotes `.dubla`**: exporta uma cena (ZIP com `cena.json`, vídeo e fundo) para usar em outro navegador ou mandar
   para outra pessoa, e importa pacotes recebidos.
@@ -57,9 +58,15 @@ uma cena no editor, exporta o pacote, exclui e reimporta. As capturas de tela fi
   Sem trilha de fundo, o original fica no volume definido em Configurações.
 - O vídeo baixado é gerado em tempo real: o quadro do vídeo é desenhado num canvas e gravado junto com a mixagem.
 
-## Cena de exemplo
+## Administração
 
-A cena "Cadê meu chinelo?" é conteúdo original, gerado por `scripts/gerar-exemplo.sh` com o ffmpeg.
+O app começa sem cenas. Em **Área do administrador** (link no rodapé), crie um PIN e use **Adicionar vídeo**
+para cadastrar cenas: vídeo, trilha de fundo opcional, personagens e falas. Só cenas marcadas como
+**Publicada no app** aparecem para os usuários. O PIN protege a área neste aparelho.
+
+## Cena de teste
+
+Os testes usam uma cena original gerada por `scripts/gerar-cena-teste.sh` (fica em `testes/fixtures`, fora do app).
 
 ## Direitos autorais
 

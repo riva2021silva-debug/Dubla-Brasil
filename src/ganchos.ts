@@ -1,17 +1,16 @@
 import { useEffect, useState } from "react";
 import { db, urlDaMidia } from "./db";
-import { CENAS_EXEMPLO } from "./exemplos";
-import type { Cena, Dub } from "./tipos";
+import { estaPublicada, type Cena, type Dub, type FonteMidia } from "./tipos";
 
 export async function buscarCena(id: string): Promise<Cena | undefined> {
-  return CENAS_EXEMPLO.find((c) => c.id === id) ?? (await db.obterCena(id));
+  return db.obterCena(id);
 }
 
-export async function todasAsCenas(): Promise<Cena[]> {
-  const minhas = await db.listarCenas();
-  return [...minhas.sort((a, b) => b.atualizadaEm - a.atualizadaEm), ...CENAS_EXEMPLO];
+/** Cenas para quem usa o app (só publicadas) ou para o administrador (todas). */
+export async function todasAsCenas(incluirOcultas = false): Promise<Cena[]> {
+  const cenas = await db.listarCenas();
+  return cenas.filter((c) => incluirOcultas || estaPublicada(c)).sort((a, b) => b.atualizadaEm - a.atualizadaEm);
 }
-
 type Estado<T> = { carregando: true; dado?: undefined; erro?: undefined } | { carregando: false; dado?: T; erro?: string };
 
 export function useCarregar<T>(fn: () => Promise<T>, deps: unknown[]): Estado<T> & { recarregar: () => void } {
@@ -73,4 +72,26 @@ export function useTempoDoVideo(video: HTMLVideoElement | null): number {
     return () => cancelAnimationFrame(raf);
   }, [video]);
   return ms;
+}
+
+/** URL tocável/exibível de uma mídia opcional (ex.: a capa), liberada ao desmontar. */
+export function useUrlDaMidia(fonte: FonteMidia | null | undefined): string | null {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!fonte) return setUrl(null);
+    let vivo = true;
+    let criada: string | null = null;
+    urlDaMidia(fonte)
+      .then((u) => {
+        if (fonte.tipo === "blob") criada = u;
+        if (vivo) setUrl(u);
+        else if (criada) URL.revokeObjectURL(criada);
+      })
+      .catch(() => vivo && setUrl(null));
+    return () => {
+      vivo = false;
+      if (criada) URL.revokeObjectURL(criada);
+    };
+  }, [fonte]);
+  return url;
 }
