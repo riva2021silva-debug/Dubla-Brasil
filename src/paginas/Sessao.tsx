@@ -85,7 +85,10 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
             setPipVisivel(true);
           }
           const alvo = Math.max(0, (ms - t.inicioMs) / 1000);
-          if (p.readyState >= 1 && Math.abs(p.currentTime - alvo) > 0.25) p.currentTime = alvo;
+          // Pular (seek) trava o vídeo por um instante; só pula se estiver muito fora. Fora isso, acelera ou freia de leve.
+          const desvio = p.currentTime - alvo;
+          if (p.readyState >= 1 && (Math.abs(desvio) > 0.6 || video.paused) && Math.abs(desvio) > 0.12) p.currentTime = alvo;
+          else p.playbackRate = Math.abs(desvio) < 0.04 ? 1 : desvio > 0 ? 0.92 : 1.08;
           if (!video.paused && p.paused) void p.play().catch(() => {});
           if (video.paused && !p.paused) p.pause();
         }
@@ -165,7 +168,10 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
     const g = tela.getContext("2d")!;
     const destino = m.ctx.createMediaStreamDestination();
     m.saida.connect(destino);
-    const fluxo = new MediaStream([...tela.captureStream(30).getVideoTracks(), ...destino.stream.getAudioTracks()]);
+    // O quadro só é enviado quando desenhamos um novo (sem quadros repetidos nem pulados por excesso de trabalho).
+    const porQuadro = "requestVideoFrameCallback" in HTMLVideoElement.prototype;
+    const trilha = tela.captureStream(porQuadro ? 0 : 30).getVideoTracks()[0] as MediaStreamTrack & { requestFrame?: () => void };
+    const fluxo = new MediaStream([trilha, ...destino.stream.getAudioTracks()]);
     const gravador = new MediaRecorder(fluxo, { mimeType: formato.mime, videoBitsPerSecond: bitrate, audioBitsPerSecond: 128_000 });
     const logo = new Image();
     logo.src = "marca/logo-pequeno.webp";
@@ -210,12 +216,24 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
         g.drawImage(logo, largura - lw - m, altura - lh - m, lw, lh);
         g.globalAlpha = 1;
       }
-      setExportando(Math.min(1, ms / Math.max(1, cena.duracaoMs)));
-      raf = requestAnimationFrame(desenhar);
+      trilha.requestFrame?.();
+      const pct = Math.round((ms / Math.max(1, cena.duracaoMs)) * 100);
+      if (pct !== ultimoPct) {
+        ultimoPct = pct;
+        setExportando(Math.min(1, pct / 100));
+      }
+      agendar();
+    };
+    let ultimoPct = -1;
+    let rvfc = 0;
+    const agendar = () => {
+      if (porQuadro) rvfc = video.requestVideoFrameCallback(desenhar);
+      else raf = requestAnimationFrame(desenhar);
     };
 
     const terminar = () => {
       cancelAnimationFrame(raf);
+      if (porQuadro) video.cancelVideoFrameCallback(rvfc);
       video.removeEventListener("ended", terminar);
       if (gravador.state !== "inactive") gravador.stop();
     };
@@ -243,7 +261,7 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
   const baixar = async () => {
     setAcao("baixar");
     try {
-      const v = await gerarVideo(1280, 5_000_000);
+      const v = await gerarVideo(960, 3_500_000);
       if (v) {
         const onde = await salvarVideoNaGaleria(v.blob, `${nomeArquivo(dub.nome)}.${v.ext}`);
         setSalvo(onde === "galeria" ? "✅ Vídeo salvo na galeria do celular (álbum Dubla Brasil AI)." : onde === "download" ? "✅ Vídeo baixado." : null);

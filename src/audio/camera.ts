@@ -2,7 +2,8 @@
 
 function formato(): string | undefined {
   if (typeof MediaRecorder === "undefined") return undefined;
-  return ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm", "video/mp4"].find((m) => MediaRecorder.isTypeSupported(m));
+  // H.264 primeiro: o celular grava e toca com o chip de vídeo (leve). VP9 só em último caso (pesado para tocar).
+  return ["video/mp4;codecs=avc1.42E01E", "video/mp4", "video/webm;codecs=vp8", "video/webm", "video/webm;codecs=vp9"].find((m) => MediaRecorder.isTypeSupported(m));
 }
 
 export class Camera {
@@ -18,7 +19,7 @@ export class Camera {
     if (!navigator.mediaDevices?.getUserMedia) throw new Error("Este aparelho não permite usar a câmera.");
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user", width: { ideal: 480 }, height: { ideal: 480 }, frameRate: { ideal: 24, max: 30 } },
+        video: { facingMode: "user", width: { ideal: 360 }, height: { ideal: 360 }, frameRate: { ideal: 24, max: 24 } },
         audio: false,
       });
       return new Camera(stream);
@@ -34,7 +35,7 @@ export class Camera {
     const mime = formato();
     if (!mime) throw new Error("Este aparelho não consegue gravar vídeo da câmera.");
     this.partes = [];
-    this.gravador = new MediaRecorder(this.stream, { mimeType: mime, videoBitsPerSecond: 700_000 });
+    this.gravador = new MediaRecorder(this.stream, { mimeType: mime, videoBitsPerSecond: 600_000 });
     this.gravador.ondataavailable = (e) => e.data.size && this.partes.push(e.data);
     this.gravador.start(500);
   }
