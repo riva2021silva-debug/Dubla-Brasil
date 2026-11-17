@@ -207,7 +207,7 @@ No estúdio, a legenda em português aparece embaixo do vídeo no estilo karaok�
 
 ## iPhone (iOS)
 
-- **Projeto:** está em `ios/`, com Capacitor 8 e Swift Package Manager (iOS 15 ou mais novo). Versão 2.2 (build 13).
+- **Projeto:** está em `ios/`, com Capacitor 8 e Swift Package Manager (iOS 15 ou mais novo). Versão 2.3 (build 14).
   Já tem as permissões de microfone, câmera e galeria.
 - **Ajustes para iPhone:** o quadradinho da câmera é desenhado sem `roundRect`. A gravação do vídeo cai para
   30 quadros por segundo quando o aparelho não tem `requestFrame`.
