@@ -13,10 +13,13 @@ import ImitarSom from "./paginas/ImitarSom";
 import Jogos from "./paginas/Jogos";
 import VozNoAlvo from "./paginas/VozNoAlvo";
 import Galeria from "./paginas/Galeria";
+import Premium, { Conta } from "./paginas/Premium";
+import { usePlano } from "./plano";
 import { useAdmin } from "./admin";
 
 function Layout() {
   const { aberto } = useAdmin();
+  const plano = usePlano();
   return (
     <>
       <header className="topo">
@@ -38,6 +41,9 @@ function Layout() {
               Admin
             </NavLink>
           )}
+          <NavLink to="/conta" className={`botao botao-pequeno botao-premium ${plano.premium ? "eh-premium" : ""}`} aria-label="Minha conta e plano">
+            {plano.premium ? "⭐ Premium" : "⭐ Seja Premium"}
+          </NavLink>
           <NavLink to="/configuracoes" className="botao botao-pequeno botao-icone" aria-label="Configurações">
             ⚙️
           </NavLink>
@@ -98,6 +104,8 @@ export default function App() {
           <Route path="admin/cena/nova" element={<SoAdmin><Editor /></SoAdmin>} />
           <Route path="admin/cena/:id" element={<SoAdmin><Editor /></SoAdmin>} />
           <Route path="configuracoes" element={<Configuracoes />} />
+          <Route path="conta" element={<Conta />} />
+          <Route path="premium" element={<Premium />} />
           <Route path="*" element={<NaoEncontrada />} />
         </Route>
       </Routes>

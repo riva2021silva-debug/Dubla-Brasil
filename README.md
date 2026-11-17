@@ -185,3 +185,22 @@ No estúdio, a legenda em português aparece embaixo do vídeo no estilo karaok�
   imagens do celular.
 - **Galeria:** barra "Faça um comentário…" embaixo de cada dub, que abre os comentários.
 - Teste: `node testes/e2e-camera.cjs` (usa a câmera falsa do Chrome).
+
+## Versão 2.2: plano Premium (R$ 19,90/mês)
+
+- **Grátis:** 3 dublagens por dia (o dia vira à meia-noite de Brasília) e vídeo com a marca d'água.
+- **Premium:** dublagens ilimitadas e vídeo sem marca d'água.
+- **Contagem no servidor:** quem conta e quem decide é o servidor (`supabase/assinatura.sql`, rode no SQL Editor
+  depois de `esquema.sql` e `galeria.sql`). Tabelas `assinantes` e `uso_diario`. A pessoa só lê os próprios dados.
+  Ninguém consegue se dar Premium nem zerar o próprio contador pelo app (testado no Postgres local).
+  O administrador conta como Premium.
+- **Ainda sem o SQL:** enquanto o arquivo não for rodado, o app segue liberado e com marca d'água.
+- **Telas:** botão "⭐ Seja Premium" no topo, "Minha conta" (`#/conta`, com plano, uso de hoje, criar conta e
+  entrar) e "Premium" (`#/premium`, página de venda). Para assinar é preciso ter conta com e-mail, para o Premium
+  valer em qualquer celular.
+- **Administrador:** aba "⭐ Assinantes" lista os assinantes e libera ou tira o Premium pelo e-mail ou @apelido.
+- **Pagamento:** o link da plataforma vai em `LINK_ASSINATURA` (`src/nuvem-config.ts`). O app abre o link com
+  `?email=` da conta. A liberação automática depois do pagamento fica a cargo de um webhook da plataforma, que grava
+  em `assinantes` com `origem = 'checkout'`. Isso é feito por uma Edge Function do Supabase, a ser escrita quando a
+  plataforma for escolhida.
+- Teste: `node testes/e2e-premium.cjs`.

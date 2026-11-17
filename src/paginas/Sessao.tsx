@@ -10,6 +10,7 @@ import { buscarCena, useCarregar, useFormatoDoVideo, useMidiasDaCena, useTempoDo
 import { decodificar, Mixer } from "../audio/mixer";
 import { irPara } from "../audio/sincronia";
 import { trechoNoTempo } from "../audio/camera";
+import { usePlano } from "../plano";
 import type { Cena, Dub } from "../tipos";
 import { formatarTempo, gerarCapa, nomeArquivo, salvarVideoNaGaleria } from "../util";
 
@@ -56,6 +57,7 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
   const navegar = useNavigate();
   const tempo = useTempoDoVideo(video);
   const formato = useFormatoDoVideo(video);
+  const plano = usePlano();
   const pip = useRef<HTMLVideoElement>(null);
   const [pipVisivel, setPipVisivel] = useState(false);
   const cameras = dub.cameras;
@@ -173,6 +175,7 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
     const trilha = tela.captureStream(porQuadro ? 0 : 30).getVideoTracks()[0] as MediaStreamTrack & { requestFrame?: () => void };
     const fluxo = new MediaStream([trilha, ...destino.stream.getAudioTracks()]);
     const gravador = new MediaRecorder(fluxo, { mimeType: formato.mime, videoBitsPerSecond: bitrate, audioBitsPerSecond: 128_000 });
+    const comMarca = !plano.premium; // Premium: vídeo sem marca d'água
     const logo = new Image();
     logo.src = "marca/logo-pequeno.webp";
     await logo.decode().catch(() => {});
@@ -208,7 +211,7 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
         g.restore();
       }
       // Marca d'água: a logo pequena no canto de baixo, à direita (sem legenda por cima da imagem).
-      if (logo.complete && logo.naturalWidth) {
+      if (comMarca && logo.complete && logo.naturalWidth) {
         const lw = Math.round(Math.min(largura, altura) * 0.2);
         const lh = Math.round((lw * logo.naturalHeight) / logo.naturalWidth);
         const m = Math.round(Math.min(largura, altura) * 0.03);
@@ -402,6 +405,11 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
           {formatarTempo(tempo)} / {formatarTempo(cena.duracaoMs)}
         </span>
       </div>
+      {!plano.premium && (
+        <p className="suave pequeno" style={{ margin: 0 }}>
+          O vídeo sai com a marca d'água do Dubla Brasil. <Link to="/premium">⭐ Tire a marca com o Premium</Link>
+        </p>
+      )}
       {pedirApelido && (
         <PedirApelido
           aoFechar={() => setPedirApelido(false)}

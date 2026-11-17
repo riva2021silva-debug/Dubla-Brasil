@@ -8,6 +8,7 @@ import { db } from "../db";
 import { buscarCena, dubsDaCena, useCarregar, useFormatoDoVideo, useMidiasDaCena } from "../ganchos";
 import { estaPublicada, type Cena, type Dub } from "../tipos";
 import { dataCurta, formatarTempo, novoId } from "../util";
+import { PRECO, usarDublagem, usePlano } from "../plano";
 
 export default function EscolherPapel() {
   const { id = "" } = useParams();
@@ -37,6 +38,10 @@ function Pronto({ c }: { c: Cena }) {
   const formato = useFormatoDoVideo(previa);
   const admin = useAdmin();
   const navegar = useNavigate();
+  const plano = usePlano();
+  const [semDublagens, setSemDublagens] = useState(false);
+  const [iniciando, setIniciando] = useState(false);
+  const [erroLimite, setErroLimite] = useState<string | null>(null);
 
   const alternar = (pid: string) => setPapeis((atual) => (atual.includes(pid) ? atual.filter((x) => x !== pid) : [...atual, pid]));
   const falasDe = (pid: string) => c.falas.filter((f) => f.personagemId === pid).length;
@@ -44,6 +49,19 @@ function Pronto({ c }: { c: Cena }) {
   const escolhidos = c.personagens.filter((p) => papeis.includes(p.id));
 
   const comecar = async () => {
+    setErroLimite(null);
+    setIniciando(true);
+    try {
+      if (!(await usarDublagem())) {
+        setSemDublagens(true);
+        return;
+      }
+    } catch (e) {
+      setErroLimite(e instanceof Error ? e.message : String(e));
+      return;
+    } finally {
+      setIniciando(false);
+    }
     const agora = Date.now();
     const dub: Dub = {
       id: novoId(),
@@ -133,9 +151,37 @@ function Pronto({ c }: { c: Cena }) {
       <TesteMicrofone />
 
       <div className="pronto-acao">
-        <button className="botao botao-primario botao-grande cta-estudio" disabled={papeis.length === 0} onClick={comecar}>
+        <button className="botao botao-primario botao-grande cta-estudio" disabled={papeis.length === 0 || iniciando} onClick={() => void comecar()}>
           Entrar no estúdio →
         </button>
+        {!plano.premium && plano.ativo && (
+          <p className="suave pequeno" style={{ margin: 0, textAlign: "center" }}>
+            {Math.max(0, plano.limite - plano.usadasHoje)} de {plano.limite} dublagens grátis hoje ·{" "}
+            <Link to="/premium">⭐ Ilimitado no Premium</Link>
+          </p>
+        )}
+        {erroLimite && <p className="alerta">{erroLimite}</p>}
+        {semDublagens && (
+          <div className="fundo-modal" role="dialog" aria-modal="true" aria-labelledby="titulo-limite" onClick={(e) => e.target === e.currentTarget && setSemDublagens(false)}>
+            <div className="cartao pilha modal" style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 44 }} aria-hidden>
+                🎙️
+              </div>
+              <h2 id="titulo-limite" style={{ margin: 0 }}>
+                Suas 3 dublagens grátis de hoje acabaram
+              </h2>
+              <p className="suave" style={{ margin: 0 }}>
+                Amanhã você ganha mais 3. Ou assine o Premium e duble sem limite, com vídeos sem marca d'água.
+              </p>
+              <Link to="/premium" className="botao botao-primario botao-grande">
+                ⭐ Seja Premium · {PRECO}/mês
+              </Link>
+              <button className="botao" onClick={() => setSemDublagens(false)}>
+                Agora não
+              </button>
+            </div>
+          </div>
+        )}
         <span className="suave pequeno">
           {papeis.length ? `${minhasFalas} ${minhasFalas === 1 ? "fala" : "falas"} para gravar. ` : ""}Nada é gravado até você apertar Gravar no estúdio.
         </span>

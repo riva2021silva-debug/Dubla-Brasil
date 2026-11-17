@@ -10,6 +10,7 @@ import { estaPublicada, type Cena } from "../tipos";
 import { baixarArquivo, dataCurta, formatarTempo, nomeArquivo } from "../util";
 import AdminSons from "./AdminSons";
 import AdminGaleria from "./AdminGaleria";
+import AdminAssinantes from "./AdminAssinantes";
 
 /** Protege uma página: só abre para o administrador logado. */
 export function SoAdmin({ children }: { children: React.ReactNode }) {
@@ -221,7 +222,7 @@ function EnviarDoAparelho({ aoTerminar }: { aoTerminar: () => void }) {
 
 function Painel() {
   const { email } = useAdmin();
-  const [aba, setAba] = useState<"cenas" | "sons" | "galeria">("cenas");
+  const [aba, setAba] = useState<"cenas" | "sons" | "galeria" | "assinantes">("cenas");
   const [versao, setVersao] = useState(0);
   return (
     <div className="pilha">
@@ -240,8 +241,11 @@ function Painel() {
         <button role="tab" aria-selected={aba === "galeria"} className={aba === "galeria" ? "ativa" : ""} onClick={() => setAba("galeria")}>
           🌎 Galeria
         </button>
+        <button role="tab" aria-selected={aba === "assinantes"} className={aba === "assinantes" ? "ativa" : ""} onClick={() => setAba("assinantes")}>
+          ⭐ Assinantes
+        </button>
       </div>
-      {aba === "cenas" ? <PainelCenas key={versao} /> : aba === "sons" ? <AdminSons key={versao} /> : <AdminGaleria />}
+      {aba === "cenas" ? <PainelCenas key={versao} /> : aba === "sons" ? <AdminSons key={versao} /> : aba === "galeria" ? <AdminGaleria /> : <AdminAssinantes />}
       <div className="linha entre" style={{ marginTop: 8 }}>
         <TrocarSenha />
         <button className="botao botao-pequeno" onClick={() => void sair()}>

@@ -8,6 +8,9 @@ const PORTA = Number(process.argv[2] || 54399);
 const ADMIN = { id: "00000000-0000-4000-8000-000000000001", email: "admin@teste.dev", senha: "senha-de-teste-123" };
 const TOKEN_ADMIN = "token-admin-de-teste";
 const usuarios = new Map([[TOKEN_ADMIN, { id: ADMIN.id, email: ADMIN.email, admin: true }]]);
+const assinantes = new Map(); // user_id -> { premium_ate, origem }
+const uso = new Map(); // user_id + dia -> dublagens
+const usuarioPorId = (id) => [...usuarios.values()].find((x) => x.id === id);
 const arquivos = new Map(); // "pasta/caminho" -> { tipo, dados }
 const dados = { cenas: new Map(), sons: new Map(), perfis: new Map(), publicacoes: new Map(), reacoes: new Map(), comentarios: new Map(), denuncias: new Map() };
 
@@ -183,10 +186,14 @@ const servidor = http.createServer(async (req, res) => {
   if (p === "/auth/v1/token" && req.method === "POST") {
     const { email, password } = json();
     if (email === ADMIN.email && password === ADMIN.senha) return responder(res, 200, sessao(TOKEN_ADMIN, usuarios.get(TOKEN_ADMIN)));
+    for (const [token, cu] of usuarios) if (cu.email === email && cu.senha === password) return responder(res, 200, sessao(token, cu));
     return responder(res, 400, { code: 400, error_code: "invalid_credentials", msg: "Invalid login credentials" });
   }
   if (p === "/auth/v1/signup" && req.method === "POST") {
-    const novo = { id: crypto.randomUUID(), email: null, admin: false };
+    const { email, password } = json();
+    if (email && [...usuarios.values()].some((x) => x.email === email))
+      return responder(res, 422, { code: 422, error_code: "user_already_exists", msg: "User already registered" });
+    const novo = { id: crypto.randomUUID(), email: email || null, senha: password, admin: false };
     const token = "token-anon-" + novo.id;
     usuarios.set(token, novo);
     return responder(res, 200, sessao(token, novo));
@@ -194,6 +201,32 @@ const servidor = http.createServer(async (req, res) => {
   if (p === "/auth/v1/user") return u.id ? responder(res, 200, sessao("x", u).user) : responder(res, 401, { msg: "JWT expired" });
   if (p === "/auth/v1/logout") return responder(res, 204);
   if (p === "/rest/v1/rpc/eh_admin") return responder(res, 200, !!u.admin);
+  // ----- Assinatura (mesmas regras de supabase/assinatura.sql) -----
+  const hoje = new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10);
+  const premiumDe = (id) => !!id && (usuarioPorId(id)?.admin || (assinantes.get(id)?.premium_ate ?? "") > new Date().toISOString());
+  if (p === "/rest/v1/rpc/meu_plano")
+    return responder(res, 200, { premium: premiumDe(u.id), premium_ate: assinantes.get(u.id)?.premium_ate ?? null, usadas_hoje: uso.get(u.id + hoje) ?? 0, limite: 3 });
+  if (p === "/rest/v1/rpc/usar_dublagem") {
+    if (!u.id) return responder(res, 401, { message: "permission denied for function usar_dublagem" });
+    if (premiumDe(u.id)) return responder(res, 200, { ok: true, premium: true, usadas: 0, limite: 3 });
+    const n = uso.get(u.id + hoje) ?? 0;
+    if (n >= 3) return responder(res, 200, { ok: false, premium: false, usadas: 3, limite: 3 });
+    uso.set(u.id + hoje, n + 1);
+    return responder(res, 200, { ok: true, premium: false, usadas: n + 1, limite: 3 });
+  }
+  if (p === "/rest/v1/rpc/admin_definir_premium" || p === "/rest/v1/rpc/admin_listar_assinantes") {
+    if (!u.admin) return responder(res, 400, { message: "Só o administrador pode fazer isso." });
+    if (p.endsWith("listar_assinantes"))
+      return responder(res, 200, [...assinantes.entries()].map(([id, a]) => ({ user_id: id, email: usuarioPorId(id)?.email ?? null, apelido: dados.perfis.get(id)?.apelido ?? null, ...a })));
+    const { busca, dias } = json();
+    const b = busca.trim().toLowerCase().replace(/^@/, "");
+    const alvo = [...usuarios.values()].find((x) => (x.email || "").toLowerCase() === b)?.id ?? [...dados.perfis.values()].find((x) => x.apelido.toLowerCase() === b)?.user_id;
+    if (!alvo) return responder(res, 400, { message: "Ninguém encontrado com esse e-mail ou apelido." });
+    if (dias <= 0) { assinantes.delete(alvo); return responder(res, 200, { user_id: alvo, premium_ate: null }); }
+    const base = Math.max(Date.now(), new Date(assinantes.get(alvo)?.premium_ate ?? 0).getTime());
+    assinantes.set(alvo, { premium_ate: new Date(base + dias * 864e5).toISOString(), origem: "manual" });
+    return responder(res, 200, { user_id: alvo, premium_ate: assinantes.get(alvo).premium_ate });
+  }
 
   // ----- Tabelas -----
   const t = /^\/rest\/v1\/([a-z_]+)$/.exec(p);
