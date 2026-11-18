@@ -21,10 +21,13 @@ workflows:
         script: npm run build
       - name: Atualizar o projeto do iPhone
         script: npx cap sync ios
-      - name: Número da versão (cada envio precisa de um número maior)
+      - name: Número da versão (vem de public/versao.json; cada envio precisa de um número maior)
         script: |
+          VERSAO=$(node -p "require('./public/versao.json').versao")
+          CODIGO=$(node -p "require('./public/versao.json').codigo")
           cd ios/App
-          agvtool new-version -all $((BUILD_NUMBER + 18))
+          agvtool new-marketing-version "$VERSAO"
+          agvtool new-version -all $((CODIGO * 1000 + BUILD_NUMBER))
       - name: Assinatura da Apple
         script: xcode-project use-profiles --project ios/App/App.xcodeproj
       - name: Gerar o arquivo .ipa

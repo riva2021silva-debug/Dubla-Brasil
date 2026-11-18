@@ -462,3 +462,8 @@ kbd { background: var(--superficie-2); border: 1px solid var(--borda); border-bo
 .palco.palco-mini video { height: auto; max-height: 42dvh; }
 .palco.palco-mini .legenda { font-size: 12px; }
 @media (min-width: 900px) { .palco.palco-mini { bottom: 20px; } }
+
+/* Aviso de atualização */
+.aviso-atualizacao { width: min(440px, 100%); }
+.lista-novidades { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.lista-novidades li::marker { color: var(--amarelo); }

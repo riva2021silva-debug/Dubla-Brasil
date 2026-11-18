@@ -246,3 +246,21 @@ No estúdio, a legenda em português aparece embaixo do vídeo no estilo karaok�
 - **2.7:** o botão "Assinar" abre o checkout da Cakto (`LINK_ASSINATURA`), com `?email=` da conta. Por enquanto
   o administrador libera o Premium à mão, na aba Assinantes, depois de ver a venda na Cakto. A liberação
   automática depende de um webhook da Cakto para uma Edge Function do Supabase.
+
+## Versão 2.8: aviso de atualização
+
+- **Uma fonte só da versão:** `public/versao.json`, com versão, código, novidades e link do APK. O Android
+  (`build.gradle`) e o iPhone (`codemagic.yaml`) leem o número dali, e o site publica o arquivo.
+- **Ao abrir o app,** ao voltar para ele e a cada 30 minutos, o app compara com o `versao.json` do site
+  (dublabr.netlify.app). Se houver versão nova, mostra **"🎉 Atualização X disponível"** com as novidades:
+  - no Android: **⬇ Baixar a atualização** (o APK em `/baixar/DublaBrasilAI.apk`);
+  - no site: **🔄 Atualizar agora** (recarrega);
+  - no iPhone instalado: atualizar pelo TestFlight ou pela App Store.
+
+  "Depois" adia por 12 horas. Depois de atualizar, mostra **"✨ Novidades da versão"** uma vez.
+- **Em Configurações:** versão atual e o botão **🔄 Procurar atualização**.
+- **Para lançar uma versão:**
+  1. Edite `public/versao.json` (versão, código +1, novidades).
+  2. Gere o APK e copie para `downloads/DublaBrasilAI.apk`.
+  3. Envie ao GitHub. O Netlify publica e todos recebem o aviso.
+- Teste: `node testes/e2e-atualizacao.cjs`.

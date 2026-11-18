@@ -1,13 +1,27 @@
 # Versão em site (link para iPhone e computador). O Netlify lê este arquivo sozinho.
 [build]
-  command = "npm run build"
+  # Gera o site e publica o APK mais novo em /baixar/ (para o aviso de atualização do Android).
+  command = "npm run build && mkdir -p dist/baixar && cp downloads/DublaBrasilAI.apk dist/baixar/"
   publish = "dist"
 
 [build.environment]
   NODE_VERSION = "22"
 
-# O app usa endereços com # (HashRouter), então basta servir o index.html.
 [[headers]]
   for = "/assets/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
+
+# O app instalado (Android/iPhone) lê a versão mais nova daqui.
+[[headers]]
+  for = "/versao.json"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/baixar/*"
+  [headers.values]
+    Content-Type = "application/vnd.android.package-archive"
+    Content-Disposition = "attachment; filename=DublaBrasilAI.apk"
+    Cache-Control = "no-cache"

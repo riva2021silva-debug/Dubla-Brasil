@@ -7,3 +7,6 @@ testes/saida
 *.zip
 chave-android/
 dist-teste
+
+# O APK publicado no site (aviso de atualização) fica no repositório
+!downloads/DublaBrasilAI.apk

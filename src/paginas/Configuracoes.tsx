@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { PADRAO, useConfig } from "../config";
 import { listarMicrofones, Microfone } from "../audio/microfone";
 import { contextoDeAudio } from "../audio/mixer";
+import { VERSAO_APP } from "../atualizacao";
+import { procurarAtualizacao } from "../componentes/AvisoAtualizacao";
 
 export default function Configuracoes() {
   const [cfg, salvar] = useConfig();
@@ -157,6 +159,15 @@ export default function Configuracoes() {
           Restaurar padrões
         </button>
       </div>
+
+      <section className="cartao linha entre">
+        <span>
+          <b>Dubla Brasil AI</b> <span className="suave">versão {VERSAO_APP}</span>
+        </span>
+        <button className="botao botao-pequeno" onClick={procurarAtualizacao}>
+          🔄 Procurar atualização
+        </button>
+      </section>
     </div>
   );
 }

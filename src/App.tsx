@@ -15,6 +15,7 @@ import VozNoAlvo from "./paginas/VozNoAlvo";
 import Galeria from "./paginas/Galeria";
 import Premium, { Conta } from "./paginas/Premium";
 import { usePlano } from "./plano";
+import AvisoAtualizacao from "./componentes/AvisoAtualizacao";
 import { useAdmin } from "./admin";
 
 function Layout() {
@@ -52,6 +53,7 @@ function Layout() {
       <main className="pagina">
         <Outlet />
       </main>
+      <AvisoAtualizacao />
       <nav className="barra-inferior" aria-label="Menu">
         {[
           ["/cenas", "🎬", "Cenas"],

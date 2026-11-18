@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAdmin } from "../admin";
+import { abrirFora } from "../atualizacao";
 import { apagarMinhaConta, criarConta, dataBr, emailDaConta, entrarNaConta, linkDeCheckout, PRECO, sairDaConta, usePlano } from "../plano";
 
 /** Página de venda do Premium. */
@@ -21,7 +22,7 @@ export default function Premium() {
       setAviso("O pagamento ainda está sendo configurado. Volte em breve!");
       return;
     }
-    window.open(link, "_blank", "noopener");
+    await abrirFora(link);
     setAviso("Depois de pagar, volte aqui: o Premium é liberado em alguns minutos.");
   };
 
