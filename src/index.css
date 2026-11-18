@@ -449,3 +449,9 @@ kbd { background: var(--superficie-2); border: 1px solid var(--borda); border-bo
 .icone-formato.f-16x9 { width: 28px; height: 16px; }
 .progresso-edicao { height: 10px; border-radius: 999px; background: var(--borda); overflow: hidden; }
 .progresso-edicao span { display: block; height: 100%; background: linear-gradient(90deg, var(--verde), var(--amarelo)); transition: width .2s linear; }
+
+/* Corrigir legendas no editor */
+.texto-legenda { width: 100%; resize: none; field-sizing: content; min-height: 2.6em; line-height: 1.35; font-weight: 600; }
+.original-editavel { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+.original-editavel input { flex: 1; min-width: 0; font-size: 0.85rem; padding: 5px 8px; opacity: 0.85; }
+.dica-legendas { margin: 0; padding: 8px 10px; border-radius: 10px; background: rgb(250 204 21 / 0.08); border: 1px dashed rgb(250 204 21 / 0.4); }

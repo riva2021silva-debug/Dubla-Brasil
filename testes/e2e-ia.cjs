@@ -36,7 +36,7 @@ fs.mkdirSync(SAIDA, { recursive: true });
   const linhas = await p.locator(".linha-fala").evaluateAll((els) =>
     els.map((el) => ({
       personagem: el.querySelector("select").selectedOptions[0]?.textContent,
-      texto: el.querySelector('input[aria-label="Texto da fala"]').value,
+      texto: el.querySelector('[aria-label="Texto da fala"]').value,
       original: el.querySelector('[title="Texto original"]')?.textContent?.replace("🌐 ", ""),
       tempos: [...el.querySelectorAll(".ajuste-tempo button:nth-child(2)")].map((b) => b.textContent).join(" → "),
     })),

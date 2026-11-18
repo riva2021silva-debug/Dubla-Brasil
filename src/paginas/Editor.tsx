@@ -514,6 +514,12 @@ export default function Editor() {
                 Ou faça à mão: toque o vídeo até o começo de uma fala e clique em “+ Fala aqui”, ou importe um arquivo de legendas .srt.
               </p>
             )}
+            {cena.falas.length > 0 && (
+              <p className="dica-legendas pequeno">
+                ✏️ <b>Corrigir legenda:</b> toque no texto de qualquer fala e escreva o que o personagem realmente diz. Use ▶ para ouvir só
+                aquele trecho. Depois, toque em “Salvar cena”.
+              </p>
+            )}
             <div className="tabela-falas">
               {falasOrdenadas.map((f, i) => (
                 <div key={f.id} className={`linha-fala ${f.id === sel ? "selecionada" : ""}`} onClick={() => setSel(f.id)}>
@@ -533,17 +539,26 @@ export default function Editor() {
                     ))}
                   </select>
                   <div style={{ minWidth: 0 }}>
-                    <input
-                      className="entrada"
+                    <textarea
+                      className="entrada texto-legenda"
+                      rows={Math.min(4, Math.max(1, Math.ceil(f.texto.length / 34)))}
                       value={f.texto}
-                      placeholder="O que o personagem diz…"
+                      placeholder="O que o personagem diz (legenda em português)…"
                       onChange={(e) => atualizarFala(f.id, { texto: e.target.value })}
+                      onFocus={() => setSel(f.id)}
                       aria-label="Texto da fala"
                     />
-                    {f.original && (
-                      <span className="suave pequeno" title="Texto original" style={{ display: "block", marginTop: 2 }}>
-                        🌐 {f.original}
-                      </span>
+                    {f.original !== undefined && (
+                      <label className="original-editavel" title="Texto no idioma original (o que o personagem fala no vídeo)">
+                        <span aria-hidden>🌐</span>
+                        <input
+                          className="entrada"
+                          value={f.original}
+                          placeholder="Texto original"
+                          onChange={(e) => atualizarFala(f.id, { original: e.target.value })}
+                          aria-label="Texto original da fala"
+                        />
+                      </label>
                     )}
                   </div>
                   <div className="linha tempos" style={{ gap: 4 }}>
