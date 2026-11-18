@@ -393,7 +393,8 @@ kbd { background: var(--superficie-2); border: 1px solid var(--borda); border-bo
 @keyframes coracao { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.4) rotate(-12deg); } 20% { opacity: 1; transform: translate(-50%, -50%) scale(1.15) rotate(6deg); } 100% { opacity: 0; transform: translate(-50%, -140%) scale(1); } }
 .post-progresso { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: rgb(255 255 255 / .2); }
 .post-progresso div { height: 100%; background: var(--amarelo); transition: width .25s linear; }
-.post-autor { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; align-self: center; font-weight: 900; font-size: 1.2rem; color: #1e0b4b; background: linear-gradient(135deg, var(--amarelo), var(--verde)); border: 2px solid #fff; margin-bottom: 4px; }
+.post-autor { align-self: center; border: 2px solid #fff; margin-bottom: 4px; }
+.post-autor-link { align-self: center; text-decoration: none; }
 @media (max-width: 760px) {
   .pagina:has(.galeria) { padding: 0; }
   .pagina:has(.galeria) + .rodape { display: none; }
@@ -518,3 +519,11 @@ kbd { background: var(--superficie-2); border: 1px solid var(--borda); border-bo
 }
 /* Gavetas que sobem do rodapé (comentários): o campo e o botão Enviar ficam acima do selo de fora */
 .com-selo-externo .gaveta { padding-bottom: calc(max(16px, env(safe-area-inset-bottom)) + var(--folga-selo, 0px)); }
+
+/* Foto de perfil das pessoas */
+.foto-perfil { flex: none; border-radius: 50%; display: inline-grid; place-items: center; overflow: hidden; font-weight: 900; color: #fff; text-shadow: 0 1px 2px rgb(0 0 0 / .35); }
+.foto-perfil img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.perfil-cartao { align-items: center; text-align: center; }
+.perfil-foto-botao { position: relative; border: none; background: none; padding: 0; cursor: pointer; border-radius: 50%; }
+.perfil-foto-botao .foto-perfil { border: 3px solid var(--amarelo); box-shadow: 0 6px 24px rgb(0 0 0 / .4); }
+.perfil-foto-botao .perfil-camera { position: absolute; right: 2px; bottom: 2px; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--amarelo); color: #2a1500; font-size: 18px; border: 2px solid var(--fundo, #08021f); }

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAdmin } from "../admin";
 import { abrirFora } from "../atualizacao";
+import MeuPerfil from "../componentes/MeuPerfil";
 import { apagarMinhaConta, criarConta, dataBr, emailDaConta, entrarNaConta, linkDeCheckout, PRECO, sairDaConta, usePlano } from "../plano";
 
 /** Página de venda do Premium. */
@@ -140,6 +141,7 @@ export function Conta() {
   return (
     <div className="pilha" style={{ maxWidth: 520 }}>
       <h1 style={{ marginBottom: 0 }}>Minha conta</h1>
+      <MeuPerfil />
 
       <section className={`cartao pilha plano-cartao ${plano.premium ? "premium-ativo" : ""}`}>
         {plano.premium ? (

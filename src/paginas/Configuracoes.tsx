@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { PADRAO, useConfig } from "../config";
 import { listarMicrofones, Microfone } from "../audio/microfone";
@@ -51,6 +52,14 @@ export default function Configuracoes() {
   return (
     <div className="pilha" style={{ maxWidth: 720 }}>
       <h1>Configurações</h1>
+      <Link to="/conta" className="cartao linha entre" style={{ textDecoration: "none", color: "inherit" }}>
+        <span>
+          <b>👤 Meu perfil e conta</b>
+          <br />
+          <span className="suave pequeno">Foto, apelido, plano Premium</span>
+        </span>
+        <span aria-hidden>›</span>
+      </Link>
       <p className="suave" style={{ margin: 0 }}>
         Ficam salvas neste aparelho e valem para todas as cenas.
       </p>

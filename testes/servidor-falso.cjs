@@ -26,6 +26,7 @@ const regras = {
     atualizar: (l, u) => l.user_id === u.id,
     apagar: () => false,
     validar: (l) => {
+      if (l.foto_path && !String(l.foto_path).startsWith(l.user_id + "/avatar-")) return 'new row for relation "perfis" violates check constraint "foto_na_propria_pasta"';
       if (!/^[A-Za-z0-9_.À-ÿ]{3,20}$/.test(l.apelido || "")) return 'new row for relation "perfis" violates check constraint "apelido_caracteres"';
       for (const o of dados.perfis.values()) if (o.user_id !== l.user_id && o.apelido.toLowerCase() === l.apelido.toLowerCase()) return 'duplicate key value violates unique constraint "perfis_apelido_unico"';
       return null;
@@ -160,7 +161,7 @@ function projetar(l, select) {
     if (c === "*") Object.assign(out, l);
     else if (c.startsWith("perfis(")) {
       const p = dados.perfis.get(l.autor_id);
-      out.perfis = p ? { apelido: p.apelido } : null;
+      out.perfis = p ? { apelido: p.apelido, ...(c.includes("foto_path") ? { foto_path: p.foto_path ?? null } : {}) } : null;
     } else out[c] = l[c];
   }
   return out;

@@ -9,6 +9,8 @@ export interface Publicacao {
   id: string;
   autorId: string;
   apelido: string;
+  /** Foto do perfil do autor (ou null: mostra a inicial). */
+  autorFoto: string | null;
   cenaId: string | null;
   cenaTitulo: string;
   papeis: string[];
@@ -29,6 +31,7 @@ export interface Comentario {
   id: string;
   autorId: string;
   apelido: string;
+  foto: string | null;
   texto: string;
   criadoEm: number;
 }
@@ -65,6 +68,63 @@ export async function meuApelido(): Promise<string | null> {
   const { data, error } = await supabase.from("perfis").select("apelido").eq("user_id", id).maybeSingle();
   if (error) erro(error);
   return data?.apelido ?? null;
+}
+
+export interface MeuPerfil {
+  apelido: string | null;
+  foto: string | null;
+  fotoPath: string | null;
+}
+
+export async function meuPerfil(): Promise<MeuPerfil> {
+  const id = await idAtual();
+  if (!id) return { apelido: null, foto: null, fotoPath: null };
+  const { data, error } = await comPerfil((perfis) =>
+    supabase.from("perfis").select(perfis.replace(/^perfis\(|\)$/g, "")).eq("user_id", id).maybeSingle(),
+  );
+  if (error) erro(error);
+  const d = data as { apelido: string; foto_path?: string | null } | null;
+  return { apelido: d?.apelido ?? null, foto: d?.foto_path ? urlDe(d.foto_path) : null, fotoPath: d?.foto_path ?? null };
+}
+
+/** Recorta no meio (quadrado), diminui para 320×320 e salva em JPEG. */
+async function prepararFoto(arquivo: Blob): Promise<Blob> {
+  const img = await createImageBitmap(arquivo, { imageOrientation: "from-image" } as ImageBitmapOptions).catch(() => createImageBitmap(arquivo));
+  const lado = Math.min(img.width, img.height);
+  const tela = document.createElement("canvas");
+  tela.width = tela.height = 320;
+  tela.getContext("2d")!.drawImage(img, (img.width - lado) / 2, (img.height - lado) / 2, lado, lado, 0, 0, 320, 320);
+  img.close?.();
+  return new Promise((ok, falha) => tela.toBlob((b) => (b ? ok(b) : falha(new Error("Não foi possível ler esta imagem."))), "image/jpeg", 0.86));
+}
+
+/** Troca a foto do perfil (precisa já ter apelido). Devolve o endereço da foto nova. */
+export async function definirFotoPerfil(arquivo: Blob): Promise<string> {
+  if (!comFoto) throw new Error("A foto de perfil ainda não foi ativada no servidor (arquivo perfil.sql).");
+  const atual = await meuPerfil();
+  if (!atual.apelido) throw new Error("Escolha um apelido antes de colocar a foto.");
+  const id = await garantirSessao();
+  const foto = await prepararFoto(arquivo);
+  const caminho = `${id}/avatar-${Date.now().toString(36)}.jpg`;
+  const up = await supabase.storage.from(PASTA).upload(caminho, foto, { contentType: "image/jpeg", cacheControl: "31536000" });
+  if (up.error) erro(up.error);
+  const { error } = await supabase.from("perfis").update({ foto_path: caminho }).eq("user_id", id);
+  if (error) {
+    await supabase.storage.from(PASTA).remove([caminho]);
+    if (semColunaFoto(error)) throw new Error("A foto de perfil ainda não foi ativada no servidor (arquivo perfil.sql).");
+    erro(error);
+  }
+  if (atual.fotoPath) await supabase.storage.from(PASTA).remove([atual.fotoPath]);
+  return urlDe(caminho);
+}
+
+export async function removerFotoPerfil() {
+  const atual = await meuPerfil();
+  const id = await idAtual();
+  if (!id || !atual.fotoPath) return;
+  const { error } = await supabase.from("perfis").update({ foto_path: null }).eq("user_id", id);
+  if (error) erro(error);
+  await supabase.storage.from(PASTA).remove([atual.fotoPath]);
 }
 
 export const APELIDO_VALIDO = /^[A-Za-z0-9_.À-ÿ]{3,20}$/;
@@ -128,7 +188,7 @@ interface Linha {
   comentarios: number;
   denuncias: number;
   criada_em: string;
-  perfis: { apelido: string } | null;
+  perfis: { apelido: string; foto_path?: string | null } | null;
 }
 
 function paraPublicacao(l: Linha): Publicacao {
@@ -136,6 +196,7 @@ function paraPublicacao(l: Linha): Publicacao {
     id: l.id,
     autorId: l.autor_id,
     apelido: l.perfis?.apelido ?? "anônimo",
+    autorFoto: l.perfis?.foto_path ? urlDe(l.perfis.foto_path) : null,
     cenaId: l.cena_id,
     cenaTitulo: l.cena_titulo,
     papeis: l.papeis ?? [],
@@ -153,28 +214,44 @@ function paraPublicacao(l: Linha): Publicacao {
   };
 }
 
-const CAMPOS = "*, perfis(apelido)";
+// Foto do perfil (coluna perfis.foto_path, de supabase/perfil.sql). Enquanto o SQL não foi rodado, segue só com o apelido.
+let comFoto = true;
+const perfisSel = () => (comFoto ? "perfis(apelido, foto_path)" : "perfis(apelido)");
+const semColunaFoto = (e: { message?: string; code?: string } | null) => !!e && comFoto && (e.code === "42703" || /foto_path/.test(e.message ?? ""));
+/** Faz a consulta com a foto; se a coluna ainda não existir no servidor, refaz sem ela. */
+async function comPerfil<T>(consulta: (perfis: string) => PromiseLike<{ data: T; error: { message?: string; code?: string } | null }>) {
+  let r = await consulta(perfisSel());
+  if (semColunaFoto(r.error)) {
+    comFoto = false;
+    r = await consulta(perfisSel());
+  }
+  return r;
+}
 
 /** Publicações visíveis, das mais novas para as mais antigas (paginado por data). */
 export async function listarFeed(opcoes: { antesDe?: number; limite?: number } = {}): Promise<Publicacao[]> {
-  let q = supabase.from("publicacoes").select(CAMPOS).eq("oculta", false).order("criada_em", { ascending: false }).limit(opcoes.limite ?? 8);
-  if (opcoes.antesDe) q = q.lt("criada_em", new Date(opcoes.antesDe).toISOString());
-  const { data, error } = await q;
+  const { data, error } = await comPerfil((perfis) => {
+    let q = supabase.from("publicacoes").select(`*, ${perfis}`).eq("oculta", false).order("criada_em", { ascending: false }).limit(opcoes.limite ?? 8);
+    if (opcoes.antesDe) q = q.lt("criada_em", new Date(opcoes.antesDe).toISOString());
+    return q;
+  });
   if (error) erro(error);
-  return (data as Linha[]).map(paraPublicacao);
+  return (data as unknown as Linha[]).map(paraPublicacao);
 }
 
 export async function obterPublicacao(id: string): Promise<Publicacao | null> {
-  const { data, error } = await supabase.from("publicacoes").select(CAMPOS).eq("id", id).maybeSingle();
+  const { data, error } = await comPerfil((perfis) => supabase.from("publicacoes").select(`*, ${perfis}`).eq("id", id).maybeSingle());
   if (error) erro(error);
-  return data ? paraPublicacao(data as Linha) : null;
+  return data ? paraPublicacao(data as unknown as Linha) : null;
 }
 
 /** Para o administrador: todas, inclusive ocultas, com as mais denunciadas primeiro. */
 export async function listarParaModeracao(): Promise<Publicacao[]> {
-  const { data, error } = await supabase.from("publicacoes").select(CAMPOS).order("denuncias", { ascending: false }).order("criada_em", { ascending: false }).limit(100);
+  const { data, error } = await comPerfil((perfis) =>
+    supabase.from("publicacoes").select(`*, ${perfis}`).order("denuncias", { ascending: false }).order("criada_em", { ascending: false }).limit(100),
+  );
   if (error) erro(error);
-  return (data as Linha[]).map(paraPublicacao);
+  return (data as unknown as Linha[]).map(paraPublicacao);
 }
 
 // ---------- Reações, comentários e denúncias ----------
@@ -200,12 +277,15 @@ export async function reagir(id: string, valor: 1 | -1 | 0): Promise<{ curtidas:
 }
 
 export async function listarComentarios(id: string): Promise<Comentario[]> {
-  const { data, error } = await supabase.from("comentarios").select("id, autor_id, texto, criado_em, perfis(apelido)").eq("publicacao_id", id).order("criado_em", { ascending: true });
+  const { data, error } = await comPerfil((perfis) =>
+    supabase.from("comentarios").select(`id, autor_id, texto, criado_em, ${perfis}`).eq("publicacao_id", id).order("criado_em", { ascending: true }),
+  );
   if (error) erro(error);
-  return (data as unknown as { id: string; autor_id: string; texto: string; criado_em: string; perfis: { apelido: string } | null }[]).map((c) => ({
+  return (data as unknown as { id: string; autor_id: string; texto: string; criado_em: string; perfis: { apelido: string; foto_path?: string | null } | null }[]).map((c) => ({
     id: c.id,
     autorId: c.autor_id,
     apelido: c.perfis?.apelido ?? "anônimo",
+    foto: c.perfis?.foto_path ? urlDe(c.perfis.foto_path) : null,
     texto: c.texto,
     criadoEm: Date.parse(c.criado_em),
   }));

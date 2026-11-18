@@ -1,11 +1,11 @@
 {
-  "versao": "3.4",
-  "codigo": 25,
+  "versao": "3.5",
+  "codigo": 26,
   "data": "2026-11-18",
   "novidades": [
-    "Galeria: comente direto no vídeo — escreva em “Faça um comentário…” e toque em ➤",
-    "Comentários: o campo de escrever fica no topo da janela",
-    "iPhone: botões e comentários não ficam mais por baixo do selo do site"
+    "Novo: Meu perfil — coloque sua foto e mude seu apelido",
+    "Sua foto aparece nos seus vídeos da galeria e nos comentários",
+    "Acesse por ⚙️ Configurações → Meu perfil e conta"
   ],
   "apk": "https://dublabr.netlify.app/baixar/DublaBrasilAI.apk"
 }

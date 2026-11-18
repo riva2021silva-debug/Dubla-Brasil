@@ -358,3 +358,17 @@ No estúdio, a legenda em português aparece embaixo do vídeo no estilo karaok�
   Netlify.
 - **Selo:** um selo em shadow DOM fechado não pode ser medido, então ele é reconhecido pelo nome
   (netlify/badge), e o app reserva 64 px.
+
+## Versão 3.5: Meu perfil (foto e apelido)
+
+- **Tela:** "Minha conta" (`#/conta`, também em ⚙️ Configurações → Meu perfil e conta) começa com
+  **Meu perfil** (`src/componentes/MeuPerfil.tsx`):
+  - foto da galeria do celular ou da câmera, recortada em quadrado de 320×320 JPEG;
+  - remover a foto;
+  - editar o apelido.
+- **Foto na galeria:** aparece no vídeo (lugar da letra; tocar no próprio leva ao perfil) e nos comentários
+  (`FotoPerfil`). Sem foto, fica a inicial num círculo de cor fixa por apelido.
+- **Servidor:** `supabase/perfil.sql` cria a coluna `perfis.foto_path`, que só pode apontar para a própria
+  pasta (`<id>/avatar-…`). A foto vai para a pasta "dubs", com as regras de envio que já existem. Enquanto o SQL
+  não for rodado, a galeria segue sem foto e não quebra. Excluir a conta apaga a foto.
+- **Teste:** `node testes/e2e-perfil.cjs`.

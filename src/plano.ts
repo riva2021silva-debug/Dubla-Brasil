@@ -99,6 +99,9 @@ export async function apagarMinhaConta() {
   if (!id) return;
   const { data } = await supabase.from("publicacoes").select("video_path,capa_path").eq("autor_id", id);
   const arquivos = (data ?? []).flatMap((p: { video_path: string; capa_path: string | null }) => [p.video_path, ...(p.capa_path ? [p.capa_path] : [])]);
+  const { data: perfil } = await supabase.from("perfis").select("*").eq("user_id", id).maybeSingle();
+  const foto = (perfil as { foto_path?: string | null } | null)?.foto_path;
+  if (foto) arquivos.push(foto);
   if (arquivos.length) await supabase.storage.from("dubs").remove(arquivos);
   const { error } = await supabase.rpc("apagar_minha_conta");
   if (error) {

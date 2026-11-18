@@ -4,6 +4,7 @@ import { Capacitor } from "@capacitor/core";
 import { Share } from "@capacitor/share";
 import { useAdmin } from "../admin";
 import PedirApelido from "../componentes/PedirApelido";
+import FotoPerfil from "../componentes/FotoPerfil";
 import {
   apagarComentario,
   apagarPublicacao,
@@ -375,9 +376,13 @@ function ItemFeed(props: {
         <div style={{ width: `${progresso * 100}%` }} />
       </div>
       <div className="post-acoes">
-        <span className="post-autor" aria-hidden title={`@${p.apelido}`}>
-          {p.apelido.slice(0, 1).toUpperCase()}
-        </span>
+        {props.souAutor ? (
+          <Link to="/conta" className="post-autor-link" title="Meu perfil" aria-label="Meu perfil">
+            <FotoPerfil apelido={p.apelido} foto={p.autorFoto} tamanho={48} className="post-autor" />
+          </Link>
+        ) : (
+          <FotoPerfil apelido={p.apelido} foto={p.autorFoto} tamanho={48} className="post-autor" />
+        )}
         <button className={`acao ${props.minha === 1 ? "ativa" : ""}`} onClick={() => props.aoReagir(1)} aria-label={`Curtir (${p.curtidas})`} aria-pressed={props.minha === 1}>
           <span>👍</span>
           {p.curtidas}
@@ -503,8 +508,11 @@ function GavetaComentarios(props: { p: Publicacao; eu: string | null; admin: boo
             lista.map((c) => (
               <div key={c.id} className="comentario">
                 <div className="linha entre">
-                  <span>
-                    <strong>@{c.apelido}</strong> <span className="suave pequeno">· {tempoAtras(c.criadoEm)}</span>
+                  <span className="linha" style={{ gap: 8, flexWrap: "nowrap" }}>
+                    <FotoPerfil apelido={c.apelido} foto={c.foto} tamanho={28} />
+                    <span>
+                      <strong>@{c.apelido}</strong> <span className="suave pequeno">· {tempoAtras(c.criadoEm)}</span>
+                    </span>
                   </span>
                   {(props.admin || props.eu === c.autorId) && (
                     <button
