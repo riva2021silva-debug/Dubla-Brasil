@@ -24,12 +24,105 @@ function passaAltas(x: Float32Array, taxa: number, corte = 80): Float32Array {
   return y;
 }
 
+// ---------- Redutor de chiado (subtração espectral) ----------
+
+const N_FFT = 1024;
+const SALTO_FFT = N_FFT / 4;
+
+function fftNoLugar(re: Float64Array, im: Float64Array, inversa: boolean) {
+  const n = re.length;
+  for (let i = 1, j = 0; i < n; i++) {
+    let bit = n >> 1;
+    for (; j & bit; bit >>= 1) j ^= bit;
+    j ^= bit;
+    if (i < j) {
+      let t = re[i]; re[i] = re[j]; re[j] = t;
+      t = im[i]; im[i] = im[j]; im[j] = t;
+    }
+  }
+  for (let tam = 2; tam <= n; tam <<= 1) {
+    const ang = ((inversa ? 2 : -2) * Math.PI) / tam;
+    const wr = Math.cos(ang), wi = Math.sin(ang);
+    for (let i = 0; i < n; i += tam) {
+      let cr = 1, ci = 0;
+      for (let k = 0; k < tam / 2; k++) {
+        const a = i + k, b = a + tam / 2;
+        const tr = re[b] * cr - im[b] * ci, ti = re[b] * ci + im[b] * cr;
+        re[b] = re[a] - tr; im[b] = im[a] - ti;
+        re[a] += tr; im[a] += ti;
+        const nr = cr * wr - ci * wi;
+        ci = cr * wi + ci * wr;
+        cr = nr;
+      }
+    }
+  }
+}
+
 /**
- * Deixa a voz mais limpa: corta graves de ruído, abafa o chiado nos trechos sem fala
+ * Tira o chiado constante (ruído do microfone, ventilador, "shhh"): mede o ruído nos momentos mais quietos
+ * e subtrai essa "impressão digital" de cada faixa de frequência. A voz passa; o chiado some.
+ */
+export function reduzirChiado(x: Float32Array, forca = 1.6, piso = 0.08): Float32Array {
+  if (x.length < N_FFT * 4) return x;
+  const janela = Float64Array.from({ length: N_FFT }, (_, i) => Math.sqrt(0.5 - 0.5 * Math.cos((2 * Math.PI * i) / N_FFT)));
+  const quadros = Math.floor((x.length - N_FFT) / SALTO_FFT) + 1;
+  const bins = N_FFT / 2 + 1;
+  const mags: Float32Array[] = [];
+  const fases: { re: Float64Array; im: Float64Array }[] = [];
+  const energia = new Float64Array(quadros);
+  for (let q = 0; q < quadros; q++) {
+    const re = new Float64Array(N_FFT), im = new Float64Array(N_FFT);
+    for (let i = 0; i < N_FFT; i++) re[i] = x[q * SALTO_FFT + i] * janela[i];
+    fftNoLugar(re, im, false);
+    const m = new Float32Array(bins);
+    for (let k = 0; k < bins; k++) {
+      m[k] = Math.hypot(re[k], im[k]);
+      energia[q] += m[k] * m[k];
+    }
+    mags.push(m);
+    fases.push({ re, im });
+  }
+  // Ruído = média dos 20% de quadros mais quietos (onde a pessoa não está falando).
+  const ordem = Array.from(energia.keys()).sort((a, b) => energia[a] - energia[b]);
+  // Sem silêncio de verdade na gravação (fala ou som contínuo, sem pausa): não dá para saber o que é chiado,
+  // então não mexe (melhor deixar um pouco de chiado do que comer a voz).
+  const quieto = energia[ordem[Math.floor(quadros * 0.2)]], forte = energia[ordem[Math.floor(quadros * 0.9)]];
+  if (!(quieto < forte * 0.1)) return x;
+  const quietos = ordem.slice(0, Math.max(3, Math.floor(quadros * 0.2)));
+  const ruido = new Float32Array(bins);
+  for (const q of quietos) for (let k = 0; k < bins; k++) ruido[k] += mags[q][k] / quietos.length;
+
+  const y = new Float64Array(x.length);
+  const ganhoAnterior = new Float32Array(bins).fill(1);
+  for (let q = 0; q < quadros; q++) {
+    const { re, im } = fases[q];
+    for (let k = 0; k < bins; k++) {
+      const alvo = Math.max(piso, 1 - (forca * ruido[k]) / (mags[q][k] + 1e-9));
+      // Sobe rápido (não come o começo das palavras) e desce suave (sem "barulhinho de robô").
+      const g = alvo > ganhoAnterior[k] ? alvo : ganhoAnterior[k] * 0.7 + alvo * 0.3;
+      ganhoAnterior[k] = g;
+      re[k] *= g;
+      im[k] *= g;
+      if (k > 0 && k < N_FFT / 2) {
+        re[N_FFT - k] = re[k];
+        im[N_FFT - k] = -im[k];
+      }
+    }
+    fftNoLugar(re, im, true);
+    for (let i = 0; i < N_FFT; i++) y[q * SALTO_FFT + i] += (re[i] / N_FFT) * janela[i];
+  }
+  // Janela √Hann com 75% de sobreposição soma 2 (análise × síntese).
+  const saida = new Float32Array(x.length);
+  for (let i = 0; i < x.length; i++) saida[i] = y[i] / 2;
+  return saida;
+}
+
+/**
+ * Deixa a voz mais limpa: corta graves de ruído, tira o chiado, abafa o que sobra nos trechos sem fala
  * (porta de ruído suave) e equilibra o volume (sem estourar).
  */
 export function limparVoz(entrada: Float32Array, taxa: number): Float32Array {
-  const x = passaAltas(entrada, taxa);
+  const x = reduzirChiado(passaAltas(entrada, taxa));
   const passo = Math.max(1, Math.round(taxa * 0.01)); // quadros de 10 ms
   const n = Math.ceil(x.length / passo);
   const energia = new Float32Array(n);
@@ -44,12 +137,15 @@ export function limparVoz(entrada: Float32Array, taxa: number): Float32Array {
   const ordenada = Array.from(energia).sort((a, b) => a - b);
   const ruido = ordenada[Math.floor(ordenada.length * 0.15)] ?? 0;
   const pico = ordenada[ordenada.length - 1] ?? 0;
-  const limiar = Math.max(ruido * 3, pico * 0.04);
-  // Ganho por quadro: 1 na fala, 0,12 no silêncio, com subida rápida e descida suave (sem "cortar" palavras).
+  const forte = ordenada[Math.floor(ordenada.length * 0.9)] ?? 0;
+  // Sem pausa de verdade (fala contínua): não abafa nada.
+  const semPausa = !(ruido < forte * 0.316);
+  const limiar = semPausa ? 0 : Math.max(ruido * 3, pico * 0.04);
+  // Ganho por quadro: 1 na fala, 0,04 no silêncio, com subida rápida e descida suave (sem "cortar" palavras).
   const ganho = new Float32Array(n);
-  let atual = 0.12;
+  let atual = 0.04;
   for (let q = 0; q < n; q++) {
-    const alvo = energia[q] > limiar ? 1 : 0.12;
+    const alvo = energia[q] > limiar ? 1 : 0.04;
     atual = alvo > atual ? atual + (alvo - atual) * 0.6 : atual + (alvo - atual) * 0.08;
     ganho[q] = atual;
   }
@@ -64,8 +160,8 @@ export function limparVoz(entrada: Float32Array, taxa: number): Float32Array {
     y[i] = x[i] * (ganho[q] * (1 - t) + ganho[proximo] * t);
     maximo = Math.max(maximo, Math.abs(y[i]));
   }
-  // Volume: leva o pico a -1 dB, mas sem aumentar mais que 4x (para não destacar o ruído).
-  const fator = maximo > 0 ? Math.min(4, 0.89 / maximo) : 1;
+  // Volume: leva o pico a -1 dB, mas sem aumentar mais que 3x (para não destacar o ruído).
+  const fator = maximo > 0 ? Math.min(3, 0.89 / maximo) : 1;
   if (fator !== 1) for (let i = 0; i < y.length; i++) y[i] *= fator;
   return y;
 }

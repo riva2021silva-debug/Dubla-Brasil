@@ -208,7 +208,10 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
   }, []);
 
   const parar = useCallback(() => {
-    if (mixer.current) mixer.current.guia = 0;
+    if (mixer.current) {
+      mixer.current.guia = 0;
+      mixer.current.gravando = false;
+    }
     if (camera.current?.gravando()) void camera.current.parar();
     mic.current?.parar();
     mixer.current?.ignorarTomadas([]);
@@ -238,7 +241,10 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
     setAlvo({ falas, fimMs });
     setModo("gravando");
     palco.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    if (mixer.current) mixer.current.guia = cfg.guiaVoz ? 0.3 : 0;
+    if (mixer.current) {
+      mixer.current.guia = cfg.guiaVoz ? 0.3 : 0;
+      mixer.current.gravando = true;
+    }
     mic.current.iniciar();
     if (camera.current) {
       camera.current.iniciar();
@@ -256,6 +262,7 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
     const m = mixer.current;
     const g = mic.current?.parar() ?? null;
     m.guia = 0;
+    m.gravando = false;
     const cenaInicio = g ? m.cenaNoTempo(g.inicioCtx) : null;
     // Câmera: guarda em que momento da cena ela começou (antes de pausar, enquanto o relógio da cena vale).
     const camGravando = camera.current?.gravando() ? camera.current : null;

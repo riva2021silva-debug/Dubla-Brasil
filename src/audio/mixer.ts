@@ -21,6 +21,11 @@ const FOLGA_DEPOIS_MS = 300;
 /** Entre duas falas suas, um espaço menor que isto fica fechado (a voz original não "pisca" no meio da sua dublagem). */
 const ESPACO_FECHADO_MS = 1500;
 const SUAVIZACAO_S = 0.02;
+/** Enquanto grava: silêncio desde antes da folga gravada (250 ms + atraso do som) até depois dela (600 ms). */
+const MARGEM_GRAVANDO_ANTES_MS = 350;
+const MARGEM_GRAVANDO_DEPOIS_MS = 450;
+/** Música durante a gravação: bem baixinha (o microfone quase não capta), só para não perder o ritmo. */
+const MUSICA_AO_GRAVAR = 0.12;
 
 let contextoCompartilhado: AudioContext | null = null;
 export function contextoDeAudio(): AudioContext {
@@ -51,6 +56,12 @@ export class Mixer {
   volumeOriginalNaMinhaFala = 0;
   /** "Guia": volume da voz original durante a gravação (0 = desligado). Só no estúdio, enquanto grava. */
   guia = 0;
+  /**
+   * Gravando: nas suas falas o alto-falante fica quase mudo (só a música bem baixinha para manter o ritmo), e o
+   * silêncio começa um pouco antes e termina um pouco depois. Assim o microfone não capta de volta a voz original
+   * nem a música (era isso que fazia eco e chiado na dublagem).
+   */
+  gravando = false;
   private limpar: () => void;
 
   private video: HTMLVideoElement;
@@ -189,24 +200,29 @@ export class Mixer {
     this.ancora = { ctx: t0, cenaMs: s0 };
     const emCtx = (ms: number) => t0 + (ms - s0) / 1000;
     const temFundo = this.fundo !== null;
-    const originalNaJanela = Math.max(this.guia, temFundo ? 0 : this.volumeOriginalNaMinhaFala);
+    const gravando = this.gravando;
+    const originalNaJanela = gravando ? this.guia : Math.max(this.guia, temFundo ? 0 : this.volumeOriginalNaMinhaFala);
+    const nivelFundo = gravando ? MUSICA_AO_GRAVAR : 1;
+    const janelas = gravando
+      ? this.janelas.map((j) => ({ inicioMs: Math.max(0, j.inicioMs - MARGEM_GRAVANDO_ANTES_MS), fimMs: j.fimMs + MARGEM_GRAVANDO_DEPOIS_MS }))
+      : this.janelas;
 
     // Estado inicial e transições do original x fundo.
-    const dentro = !this.modoOriginal && this.janelas.some((j) => s0 >= j.inicioMs && s0 < j.fimMs);
+    const dentro = !this.modoOriginal && janelas.some((j) => s0 >= j.inicioMs && s0 < j.fimMs);
     const gv = this.ganhoVideo.gain;
     const gf = this.ganhoFundo.gain;
     // Sem trilha de fundo enviada: na sua fala entra o som do próprio vídeo sem a voz original.
     const ambiente = !temFundo && this.somAmbiente;
     const ga = this.ganhoSemVoz.gain;
     gv.setValueAtTime(dentro ? originalNaJanela : 1, t0);
-    gf.setValueAtTime(dentro && temFundo ? 1 : 0, t0);
-    ga.setValueAtTime(dentro && ambiente ? 1 : 0, t0);
-    for (const j of this.modoOriginal ? [] : this.janelas) {
+    gf.setValueAtTime(dentro && temFundo ? nivelFundo : 0, t0);
+    ga.setValueAtTime(dentro && ambiente ? nivelFundo : 0, t0);
+    for (const j of this.modoOriginal ? [] : janelas) {
       if (j.fimMs <= s0) continue;
       if (j.inicioMs > s0) {
         gv.setTargetAtTime(originalNaJanela, emCtx(j.inicioMs), SUAVIZACAO_S);
-        if (temFundo) gf.setTargetAtTime(1, emCtx(j.inicioMs), SUAVIZACAO_S);
-        if (ambiente) ga.setTargetAtTime(1, emCtx(j.inicioMs), SUAVIZACAO_S);
+        if (temFundo) gf.setTargetAtTime(nivelFundo, emCtx(j.inicioMs), SUAVIZACAO_S);
+        if (ambiente) ga.setTargetAtTime(nivelFundo, emCtx(j.inicioMs), SUAVIZACAO_S);
       }
       gv.setTargetAtTime(1, emCtx(j.fimMs), SUAVIZACAO_S);
       if (temFundo) gf.setTargetAtTime(0, emCtx(j.fimMs), SUAVIZACAO_S);

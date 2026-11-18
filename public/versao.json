@@ -1,11 +1,12 @@
 {
-  "versao": "4.0",
-  "codigo": 31,
+  "versao": "4.1",
+  "codigo": 32,
   "data": "2026-11-18",
   "novidades": [
-    "🎭 Dueto: toque em “Dublar junto” num dub da galeria e duble os personagens que sobraram — o vídeo sai com as duas vozes",
-    "🔔 Notificações: saiba quando alguém curtir, comentar ou dublar junto com você",
-    "Galeria: o dueto mostra “🎭 Dueto com @fulano” e leva ao dub original"
+    "🎙️ Microfone sem eco: enquanto você grava, o celular fica quase em silêncio na sua fala",
+    "🎙️ Voz sem chiado: novo redutor de ruído limpa o “shhh” do microfone",
+    "📱 Tamanho padrão no celular (Android e iPhone): topo compacto e barra de baixo acima dos botões do Android",
+    "🎭 Botão “Dublar junto” em todos os dubs da galeria"
   ],
   "apk": "https://dublabr.netlify.app/baixar/DublaBrasilAI.apk"
 }

@@ -1,4 +1,14 @@
 :root {
+  /* Faixas do sistema (barra de status, botões do Android, "notch" do iPhone). O Capacitor também informa os
+     valores (--safe-area-inset-*) quando o Android não repassa para o env(); vale o maior dos dois. */
+  --sa-top: max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px));
+  --sa-bottom: max(env(safe-area-inset-bottom, 0px), var(--safe-area-inset-bottom, 0px));
+  --sa-left: max(env(safe-area-inset-left, 0px), var(--safe-area-inset-left, 0px));
+  --sa-right: max(env(safe-area-inset-right, 0px), var(--safe-area-inset-right, 0px));
+}
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
+:root {
   --fundo: #08021f;
   --superficie: #140834;
   --superficie-2: #1f0e4a;
@@ -154,8 +164,8 @@ kbd { background: var(--superficie-2); border: 1px solid var(--borda); border-bo
 .slogan { font-family: var(--fonte-titulo); font-size: 1.15rem; font-weight: 800; }
 .slogan b { color: var(--amarelo); }
 /* Área segura de celulares com recorte de tela (notch) */
-.topo { padding-top: max(10px, env(safe-area-inset-top)); padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
-.rodape { padding-bottom: max(30px, env(safe-area-inset-bottom)); }
+.topo { padding-top: max(10px, var(--sa-top)); padding-left: max(16px, var(--sa-left)); padding-right: max(16px, var(--sa-right)); }
+.rodape { padding-bottom: max(30px, var(--sa-bottom)); }
 
 /* ===== Estúdio: uma fala por vez ===== */
 .estudio { max-width: 680px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
@@ -271,13 +281,13 @@ kbd { background: var(--superficie-2); border: 1px solid var(--borda); border-bo
   .barra-inferior {
     display: grid; grid-template-columns: repeat(5, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
     background: rgb(8 2 31 / 0.96); backdrop-filter: blur(10px); border-top: 1px solid var(--borda);
-    padding: 6px max(6px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left));
+    padding: 6px max(6px, var(--sa-right)) max(8px, var(--sa-bottom)) max(6px, var(--sa-left));
   }
   .barra-inferior a { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; border-radius: 12px; text-decoration: none; color: var(--texto-suave); font-size: 0.7rem; font-weight: 700; }
   .barra-inferior a span { font-size: 1.3rem; line-height: 1; }
   .barra-inferior a.active { color: var(--amarelo); background: var(--superficie-2); }
   .pagina { padding-bottom: 110px; }
-  .rodape { padding-bottom: calc(90px + env(safe-area-inset-bottom)); }
+  .rodape { padding-bottom: calc(90px + var(--sa-bottom)); }
 }
 
 /* ===== Rostos ===== */
@@ -333,7 +343,7 @@ kbd { background: var(--superficie-2); border: 1px solid var(--borda); border-bo
 .fundo-modal { position: fixed; inset: 0; z-index: 50; background: rgb(0 0 0 / 0.6); display: grid; place-items: center; padding: 16px; }
 .modal { width: min(420px, 100%); }
 .gaveta-fundo { place-items: end center; padding: 0; }
-.gaveta { width: min(560px, 100%); max-height: 75dvh; display: flex; flex-direction: column; gap: 12px; background: var(--superficie); border: 1px solid var(--borda); border-radius: 20px 20px 0 0; padding: 16px 16px max(16px, env(safe-area-inset-bottom)); }
+.gaveta { width: min(560px, 100%); max-height: 75dvh; display: flex; flex-direction: column; gap: 12px; background: var(--superficie); border: 1px solid var(--borda); border-radius: 20px 20px 0 0; padding: 16px 16px max(16px, var(--sa-bottom)); }
 .lista-comentarios { overflow-y: auto; display: flex; flex-direction: column; gap: 12px; min-height: 120px; }
 .comentario { padding-bottom: 10px; border-bottom: 1px solid var(--borda); }
 .aviso-flutuante { position: fixed; left: 50%; bottom: 110px; transform: translateX(-50%); z-index: 60; background: var(--superficie-2); border: 1px solid var(--roxo-claro); padding: 10px 16px; border-radius: 999px; font-weight: 700; box-shadow: var(--sombra); max-width: calc(100% - 32px); text-align: center; }
@@ -386,7 +396,7 @@ kbd { background: var(--superficie-2); border: 1px solid var(--borda); border-bo
   .estudio .estudio-topo .suave.pequeno { display: none; }
 }
 /* Ao começar a gravar, o vídeo para logo abaixo do cabeçalho fixo (e não escondido atrás dele). */
-.estudio .palco { scroll-margin-top: calc(84px + env(safe-area-inset-top, 0px)); }
+.estudio .palco { scroll-margin-top: calc(84px + var(--sa-top)); }
 
 /* ===== Galeria estilo TikTok: tela cheia no celular, toque duplo para curtir, progresso ===== */
 .coracao-voador { position: absolute; transform: translate(-50%, -50%); font-size: 4.5rem; pointer-events: none; animation: coracao .9s ease-out forwards; filter: drop-shadow(0 4px 12px rgb(0 0 0 / .5)); }
@@ -399,7 +409,7 @@ kbd { background: var(--superficie-2); border: 1px solid var(--borda); border-bo
   .pagina:has(.galeria) { padding: 0; }
   .pagina:has(.galeria) + .rodape { display: none; }
   .galeria { max-width: none; }
-  .feed { height: calc(100dvh - 76px - 72px - env(safe-area-inset-bottom, 0px)); border-radius: 0; }
+  .feed { height: calc(100dvh - 76px - 72px - var(--sa-bottom)); border-radius: 0; }
   .galeria > .cartao.vazio { margin: 16px; }
 }
 @media (prefers-reduced-motion: reduce) { .coracao-voador { animation-duration: .01s; } }
@@ -462,7 +472,7 @@ kbd { background: var(--superficie-2); border: 1px solid var(--borda); border-bo
 .dica-legendas { margin: 0; padding: 8px 10px; border-radius: 10px; background: rgb(250 204 21 / 0.08); border: 1px dashed rgb(250 204 21 / 0.4); }
 
 /* Prévia de uma fala no editor: o vídeo vira um miniplayer no canto, para ver e ouvir sem sair da lista */
-.palco.palco-mini { position: fixed; z-index: 40; right: 12px; bottom: calc(86px + env(safe-area-inset-bottom)); width: min(58vw, 340px) !important; height: auto !important; max-height: 42dvh; aspect-ratio: auto; box-shadow: 0 10px 30px rgb(0 0 0 / 0.6); border-color: var(--amarelo); }
+.palco.palco-mini { position: fixed; z-index: 40; right: 12px; bottom: calc(86px + var(--sa-bottom)); width: min(58vw, 340px) !important; height: auto !important; max-height: 42dvh; aspect-ratio: auto; box-shadow: 0 10px 30px rgb(0 0 0 / 0.6); border-color: var(--amarelo); }
 .palco.palco-mini.vertical { width: min(38vw, 200px) !important; }
 .palco.palco-mini video { height: auto; max-height: 42dvh; }
 .palco.palco-mini .legenda { font-size: 12px; }
@@ -515,10 +525,10 @@ kbd { background: var(--superficie-2); border: 1px solid var(--borda); border-bo
   .com-selo-externo .palco.palco-mini { bottom: calc(86px + var(--folga-selo, 0px)); }
 }
 @media (max-width: 720px) {
-  .com-selo-externo .feed { height: calc(100dvh - 76px - 72px - env(safe-area-inset-bottom, 0px) - var(--folga-selo, 0px)); }
+  .com-selo-externo .feed { height: calc(100dvh - 76px - 72px - var(--sa-bottom) - var(--folga-selo, 0px)); }
 }
 /* Gavetas que sobem do rodapé (comentários): o campo e o botão Enviar ficam acima do selo de fora */
-.com-selo-externo .gaveta { padding-bottom: calc(max(16px, env(safe-area-inset-bottom)) + var(--folga-selo, 0px)); }
+.com-selo-externo .gaveta { padding-bottom: calc(max(16px, var(--sa-bottom)) + var(--folga-selo, 0px)); }
 
 /* Foto de perfil das pessoas */
 .foto-perfil { flex: none; border-radius: 50%; display: inline-grid; place-items: center; overflow: hidden; font-weight: 900; color: #fff; text-shadow: 0 1px 2px rgb(0 0 0 / .35); }
@@ -553,3 +563,12 @@ kbd { background: var(--superficie-2); border: 1px solid var(--borda); border-bo
 .ator.de-outro { opacity: .55; cursor: not-allowed; }
 .pip-camera.esquerda { right: auto; left: 3.5%; }
 .linha-dueto { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; opacity: .9; }
+
+/* Celular estreito: topo compacto (tudo cabe numa linha, sem cortar o ⚙️). */
+@media (max-width: 430px) {
+  .topo .marca img { width: 54px; height: auto; }
+  .atalhos-topo { gap: 4px; }
+  .atalhos-topo .botao-icone { width: 34px; height: 34px; padding: 6px; font-size: 15px; }
+  .atalhos-topo .botao-pequeno { padding: 6px 9px; font-size: 13px; }
+  .botao-premium .texto-premium { display: none; }
+}

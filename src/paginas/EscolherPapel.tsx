@@ -145,7 +145,7 @@ function Pronto({ c, dueto }: { c: Cena; dueto: DuetoBase | null }) {
             </span>
           ) : (
             <span className="pequeno">
-              @{dueto.apelido} já dublou todos os personagens desta cena. <Link to={`/cena/${c.id}`}>Dublar a cena sozinho</Link>
+              @{dueto.apelido} já dublou todos os personagens deste dub, então não sobrou ninguém para o dueto. Para fazer dueto, quem publica precisa deixar pelo menos um personagem sem dublar. <Link to={`/cena/${c.id}`}>Dublar a cena sozinho</Link>
             </span>
           )}
         </div>
@@ -177,6 +177,11 @@ function Pronto({ c, dueto }: { c: Cena; dueto: DuetoBase | null }) {
       <div className="legenda-elenco">
         <span>{legenda}</span>
       </div>
+      {!dueto && escolhidos.length > 0 && escolhidos.length < c.personagens.length && (
+        <p className="suave pequeno" style={{ textAlign: "center", margin: 0 }}>
+          🎭 Quem você não dublar fica livre: depois de publicar, outra pessoa pode tocar em “Dublar junto” e fazer um dueto com você.
+        </p>
+      )}
 
       {verCena ? (
         <div className={`palco ${formato.vertical ? "vertical" : ""}`} style={formato.estilo}>

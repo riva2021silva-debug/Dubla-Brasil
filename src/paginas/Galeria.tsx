@@ -445,12 +445,10 @@ function ItemFeed(props: {
         {p.papeis.length > 0 && <div className="suave pequeno">Dublando: {p.papeis.join(", ")}</div>}
         {p.cenaId && (
           <div className="linha" style={{ marginTop: 6, gap: 6, flexWrap: "wrap" }}>
-            {!props.souAutor && (
-              <Link className="botao botao-pequeno botao-primario" to={`/cena/${p.cenaId}?dueto=${p.id}`} aria-label={`Dublar junto com @${p.apelido}`}>
-                🎭 Dublar junto
-              </Link>
-            )}
-            <Link className={`botao botao-pequeno ${props.souAutor ? "botao-primario" : ""}`} to={`/cena/${p.cenaId}`}>
+            <Link className="botao botao-pequeno botao-primario" to={`/cena/${p.cenaId}?dueto=${p.id}`} aria-label={`Dublar junto com @${p.apelido}`}>
+              🎭 Dublar junto
+            </Link>
+            <Link className="botao botao-pequeno" to={`/cena/${p.cenaId}`}>
               🎙️ Dublar esta cena
             </Link>
           </div>

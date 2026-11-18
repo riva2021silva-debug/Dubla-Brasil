@@ -65,7 +65,7 @@ function Layout() {
             </NavLink>
           )}
           <NavLink to="/conta" className={`botao botao-pequeno botao-premium ${plano.premium ? "eh-premium" : ""}`} aria-label="Minha conta e plano">
-            {plano.premium ? "⭐ Premium" : "⭐ Seja Premium"}
+            ⭐<span className="texto-premium">{plano.premium ? " Premium" : " Seja Premium"}</span>
           </NavLink>
           <NavLink to="/notificacoes" className="botao botao-pequeno botao-icone sino" aria-label={naoLidas ? `Notificações, ${naoLidas} novas` : "Notificações"}>
             🔔{naoLidas > 0 && <span className="selo-novas selo-sino">{naoLidas > 9 ? "9+" : naoLidas}</span>}
