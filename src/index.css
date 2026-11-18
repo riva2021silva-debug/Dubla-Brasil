@@ -512,3 +512,5 @@ kbd { background: var(--superficie-2); border: 1px solid var(--borda); border-bo
 @media (max-width: 720px) {
   .com-selo-externo .feed { height: calc(100dvh - 76px - 72px - env(safe-area-inset-bottom, 0px) - var(--folga-selo, 0px)); }
 }
+/* Gavetas que sobem do rodapé (comentários): o campo e o botão Enviar ficam acima do selo de fora */
+.com-selo-externo .gaveta { padding-bottom: calc(max(16px, env(safe-area-inset-bottom)) + var(--folga-selo, 0px)); }

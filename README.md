@@ -344,6 +344,7 @@ No estúdio, a legenda em português aparece embaixo do vídeo no estilo karaok�
 
 - No plano grátis, o Netlify coloca uma pílula "Powered by Netlify" fixa no rodapé, que cobria a barra de botões.
 - `src/seloExterno.ts` mede qualquer elemento fixo no rodapé que não seja do app, inclusive em shadow DOM
-  aberto, e liga a classe `com-selo-externo`. Ela sobe a barra inferior (`--folga-selo`) e o conteúdo, e
+  aberto, e liga a classe `com-selo-externo`. Ela sobe a barra inferior (`--folga-selo`), o conteúdo e a gaveta de
+  comentários (o botão Enviar fica acima do selo), e
   preenche o espaço por baixo. Só no navegador: no app instalado não há selo.
 - **Teste:** `node testes/e2e-selo.cjs`, que simula o selo no tamanho do iPhone.
