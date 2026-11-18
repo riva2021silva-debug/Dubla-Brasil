@@ -34,9 +34,13 @@ export function fatiarEmTomadas(
 ): Record<string, Tomada> {
   const inicioReal = cenaDaPrimeiraAmostra - compensacaoMs;
   const saida: Record<string, Tomada> = {};
-  for (const f of falas) {
-    const de = f.inicioMs - FOLGA_INICIO_MS;
-    const ate = f.fimMs + FOLGA_FIM_MS;
+  const ordem = [...falas].sort((a, b) => a.inicioMs - b.inicioMs);
+  for (let k = 0; k < ordem.length; k++) {
+    const f = ordem[k];
+    // As folgas não podem invadir a fala vizinha (senão o mesmo trecho toca duas vezes = eco): param no meio do caminho.
+    const ant = ordem[k - 1], prox = ordem[k + 1];
+    const de = Math.max(f.inicioMs - FOLGA_INICIO_MS, ant ? (ant.fimMs + f.inicioMs) / 2 : -Infinity);
+    const ate = Math.min(f.fimMs + FOLGA_FIM_MS, prox ? (f.fimMs + prox.inicioMs) / 2 : Infinity);
     const i = Math.max(0, Math.round(((de - inicioReal) / 1000) * g.taxa));
     const z = Math.min(g.amostras.length, Math.round(((ate - inicioReal) / 1000) * g.taxa));
     if (z - i < g.taxa * 0.1) continue;

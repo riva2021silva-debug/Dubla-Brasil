@@ -69,9 +69,14 @@ function db(arq, ini, dur, freq) {
     return arq;
   };
   const ligado = await gravarEBaixar("ligado");
-  const voz = db(ligado, 5, 2, 880), musica = db(ligado, 5, 2, 330), musicaFora = db(ligado, 1, 2, 330), vozFora = db(ligado, 1, 2, 880);
-  console.log(`Ligado — fora da fala: voz ${vozFora.toFixed(0)} dB, música ${musicaFora.toFixed(0)} dB · na fala: voz ${voz.toFixed(0)} dB, música ${musica.toFixed(0)} dB`);
-  console.log("Na fala do usuário a voz original some e a música continua:", voz < vozFora - 25 && musica > musicaFora - 10 ? "ok" : "FALHOU");
+  // Referência: o mesmo trecho no vídeo original (voz e música juntas).
+  const vozOrig = db(VIDEO, 5, 2, 880), musicaOrig = db(VIDEO, 5, 2, 330);
+  const voz = db(ligado, 5, 2, 880), musica = db(ligado, 5, 2, 330);
+  console.log(`Original: voz ${vozOrig.toFixed(0)} dB, música ${musicaOrig.toFixed(0)} dB · dublado (na fala): voz ${voz.toFixed(0)} dB, música ${musica.toFixed(0)} dB`);
+  console.log("Na fala do usuário a voz original some e a música continua:", voz < vozOrig - 25 && musica > musicaOrig - 10 ? "ok" : "FALHOU");
+  // Esta cena só tem um personagem: dublando ele, a voz original some também fora da fala (cena inteira).
+  const vozFora = db(ligado, 1, 0.8, 880);
+  console.log(`Fora da fala (cena com um personagem só, todo dublado): voz ${vozFora.toFixed(0)} dB:`, vozFora < vozOrig - 25 ? "ok" : "FALHOU");
 
   await u.goto(BASE + "#/configuracoes");
   await u.getByText("Manter o som ambiente nas minhas falas").click();

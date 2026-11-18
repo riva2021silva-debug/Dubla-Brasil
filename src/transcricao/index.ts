@@ -64,6 +64,51 @@ function rodarNoTrabalhador(pedido: Pedido, aoProgredir: (p: Progresso) => void)
   });
 }
 
+/**
+ * Quebra uma fala que junta duas falas (ex.: "Oi!" … "Tudo bem?" de pessoas diferentes) nas pausas que o detector de
+ * voz encontrou dentro dela. O texto é repartido pelas palavras, na proporção do tempo de cada pedaço.
+ */
+function dividirPorPausas(partes: { inicioMs: number; fimMs: number; texto: string; original: string }[], regioes: Trecho[]) {
+  const saida: typeof partes = [];
+  for (const p of partes) {
+    let dentro = regioes
+      .map((r) => ({ inicioMs: Math.max(r.inicioMs, p.inicioMs), fimMs: Math.min(r.fimMs, p.fimMs) }))
+      .filter((r) => r.fimMs - r.inicioMs >= 250);
+    const palavras = p.texto.split(/\s+/).filter(Boolean);
+    const originais = p.original.split(/\s+/).filter(Boolean);
+    // Só divide se houver pausas de verdade (≥ 250 ms) e palavras suficientes para cada pedaço.
+    dentro = dentro.filter((r, i) => i === 0 || r.inicioMs - dentro[i - 1].fimMs >= 0);
+    if (dentro.length < 2 || palavras.length < dentro.length) {
+      saida.push(p);
+      continue;
+    }
+    const total = dentro.reduce((t, r) => t + (r.fimMs - r.inicioMs), 0);
+    const repartir = (lista: string[]) => {
+      const pedacos: string[] = [];
+      let usadas = 0, acumulado = 0;
+      dentro.forEach((r, i) => {
+        acumulado += r.fimMs - r.inicioMs;
+        const ate = i === dentro.length - 1 ? lista.length : Math.max(usadas + 1, Math.min(lista.length - (dentro.length - 1 - i), Math.round((acumulado / total) * lista.length)));
+        pedacos.push(lista.slice(usadas, ate).join(" "));
+        usadas = ate;
+      });
+      return pedacos;
+    };
+    const textos = repartir(palavras);
+    const orig = originais.length >= dentro.length ? repartir(originais) : dentro.map((_, i) => (i === 0 ? p.original : ""));
+    // O pedaço começa onde a voz começa e vai até a próxima voz (sem deixar buraco dentro da fala original).
+    dentro.forEach((r, i) =>
+      saida.push({
+        inicioMs: i === 0 ? p.inicioMs : r.inicioMs,
+        fimMs: i === dentro.length - 1 ? p.fimMs : r.fimMs,
+        texto: textos[i],
+        original: orig[i],
+      }),
+    );
+  }
+  return saida;
+}
+
 /** Quebra falas muito longas nas pontuações, dividindo o tempo pela quantidade de texto. */
 function dividirLongas(partes: { inicioMs: number; fimMs: number; texto: string; original: string }[]) {
   const saida: typeof partes = [];
@@ -195,7 +240,8 @@ export async function separarFalas(opcoes: {
   const audio = som.mono;
   const copia = audio.slice(); // o original vai para o trabalhador
   const idioma = IDIOMAS_WHISPER[opcoes.idioma] ?? "english";
-  const partes = dividirLongas(refinarTempos(copia, await rodarNoTrabalhador({ audio, idioma, modelo: opcoes.modelo ?? "base" }, aoProgredir)));
+  const regioes = detectarFala(som.esq, som.dir, TAXA);
+  const partes = dividirLongas(dividirPorPausas(refinarTempos(copia, await rodarNoTrabalhador({ audio, idioma, modelo: opcoes.modelo ?? "base" }, aoProgredir)), regioes));
   if (!partes.length) throw new Error("Não encontrei falas neste vídeo. Ele tem diálogo audível?");
 
   aoProgredir({ etapa: "personagens", detalhe: "Separando as vozes por personagem…" });

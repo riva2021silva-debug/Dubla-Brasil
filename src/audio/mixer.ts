@@ -219,17 +219,27 @@ export class Mixer {
       this.ativas.push(f);
     }
 
-    for (const t of this.modoOriginal ? [] : this.tomadas) {
-      if (this.ignorar.has(t.falaId)) continue;
-      const fimMs = t.inicioMs + t.buffer.duration * 1000;
-      if (fimMs <= s0) continue;
+    // Uma tomada nunca toca junto com a próxima: termina (com um fade curtinho) quando a seguinte começa.
+    // Sem isso, as sobras de antes/depois de falas muito próximas se sobrepõem e a voz soa duplicada (eco).
+    const tocaveis = (this.modoOriginal ? [] : this.tomadas).filter((t) => !this.ignorar.has(t.falaId)).sort((a, b) => a.inicioMs - b.inicioMs);
+    tocaveis.forEach((t, k) => {
+      const proxima = tocaveis[k + 1];
+      const fimMs = Math.min(t.inicioMs + t.buffer.duration * 1000, proxima ? proxima.inicioMs : Infinity);
+      if (fimMs <= s0 || fimMs <= t.inicioMs) return;
       const src = this.ctx.createBufferSource();
       src.buffer = t.buffer;
-      src.connect(this.ganhoVoz);
+      const g = this.ctx.createGain();
+      src.connect(g).connect(this.ganhoVoz);
       if (t.inicioMs >= s0) src.start(emCtx(t.inicioMs));
       else src.start(t0, (s0 - t.inicioMs) / 1000);
+      if (proxima && proxima.inicioMs < t.inicioMs + t.buffer.duration * 1000) {
+        const corte = Math.max(t0, emCtx(fimMs));
+        g.gain.setValueAtTime(1, Math.max(t0, corte - 0.03));
+        g.gain.linearRampToValueAtTime(0, corte);
+        src.stop(corte + 0.01);
+      }
       this.ativas.push(src);
-    }
+    });
   }
 }
 

@@ -1,11 +1,11 @@
 {
-  "versao": "3.5",
-  "codigo": 26,
+  "versao": "3.6",
+  "codigo": 27,
   "data": "2026-11-18",
   "novidades": [
-    "Novo: Meu perfil — coloque sua foto e mude seu apelido",
-    "Sua foto aparece nos seus vídeos da galeria e nos comentários",
-    "Acesse por ⚙️ Configurações → Meu perfil e conta"
+    "Dublando todos os personagens, a voz original não volta mais no meio da sua dublagem",
+    "Espaços curtos entre as suas falas ficam fechados (só o som ambiente)",
+    "Admin: a IA agora acha as falas que faltaram — botão “🔍 Encontrar falas que faltaram”"
   ],
   "apk": "https://dublabr.netlify.app/baixar/DublaBrasilAI.apk"
 }

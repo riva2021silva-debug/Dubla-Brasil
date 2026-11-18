@@ -372,3 +372,23 @@ No estúdio, a legenda em português aparece embaixo do vídeo no estilo karaok�
   pasta (`<id>/avatar-…`). A foto vai para a pasta "dubs", com as regras de envio que já existem. Enquanto o SQL
   não for rodado, a galeria segue sem foto e não quebra. Excluir a conta apaga a foto.
 - **Teste:** `node testes/e2e-perfil.cjs`.
+
+## Versão 3.6: sem buracos na dublagem
+
+- **Buracos:** nos espaços sem fala marcada, a voz original voltava no meio da dublagem.
+- **Mixer:**
+  - espaços de até 1,5 s entre as falas do usuário ficam fechados (`ESPACO_FECHADO_MS`);
+  - quando a pessoa dubla **todos** os personagens (e, no resultado, gravou todas as falas), a janela vira a
+    **cena inteira**: a voz original não volta em momento nenhum e o som ambiente ou a trilha de fundo toca
+    sozinho.
+- **IA, detector de voz** (`src/transcricao/vozes.ts`):
+  - filtra a faixa da voz (250 Hz–3,5 kHz) e compara o centro do estéreo com os lados, porque a voz fica no
+    centro e a música nos lados. Em mono, usa só a força do som;
+  - acha trechos falados sem fala marcada (≥ 0,3 s), transcreve só esses trechos com o Whisper (juntos, numa
+    passada) e escolhe o personagem pelo tom de voz mais parecido;
+  - roda sozinho no fim do **✨ Separar falas** e pelo botão **🔍 Encontrar falas que faltaram** no editor;
+  - quando não dá para entender as palavras, a fala entra com "…" para o admin completar.
+- **Testes:**
+  - `node --experimental-strip-types testes/unidade-vozes.mjs`;
+  - `node testes/e2e-sem-buraco.cjs`: a voz no buraco caiu de -14 para -52 dB;
+  - `node testes/e2e-faltaram.cjs`: uma fala apagada foi encontrada de novo com o texto certo.
