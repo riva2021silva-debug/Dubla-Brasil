@@ -16,11 +16,27 @@ import Galeria from "./paginas/Galeria";
 import Premium, { Conta } from "./paginas/Premium";
 import { usePlano } from "./plano";
 import AvisoAtualizacao from "./componentes/AvisoAtualizacao";
+import Ajuda from "./paginas/Ajuda";
+import { useEffect, useState } from "react";
+import { contarNovas } from "./ajuda";
 import { useAdmin } from "./admin";
 
 function Layout() {
   const { aberto } = useAdmin();
   const plano = usePlano();
+  // Administrador: quantas mensagens de Ajuda estão esperando (aparece no botão Admin).
+  const [novas, setNovas] = useState(0);
+  useEffect(() => {
+    if (!aberto) return setNovas(0);
+    const contar = () => void contarNovas().then(setNovas);
+    contar();
+    const t = setInterval(contar, 60_000);
+    window.addEventListener("dubla:mensagens-mudaram", contar);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener("dubla:mensagens-mudaram", contar);
+    };
+  }, [aberto]);
   return (
     <>
       <header className="topo">
@@ -38,12 +54,15 @@ function Layout() {
         </nav>
         <div className="atalhos-topo">
           {aberto && (
-            <NavLink to="/admin" className="botao botao-pequeno">
-              Admin
+            <NavLink to="/admin" className="botao botao-pequeno" aria-label={novas ? `Admin, ${novas} mensagens novas` : "Admin"}>
+              Admin{novas > 0 && <span className="selo-novas">{novas}</span>}
             </NavLink>
           )}
           <NavLink to="/conta" className={`botao botao-pequeno botao-premium ${plano.premium ? "eh-premium" : ""}`} aria-label="Minha conta e plano">
             {plano.premium ? "⭐ Premium" : "⭐ Seja Premium"}
+          </NavLink>
+          <NavLink to="/ajuda" className="botao botao-pequeno botao-icone" aria-label="Ajuda">
+            ❓
           </NavLink>
           <NavLink to="/configuracoes" className="botao botao-pequeno botao-icone" aria-label="Configurações">
             ⚙️
@@ -107,6 +126,7 @@ export default function App() {
           <Route path="admin/cena/:id" element={<SoAdmin><Editor /></SoAdmin>} />
           <Route path="configuracoes" element={<Configuracoes />} />
           <Route path="conta" element={<Conta />} />
+          <Route path="ajuda" element={<Ajuda />} />
           <Route path="premium" element={<Premium />} />
           <Route path="*" element={<NaoEncontrada />} />
         </Route>

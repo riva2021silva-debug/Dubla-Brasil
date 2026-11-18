@@ -264,3 +264,25 @@ No estúdio, a legenda em português aparece embaixo do vídeo no estilo karaok�
   2. Gere o APK e copie para `downloads/DublaBrasilAI.apk`.
   3. Envie ao GitHub. O Netlify publica e todos recebem o aviso.
 - Teste: `node testes/e2e-atualizacao.cjs`.
+
+## Versão 2.9: Cakto automática e Ajuda
+
+- **Cakto → Supabase:**
+  - Pagamento aprovado ou renovado: Premium por 32 dias a partir do aviso. Avisos repetidos não somam.
+  - Cancelamento: o Premium vale até o fim do período pago.
+  - Reembolso ou chargeback: o Premium acaba na hora.
+  - Quem pagou antes de criar a conta recebe o Premium ao criar a conta com o mesmo e-mail (gatilho em
+    `auth.users`).
+- **Arquivos:**
+  - SQL: `supabase/cakto-e-ajuda.sql`. As funções `cakto_aplicar` e `cakto_recusado` só podem ser chamadas
+    pela chave de serviço.
+  - Edge Function: `supabase/functions/cakto/index.ts`, sem dependências. Ela confere o `secret` do aviso (ou
+    `?segredo=` no endereço) com o segredo `CAKTO_SECRET` e guarda tudo em `pagamentos_log`, sem o segredo.
+    Precisa de "Enforce JWT verification" desligado.
+- **Endereço do webhook:** `https://<projeto>.supabase.co/functions/v1/cakto`
+- **Admin → ⭐ Assinantes → 💳 Avisos da Cakto:** os últimos 50 avisos e o que foi feito com cada um.
+- **Ajuda (❓ no topo, `#/ajuda`):**
+  - A pessoa escolhe o assunto e escreve. Vão junto a versão e o aparelho.
+  - Limite de 5 mensagens por dia. A resposta aparece em "Minhas mensagens".
+  - O admin vê o número de mensagens novas no botão Admin e responde e resolve em **Admin → 💬 Mensagens**.
+- **Testes:** `node testes/e2e-ajuda.cjs`. As regras do SQL e a função foram testadas no Postgres local.

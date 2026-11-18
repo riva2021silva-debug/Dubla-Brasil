@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useCarregar } from "../ganchos";
 import { dataBr, definirPremium, listarAssinantes } from "../plano";
+import { listarPagamentos, quando } from "../ajuda";
 
 /** Assinantes Premium: lista e liberação manual (por e-mail ou @apelido). */
 export default function AdminAssinantes() {
   const lista = useCarregar(() => listarAssinantes(), []);
+  const pagamentos = useCarregar(() => listarPagamentos(), []);
   const [busca, setBusca] = useState("");
   const [ocupado, setOcupado] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -80,6 +82,32 @@ export default function AdminAssinantes() {
           })}
         </ul>
       )}
+      <section className="cartao pilha">
+        <div className="linha entre">
+          <b>💳 Avisos da Cakto</b>
+          <button className="botao botao-pequeno" onClick={() => pagamentos.recarregar()}>
+            Atualizar
+          </button>
+        </div>
+        <span className="suave pequeno">Cada pagamento, renovação, cancelamento ou reembolso que a Cakto avisar aparece aqui.</span>
+        {pagamentos.erro && <p className="alerta">{pagamentos.erro}</p>}
+        {(pagamentos.dado ?? []).length === 0 ? (
+          <span className="suave">Nenhum aviso recebido ainda.</span>
+        ) : (
+          <ul className="lista-pagamentos">
+            {pagamentos.dado!.map((p, i) => (
+              <li key={i} className={p.valido ? "" : "recusado"}>
+                <span>
+                  <b>{p.evento ?? "?"}</b> · {p.email || "sem e-mail"}
+                </span>
+                <span className="suave pequeno">
+                  {quando(p.recebido_em)} · {p.resultado}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }

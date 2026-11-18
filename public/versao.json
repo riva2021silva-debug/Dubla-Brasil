@@ -1,12 +1,11 @@
 {
-  "versao": "2.8",
-  "codigo": 19,
+  "versao": "2.9",
+  "codigo": 20,
   "data": "2026-11-18",
   "novidades": [
-    "Aviso de atualização: quando sair uma versão nova, o app avisa e mostra as novidades",
-    "Botão Assinar abre o pagamento seguro da Cakto",
-    "No editor: ouvir cada fala num miniplayer e corrigir as legendas",
-    "No editor: cortar o vídeo e deixar em 9:16, 1:1 ou 16:9"
+    "Nova área de Ajuda (❓ no topo): mande sua mensagem e veja a resposta da equipe",
+    "Assinatura Premium liberada automaticamente depois do pagamento",
+    "Cancelamento e reembolso também atualizam o Premium sozinhos"
   ],
   "apk": "https://dublabr.netlify.app/baixar/DublaBrasilAI.apk"
 }

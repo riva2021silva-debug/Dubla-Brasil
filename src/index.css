@@ -467,3 +467,18 @@ kbd { background: var(--superficie-2); border: 1px solid var(--borda); border-bo
 .aviso-atualizacao { width: min(440px, 100%); }
 .lista-novidades { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
 .lista-novidades li::marker { color: var(--amarelo); }
+
+/* Ajuda */
+.tipos-ajuda { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tipo-ajuda { padding: 10px; border-radius: 12px; border: 2px solid var(--borda); background: var(--superficie); color: inherit; font: inherit; font-weight: 600; cursor: pointer; text-align: left; }
+.tipo-ajuda.ativo { border-color: var(--amarelo); background: rgb(250 204 21 / 0.1); }
+.mensagem-ajuda { gap: 8px; }
+.mensagem-ajuda.nova { border-color: var(--amarelo); }
+.status-ajuda { font-size: 12px; font-weight: 700; padding: 3px 8px; border-radius: 999px; background: var(--borda); }
+.status-ajuda.s-resolvida { background: rgb(34 197 94 / 0.2); color: var(--verde); }
+.status-ajuda.s-nova { background: rgb(239 68 68 / 0.18); }
+.resposta-ajuda { padding: 10px 12px; border-radius: 10px; background: rgb(34 197 94 / 0.1); border-left: 3px solid var(--verde); }
+.selo-novas { display: inline-grid; place-items: center; min-width: 18px; height: 18px; margin-left: 6px; padding: 0 5px; border-radius: 999px; background: #ef4444; color: #fff; font-size: 11px; font-weight: 800; }
+.lista-pagamentos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.lista-pagamentos li { display: flex; flex-direction: column; padding: 8px 10px; border-radius: 10px; background: rgb(255 255 255 / 0.04); border-left: 3px solid var(--verde); }
+.lista-pagamentos li.recusado { border-left-color: #ef4444; }

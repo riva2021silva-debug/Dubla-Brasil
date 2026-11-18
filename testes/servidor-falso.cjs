@@ -12,7 +12,7 @@ const assinantes = new Map(); // user_id -> { premium_ate, origem }
 const uso = new Map(); // user_id + dia -> dublagens
 const usuarioPorId = (id) => [...usuarios.values()].find((x) => x.id === id);
 const arquivos = new Map(); // "pasta/caminho" -> { tipo, dados }
-const dados = { cenas: new Map(), sons: new Map(), perfis: new Map(), publicacoes: new Map(), reacoes: new Map(), comentarios: new Map(), denuncias: new Map() };
+const dados = { cenas: new Map(), sons: new Map(), perfis: new Map(), publicacoes: new Map(), reacoes: new Map(), comentarios: new Map(), denuncias: new Map(), mensagens_ajuda: new Map() };
 
 const temPerfil = (u) => !!u.id && dados.perfis.has(u.id);
 const regras = {
@@ -54,6 +54,16 @@ const regras = {
     inserir: (l, u) => l.autor_id === u.id && temPerfil(u) && (l.texto || "").trim().length >= 1 && l.texto.length <= 300,
     atualizar: () => false,
     apagar: (l, u) => l.autor_id === u.id || u.admin,
+  },
+  mensagens_ajuda: {
+    pk: ["id"],
+    padrao: (u) => ({ id: crypto.randomUUID(), user_id: u.id, status: "nova", resposta: null, respondida_em: null, contato: null, criada_em: agora() }),
+    ler: (l, u) => l.user_id === u.id || u.admin,
+    inserir: (l, u) =>
+      !!u.id && l.user_id === u.id && l.status === "nova" && !l.resposta && (l.texto || "").trim().length >= 5 &&
+      [...dados.mensagens_ajuda.values()].filter((m) => m.user_id === u.id).length < 5,
+    atualizar: (l, u) => u.admin,
+    apagar: (l, u) => u.admin,
   },
   denuncias: {
     pk: ["publicacao_id", "user_id"],
@@ -214,6 +224,7 @@ const servidor = http.createServer(async (req, res) => {
     uso.set(u.id + hoje, n + 1);
     return responder(res, 200, { ok: true, premium: false, usadas: n + 1, limite: 3 });
   }
+  if (p === "/rest/v1/rpc/admin_listar_pagamentos") return u.admin ? responder(res, 200, []) : responder(res, 400, { message: "Só o administrador pode fazer isso." });
   if (p === "/rest/v1/rpc/apagar_minha_conta") {
     if (!u.id) return responder(res, 401, { message: "permission denied for function apagar_minha_conta" });
     if (u.admin) return responder(res, 400, { message: "A conta do administrador não pode ser apagada pelo app." });
@@ -247,7 +258,7 @@ const servidor = http.createServer(async (req, res) => {
     const select = url.searchParams.get("select");
     const entregar = (linhas, status = 200) => {
       const saida = linhas.map((l) => projetar(l, select));
-      if (!umSo) return responder(res, status, saida);
+      if (!umSo) return responder(res, status, saida, /count=exact/.test(prefer) ? { "Content-Range": `0-${Math.max(0, saida.length - 1)}/${saida.length}` } : {});
       if (saida.length !== 1) return responder(res, 406, { code: "PGRST116", message: "JSON object requested, multiple (or no) rows returned" });
       return responder(res, status, saida[0]);
     };
