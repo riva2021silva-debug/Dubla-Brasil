@@ -18,6 +18,8 @@ export interface TomadaTocavel {
 
 const FOLGA_ANTES_MS = 120;
 const FOLGA_DEPOIS_MS = 300;
+/** Entre duas falas suas, um espaço menor que isto fica fechado (a voz original não "pisca" no meio da sua dublagem). */
+const ESPACO_FECHADO_MS = 1500;
 const SUAVIZACAO_S = 0.02;
 
 let contextoCompartilhado: AudioContext | null = null;
@@ -112,14 +114,20 @@ export class Mixer {
   }
 
   /** Suas falas: trechos onde o original some e entra o fundo. */
-  definirJanelas(falas: Janela[]) {
+  definirJanelas(falas: Janela[], cenaInteira = false) {
+    // Dublando todos os personagens: a voz original não volta em momento nenhum (fica só o ambiente).
+    if (cenaInteira && falas.length) {
+      this.janelas = [{ inicioMs: 0, fimMs: Number.MAX_SAFE_INTEGER }];
+      this.reagendarSeTocando();
+      return;
+    }
     const ord = falas
       .map((f) => ({ inicioMs: Math.max(0, f.inicioMs - FOLGA_ANTES_MS), fimMs: f.fimMs + FOLGA_DEPOIS_MS }))
       .sort((a, b) => a.inicioMs - b.inicioMs);
     const unidas: Janela[] = [];
     for (const j of ord) {
       const ult = unidas[unidas.length - 1];
-      if (ult && j.inicioMs <= ult.fimMs) ult.fimMs = Math.max(ult.fimMs, j.fimMs);
+      if (ult && j.inicioMs <= ult.fimMs + ESPACO_FECHADO_MS) ult.fimMs = Math.max(ult.fimMs, j.fimMs);
       else unidas.push({ ...j });
     }
     this.janelas = unidas;

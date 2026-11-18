@@ -82,7 +82,8 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
     if (!video || !urls) return;
     const m = new Mixer(video);
     mixer.current = m;
-    m.definirJanelas(minhas);
+    const todosOsPapeis = cena.personagens.filter((p) => cena.falas.some((f) => f.personagemId === p.id)).every((p) => dub.papeis.includes(p.id));
+    m.definirJanelas(minhas, todosOsPapeis);
     let vivo = true;
     if (urls.fundo)
       fetch(urls.fundo)

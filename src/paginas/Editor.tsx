@@ -341,6 +341,33 @@ export default function Editor() {
     }
   };
 
+  /** Procura trechos em que alguém fala e não há fala marcada (sem mexer nas que já existem). */
+  const encontrarQueFaltaram = async () => {
+    if (!video || !cena) return;
+    setAvisoIa(null);
+    setProgressoIa({ etapa: "preparando", detalhe: "Procurando falas que faltaram…" });
+    try {
+      const { encontrarFalasQueFaltaram } = await import("../transcricao");
+      const novas = await encontrarFalasQueFaltaram({ urlVideo: video.url, idioma: cena.idioma, falas: cena.falas, personagens: cena.personagens, aoProgredir: setProgressoIa });
+      if (!novas.length) {
+        setAvisoIa("✅ Não encontrei trechos falados sem fala marcada. A cena está completa.");
+        return;
+      }
+      atualizar((c) => ({ ...c, falas: [...c.falas, ...novas].sort((a, b) => a.inicioMs - b.inicioMs) }));
+      setSel(novas[0].id);
+      const semTexto = novas.filter((f) => f.texto === "…").length;
+      setAvisoIa(
+        `🔍 Encontrei ${novas.length} ${novas.length === 1 ? "fala que faltava" : "falas que faltavam"} (em ${novas.map((f) => formatarTempo(f.inicioMs)).join(", ")}). ` +
+          (semTexto ? `${semTexto} ficaram com “…” (não deu para entender as palavras): escreva o texto. ` : "") +
+          "Confira o personagem de cada uma e salve.",
+      );
+    } catch (e) {
+      setAvisoIa(`Não deu certo: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setProgressoIa(null);
+    }
+  };
+
   const importarSrt = async (arq: File) => {
     const lidas = lerSrt(await arq.text());
     if (lidas.length === 0) return alert("Nenhuma legenda encontrada neste arquivo .srt.");
@@ -648,6 +675,14 @@ export default function Editor() {
                   {progressoIa ? "Processando…" : confirmarSubstituir ? "Substituir as falas?" : "✨ Separar falas"}
                 </button>
               </div>
+              {cena.falas.length > 0 && !progressoIa && !confirmarSubstituir && (
+                <div className="linha entre pequeno">
+                  <span className="suave">Ficou algum pedaço sem fala, onde alguém fala no vídeo?</span>
+                  <button className="botao botao-pequeno" disabled={!video} onClick={() => void encontrarQueFaltaram()}>
+                    🔍 Encontrar falas que faltaram
+                  </button>
+                </div>
+              )}
               {confirmarSubstituir && !progressoIa && (
                 <div className="linha pequeno">
                   <span>Isso troca as {cena.falas.length} falas atuais pelas que a IA encontrar.</span>

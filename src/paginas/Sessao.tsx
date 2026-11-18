@@ -128,7 +128,10 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
     m.somAmbiente = cfg.somAmbiente;
     m.definirVolumeVoz(cfg.volumeVoz);
     // Só silencia o original nas falas que você de fato gravou.
-    m.definirJanelas(minhas.filter((f) => dub.tomadas[f.id]));
+    // Se a pessoa dublou todos os personagens e gravou todas as falas, a voz original some na cena inteira.
+    const todosOsPapeis = cena.personagens.filter((p) => cena.falas.some((f) => f.personagemId === p.id)).every((p) => dub.papeis.includes(p.id));
+    const gravadas = minhas.filter((f) => dub.tomadas[f.id]);
+    m.definirJanelas(gravadas, todosOsPapeis && gravadas.length === cena.falas.length);
     let vivo = true;
     (async () => {
       if (urls.fundo) {

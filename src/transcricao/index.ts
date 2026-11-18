@@ -5,6 +5,7 @@ import { contextoDeAudio } from "../audio/mixer";
 import type { Fala, Personagem } from "../tipos";
 import { novoId } from "../util";
 import type { Mensagem, Pedido } from "./trabalhador";
+import { audioEstereo, detectarFala, trechosSemFala, type Trecho } from "./vozes";
 
 const TAXA = 16000;
 const MAX_FALA_MS = 7000;
@@ -28,22 +29,19 @@ export interface Progresso {
   fracao?: number;
 }
 
-/** Extrai o áudio do vídeo em mono, 16 kHz (o formato que o Whisper usa). */
-async function audioDoVideo(url: string): Promise<Float32Array> {
+/** Extrai o áudio do vídeo a 16 kHz: em mono (o formato que o Whisper usa) e em estéreo (para o detector de voz). */
+async function audioDoVideo(url: string): Promise<{ mono: Float32Array; esq: Float32Array; dir: Float32Array }> {
   const resposta = await fetch(url);
   if (!resposta.ok) throw new Error("Não foi possível ler o vídeo.");
-  let decodificado: AudioBuffer;
+  let e: { esq: Float32Array; dir: Float32Array };
   try {
-    decodificado = await contextoDeAudio().decodeAudioData(await resposta.arrayBuffer());
+    e = await audioEstereo(await resposta.arrayBuffer(), contextoDeAudio());
   } catch {
     throw new Error("Não foi possível ler o áudio deste vídeo. Tente um MP4 comum (H.264 + AAC).");
   }
-  const offline = new OfflineAudioContext(1, Math.ceil(decodificado.duration * TAXA), TAXA);
-  const fonte = offline.createBufferSource();
-  fonte.buffer = decodificado;
-  fonte.connect(offline.destination);
-  fonte.start();
-  return (await offline.startRendering()).getChannelData(0);
+  const mono = new Float32Array(e.esq.length);
+  for (let i = 0; i < mono.length; i++) mono[i] = (e.esq[i] + e.dir[i]) / 2;
+  return { mono, ...e };
 }
 
 function rodarNoTrabalhador(pedido: Pedido, aoProgredir: (p: Progresso) => void) {
@@ -193,7 +191,8 @@ export async function separarFalas(opcoes: {
 }): Promise<Fala[]> {
   const { aoProgredir, personagens } = opcoes;
   aoProgredir({ etapa: "preparando", detalhe: "Lendo o áudio do vídeo…" });
-  const audio = await audioDoVideo(opcoes.urlVideo);
+  const som = await audioDoVideo(opcoes.urlVideo);
+  const audio = som.mono;
   const copia = audio.slice(); // o original vai para o trabalhador
   const idioma = IDIOMAS_WHISPER[opcoes.idioma] ?? "english";
   const partes = dividirLongas(refinarTempos(copia, await rodarNoTrabalhador({ audio, idioma, modelo: opcoes.modelo ?? "base" }, aoProgredir)));
@@ -207,7 +206,7 @@ export async function separarFalas(opcoes: {
   // A primeira voz que aparece vira o primeiro personagem, e assim por diante.
   const ordem: number[] = [];
   for (const g of grupos) if (!ordem.includes(g)) ordem.push(g);
-  return partes.map((p, i) => ({
+  const falas: Fala[] = partes.map((p, i) => ({
     id: novoId(),
     personagemId: personagens[ordem.indexOf(grupos[i])]?.id ?? personagens[0]?.id ?? "",
     texto: p.texto,
@@ -215,4 +214,96 @@ export async function separarFalas(opcoes: {
     inicioMs: p.inicioMs,
     fimMs: Math.max(p.inicioMs + 400, p.fimMs),
   }));
+  // O Whisper às vezes pula falas curtas ou rápidas: o detector de voz acha esses buracos e completa.
+  const extras = await completarBuracos({ som, copia, falas, personagens, idioma, modelo: opcoes.modelo ?? "base", aoProgredir });
+  return [...falas, ...extras].sort((a, b) => a.inicioMs - b.inicioMs);
+}
+
+/** Acha trechos com voz sem fala marcada, transcreve só eles e escolhe o personagem pelo tom de voz. */
+async function completarBuracos(o: {
+  som: { esq: Float32Array; dir: Float32Array };
+  copia: Float32Array;
+  falas: Fala[];
+  personagens: Personagem[];
+  idioma: string;
+  modelo: "base" | "tiny";
+  aoProgredir: (p: Progresso) => void;
+}): Promise<Fala[]> {
+  const buracos = trechosSemFala(detectarFala(o.som.esq, o.som.dir, TAXA), o.falas);
+  if (!buracos.length) return [];
+  o.aoProgredir({ etapa: "ouvindo", detalhe: `Encontrei ${buracos.length} ${buracos.length === 1 ? "trecho falado sem fala marcada" : "trechos falados sem fala marcada"}. Ouvindo…` });
+  // Junta os trechos num áudio só (com 1 s de silêncio entre eles) para ouvir tudo de uma vez.
+  const MARGEM = 0.2 * TAXA, ESPACO = 1 * TAXA;
+  const pedacos = buracos.map((b) => {
+    const a = Math.max(0, Math.floor((b.inicioMs / 1000) * TAXA - MARGEM));
+    const z = Math.min(o.copia.length, Math.ceil((b.fimMs / 1000) * TAXA + MARGEM));
+    return { b, a, z };
+  });
+  const tamanho = pedacos.reduce((t, p) => t + (p.z - p.a) + ESPACO, 0);
+  const junto = new Float32Array(tamanho);
+  const posicoes: { b: Trecho; de: number; ate: number }[] = [];
+  let pos = 0;
+  for (const p of pedacos) {
+    junto.set(o.copia.subarray(p.a, p.z), pos);
+    posicoes.push({ b: p.b, de: (pos / TAXA) * 1000, ate: ((pos + p.z - p.a) / TAXA) * 1000 });
+    pos += p.z - p.a + ESPACO;
+  }
+  let textos: { texto: string; original: string }[] = buracos.map(() => ({ texto: "", original: "" }));
+  try {
+    const ouvidas = await rodarNoTrabalhador({ audio: junto, idioma: o.idioma, modelo: o.modelo }, o.aoProgredir);
+    textos = posicoes.map((p) => {
+      const daqui = ouvidas.filter((x) => (x.inicioMs + x.fimMs) / 2 >= p.de - 300 && (x.inicioMs + x.fimMs) / 2 <= p.ate + 300);
+      return { texto: daqui.map((x) => x.texto).join(" ").trim(), original: daqui.map((x) => x.original).join(" ").trim() };
+    });
+  } catch {
+    /* sem texto: as falas entram com "…" para o administrador completar */
+  }
+  // Tom de voz típico de cada personagem (pelas falas que já têm).
+  const tons = new Map<string, number[]>();
+  for (const f of o.falas) {
+    const t = tomMedio(o.copia, f.inicioMs, f.fimMs);
+    if (t) tons.set(f.personagemId, [...(tons.get(f.personagemId) ?? []), 12 * Math.log2(t)]);
+  }
+  const tipico = [...tons].map(([pid, v]) => ({ pid, st: [...v].sort((a, b) => a - b)[Math.floor(v.length / 2)] }));
+  return buracos.map((b, i) => {
+    const t = tomMedio(o.copia, b.inicioMs, b.fimMs);
+    let pid = o.personagens[0]?.id ?? "";
+    if (t && tipico.length) {
+      const st = 12 * Math.log2(t);
+      pid = tipico.reduce((m, x) => (Math.abs(x.st - st) < Math.abs(m.st - st) ? x : m)).pid;
+    } else {
+      const antes = [...o.falas].filter((f) => f.fimMs <= b.inicioMs).sort((a, c) => c.fimMs - a.fimMs)[0];
+      if (antes) pid = antes.personagemId;
+    }
+    return {
+      id: novoId(),
+      personagemId: pid,
+      texto: textos[i].texto || "…",
+      original: textos[i].original || undefined,
+      inicioMs: b.inicioMs,
+      fimMs: b.fimMs,
+    };
+  });
+}
+
+/** Para o editor: procura falas que ficaram de fora (sem refazer as que já existem). */
+export async function encontrarFalasQueFaltaram(opcoes: {
+  urlVideo: string;
+  idioma: string;
+  falas: Fala[];
+  personagens: Personagem[];
+  modelo?: "base" | "tiny";
+  aoProgredir: (p: Progresso) => void;
+}): Promise<Fala[]> {
+  opcoes.aoProgredir({ etapa: "preparando", detalhe: "Procurando trechos com voz sem fala marcada…" });
+  const som = await audioDoVideo(opcoes.urlVideo);
+  return completarBuracos({
+    som,
+    copia: som.mono,
+    falas: opcoes.falas,
+    personagens: opcoes.personagens,
+    idioma: IDIOMAS_WHISPER[opcoes.idioma] ?? "english",
+    modelo: opcoes.modelo ?? "base",
+    aoProgredir: opcoes.aoProgredir,
+  });
 }
