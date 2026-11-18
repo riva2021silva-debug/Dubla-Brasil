@@ -3,9 +3,10 @@
   "codigo": 27,
   "data": "2026-11-18",
   "novidades": [
-    "Dublando todos os personagens, a voz original não volta mais no meio da sua dublagem",
-    "Espaços curtos entre as suas falas ficam fechados (só o som ambiente)",
-    "Admin: a IA agora acha as falas que faltaram — botão “🔍 Encontrar falas que faltaram”"
+    "Sem eco: uma fala dublada não invade mais a outra quando estão bem pertinho",
+    "Dublando todos os personagens, a voz original não volta no meio da sua dublagem",
+    "IA separa melhor as falas: divide as que vinham grudadas e acha as que faltavam",
+    "Admin: botão “🔍 Encontrar falas que faltaram” no editor"
   ],
   "apk": "https://dublabr.netlify.app/baixar/DublaBrasilAI.apk"
 }

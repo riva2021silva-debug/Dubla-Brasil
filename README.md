@@ -392,3 +392,10 @@ No estúdio, a legenda em português aparece embaixo do vídeo no estilo karaok�
   - `node --experimental-strip-types testes/unidade-vozes.mjs`;
   - `node testes/e2e-sem-buraco.cjs`: a voz no buraco caiu de -14 para -52 dB;
   - `node testes/e2e-faltaram.cjs`: uma fala apagada foi encontrada de novo com o texto certo.
+- **Sem eco:** as sobras de antes e depois das tomadas não se sobrepõem mais:
+  - `fatiarEmTomadas` corta cada tomada no meio do caminho até a fala vizinha;
+  - o mixer encerra cada tomada, com fade de 30 ms, quando a próxima começa;
+  - antes, a junção de duas falas a 0,2 s tocava a voz duas vezes (+6 dB, eco). Teste: `node testes/e2e-sem-eco.cjs`.
+- **Falas grudadas:** `dividirPorPausas` (em `vozes.ts`) quebra um trecho do Whisper que junta duas vozes nas
+  pausas do detector, repartindo as palavras. Cada pedaço ganha seu personagem pelo tom.
+  Teste: `node --experimental-strip-types testes/unidade-dividir.mjs`.
