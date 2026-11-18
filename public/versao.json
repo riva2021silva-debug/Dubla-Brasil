@@ -1,11 +1,13 @@
 {
-  "versao": "3.8",
-  "codigo": 29,
+  "versao": "3.9",
+  "codigo": 30,
   "data": "2026-11-18",
   "novidades": [
-    "Dublagem por turnos: cada personagem fala até terminar, e só então começa o próximo",
-    "Cada fala vai até a outra pessoa começar — dá tempo de dublar a frase inteira",
-    "Admin: “✨ Separar falas” e “🔧 Arrumar falas com IA” já organizam por turnos"
+    "Estúdio: botão “✅ Ficou bom · Próxima fala” depois de cada gravação",
+    "Estúdio: “🔈 Guia” — ouça a voz original baixinho enquanto grava (use fone)",
+    "Estúdio: avisa se o microfone está baixo ou alto demais na hora de falar",
+    "Falas mais curtas: uma por frase, cada uma até a próxima começar",
+    "Admin: “✨ Gerar trilha de fundo com IA” — tira as vozes e deixa só a música e os efeitos"
   ],
   "apk": "https://dublabr.netlify.app/baixar/DublaBrasilAI.apk"
 }

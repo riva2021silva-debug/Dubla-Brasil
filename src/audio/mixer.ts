@@ -49,6 +49,8 @@ export class Mixer {
   /** Toca a cena como ela é: sem silenciar o original e sem as suas tomadas. */
   private modoOriginal = false;
   volumeOriginalNaMinhaFala = 0;
+  /** "Guia": volume da voz original durante a gravação (0 = desligado). Só no estúdio, enquanto grava. */
+  guia = 0;
   private limpar: () => void;
 
   private video: HTMLVideoElement;
@@ -187,7 +189,7 @@ export class Mixer {
     this.ancora = { ctx: t0, cenaMs: s0 };
     const emCtx = (ms: number) => t0 + (ms - s0) / 1000;
     const temFundo = this.fundo !== null;
-    const originalNaJanela = temFundo ? 0 : this.volumeOriginalNaMinhaFala;
+    const originalNaJanela = Math.max(this.guia, temFundo ? 0 : this.volumeOriginalNaMinhaFala);
 
     // Estado inicial e transições do original x fundo.
     const dentro = !this.modoOriginal && this.janelas.some((j) => s0 >= j.inicioMs && s0 < j.fimMs);

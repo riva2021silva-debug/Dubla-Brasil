@@ -421,3 +421,28 @@ No estúdio, a legenda em português aparece embaixo do vídeo no estilo karaok�
   - `node --experimental-strip-types testes/unidade-turnos.mjs`;
   - `e2e-ia`, `e2e-arrumar` e `e2e-faltaram`: as falas ficam encadeadas, por exemplo 1,0–4,7 · 4,8–8,4 ·
     8,5–12,2 · 12,3–15,1.
+
+## Versão 3.9: ideias de estúdio guiado e trilha de fundo por IA
+
+Ideias tiradas de observar o fluxo de outro app de dublagem. Nada copiado: nem código, nem textos, nem visual,
+nem conteúdo.
+
+- **A) ✅ Ficou bom · Próxima fala:** depois de gravar, um botão grande leva à próxima fala. Na última, leva ao
+  resultado.
+- **B) 🔈 Guia:** liga a voz original a 30% durante a gravação (`Mixer.guia`, `cfg.guiaVoz`), para pegar o
+  ritmo. Melhor com fone.
+- **C) Falas mais curtas:** `organizarPorTurnos` só junta pedacinhos da mesma pessoa (< 1,2 s e pausa
+  ≤ 0,45 s). Frases inteiras ficam uma por fala, e cada fala vai até a próxima começar.
+- **D) Aviso de nível:** durante a fala, avisa "fale mais alto" (1,2 s de silêncio) ou "muito alto"
+  (estourando).
+- **E) ✨ Gerar trilha de fundo com IA** (editor, seção Arquivos):
+  - usa o HTDemucs (Meta, licença MIT), num ONNX feito para a web (180 MB), baixado do Hugging Face só na
+    primeira vez e guardado no Cache Storage;
+  - roda num Web Worker com onnxruntime-web (WebGPU quando há, senão WASM);
+  - `src/separacao/demucs.ts` faz o STFT/iSTFT igual ao HTDemucs, pedaços de 7,8 s com 25% de sobreposição e
+    peso em triângulo; fundo = bateria + baixo + outros;
+  - **testes:** no Node, fundo + voz = mistura com erro de -34 dB; a voz separada bate 0,986 com a fala e o
+    fundo 0,989 com a música. No app (`MODELO=<onnx> node testes/e2e-fundo-ia.cjs`), o fundo ficou com 0,04
+    de fala e 0,99 de música; 16 s de cena levaram 53 s (WASM);
+  - **não usei o Open-Unmix L:** os pesos dele são só para uso não comercial.
+- **Testes:** `node testes/e2e-estudio-guiado.cjs`.

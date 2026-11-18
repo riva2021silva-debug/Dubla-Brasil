@@ -527,3 +527,11 @@ kbd { background: var(--superficie-2); border: 1px solid var(--borda); border-bo
 .perfil-foto-botao { position: relative; border: none; background: none; padding: 0; cursor: pointer; border-radius: 50%; }
 .perfil-foto-botao .foto-perfil { border: 3px solid var(--amarelo); box-shadow: 0 6px 24px rgb(0 0 0 / .4); }
 .perfil-foto-botao .perfil-camera { position: absolute; right: 2px; bottom: 2px; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--amarelo); color: #2a1500; font-size: 18px; border: 2px solid var(--fundo, #08021f); }
+
+/* Estúdio: Ficou bom · Próxima, Guia e avisos de nível */
+.manter-proxima { width: 100%; justify-content: center; font-weight: 800; }
+.botao-guia { border: 1px solid var(--borda); background: var(--superficie); color: var(--texto-suave); border-radius: 999px; padding: 3px 10px; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+.botao-guia.ligada { border-color: var(--amarelo); color: var(--amarelo); background: rgb(250 204 21 / 0.1); }
+.aviso-nivel { padding: 8px 12px; border-radius: 10px; font-weight: 700; font-size: .9rem; }
+.aviso-nivel.baixo { background: rgb(250 204 21 / 0.14); color: var(--amarelo); border: 1px solid rgb(250 204 21 / 0.5); }
+.aviso-nivel.alto { background: rgb(239 68 68 / 0.16); color: #f87171; border: 1px solid rgb(239 68 68 / 0.5); }

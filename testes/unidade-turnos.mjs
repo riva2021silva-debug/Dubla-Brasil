@@ -15,3 +15,6 @@ const ok =
   r[2].fimMs === 6920 &&
   r.every((t, i) => i === 0 || t.inicioMs >= r[i - 1].fimMs);
 console.log("Turnos: homem → mulher → homem → mulher, um depois do outro, sem buraco e sem invadir:", ok ? "ok" : "FALHOU");
+// Duas frases inteiras da mesma pessoa ficam separadas (uma fala por frase), e a 1ª vai até a 2ª começar.
+const d = organizarPorTurnos([f("a", "homem", 1000, 3000, "Primeira frase inteira."), f("b", "homem", 3500, 5500, "Segunda frase inteira.")]);
+console.log("Frases inteiras da mesma pessoa continuam separadas:", d.length === 2 && d[0].fimMs === 3420 ? "ok" : "FALHOU");

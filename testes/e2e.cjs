@@ -57,7 +57,7 @@ fs.mkdirSync(SAIDA, { recursive: true });
   await p.getByRole("button", { name: "Ouvir a minha tomada" }).click();
   await p.waitForTimeout(800);
   await p.getByRole("button", { name: "Ouvir a minha tomada" }).click();
-  await p.getByRole("button", { name: /Próxima/ }).click();
+  await p.getByRole("button", { name: /Ficou bom · Próxima fala/ }).click();
 
   // Grava todas seguidas.
   await p.getByText("Mais opções").click();

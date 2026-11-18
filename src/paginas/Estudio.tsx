@@ -55,6 +55,9 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
   const mic = useRef<Microfone | null>(null);
   const [micPronto, setMicPronto] = useState(false);
   const [nivel, setNivel] = useState(0);
+  const [avisoNivel, setAvisoNivel] = useState<"baixo" | "alto" | null>(null);
+  const baixoDesde = useRef<number | null>(null);
+  const altoAte = useRef(0);
   const [dub, setDub] = useState(dubInicial);
   const [buffers, setBuffers] = useState<Record<string, AudioBuffer>>({});
   const [original, setOriginal] = useState<AudioBuffer | null>(null);
@@ -139,6 +142,7 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
   const tempoRef = useRef(0);
   tempoRef.current = tempo;
   const gravandoRef = useRef(false);
+  const falandoRef = useRef(false);
   gravandoRef.current = modo === "gravando";
   useEffect(() => {
     if (!micPronto) return;
@@ -146,7 +150,18 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
     const loop = () => {
       const n = mic.current?.nivel() ?? 0;
       setNivel(n);
-      if (gravandoRef.current) setAoVivo((a) => [...a, { ms: tempoRef.current, nivel: n }]);
+      if (gravandoRef.current) {
+        setAoVivo((a) => [...a, { ms: tempoRef.current, nivel: n }]);
+        // Durante a fala: avisa se a voz está baixa demais (1,2 s seguidos) ou estourando.
+        const agora = performance.now();
+        if (falandoRef.current && n < 0.04) baixoDesde.current ??= agora;
+        else baixoDesde.current = null;
+        if (n > 0.95) altoAte.current = agora + 1500;
+        setAvisoNivel(altoAte.current > agora ? "alto" : baixoDesde.current !== null && agora - baixoDesde.current > 1200 ? "baixo" : null);
+      } else {
+        baixoDesde.current = null;
+        setAvisoNivel((v) => (v ? null : v));
+      }
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
@@ -193,6 +208,7 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
   }, []);
 
   const parar = useCallback(() => {
+    if (mixer.current) mixer.current.guia = 0;
     if (camera.current?.gravando()) void camera.current.parar();
     mic.current?.parar();
     mixer.current?.ignorarTomadas([]);
@@ -222,6 +238,7 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
     setAlvo({ falas, fimMs });
     setModo("gravando");
     palco.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (mixer.current) mixer.current.guia = cfg.guiaVoz ? 0.3 : 0;
     mic.current.iniciar();
     if (camera.current) {
       camera.current.iniciar();
@@ -238,6 +255,7 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
     if (modo !== "gravando") return parar();
     const m = mixer.current;
     const g = mic.current?.parar() ?? null;
+    m.guia = 0;
     const cenaInicio = g ? m.cenaNoTempo(g.inicioCtx) : null;
     // Câmera: guarda em que momento da cena ela começou (antes de pausar, enquanto o relógio da cena vale).
     const camGravando = camera.current?.gravando() ? camera.current : null;
@@ -353,6 +371,7 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
   const contagem =
     modo === "gravando" && proximaFala && tempo < proximaFala.inicioMs ? Math.ceil((proximaFala.inicioMs - tempo) / 1000) : null;
   const falando = modo === "gravando" && alvo?.falas.some((f) => tempo >= f.inicioMs && tempo < f.fimMs + 200);
+  falandoRef.current = !!falando;
   const total = minhas.length;
   const qtdFeitas = minhas.filter((f) => dub.tomadas[f.id]).length;
   const ocupado = modo === "gravando" || modo === "original" || modo === "minha";
@@ -489,9 +508,23 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
             ativo={modo === "gravando" || modo === "original"}
             gravando={modo === "gravando"}
           />
+          {avisoNivel && (
+            <div className={`aviso-nivel ${avisoNivel}`} role="status">
+              {avisoNivel === "baixo" ? "🔈 Não estou te ouvindo bem: fale mais alto ou chegue o celular mais perto" : "📢 Muito alto: afaste um pouco o celular"}
+            </div>
+          )}
           <div className={`painel-onda ${modo === "gravando" ? "gravando" : ""}`}>
             <div className="linha entre pequeno">
               <span className="linha" style={{ gap: 12 }}>
+                <button
+                  className={`botao-guia ${cfg.guiaVoz ? "ligada" : ""}`}
+                  aria-pressed={!!cfg.guiaVoz}
+                  title="Guia: ouvir a voz original baixinho enquanto grava (use fone de ouvido)"
+                  disabled={ocupado}
+                  onClick={() => salvarCfg({ guiaVoz: !cfg.guiaVoz })}
+                >
+                  {cfg.guiaVoz ? "🔈 Guia" : "🔇 Guia"}
+                </button>
                 <span className="legenda-onda original">Original</span>
                 <span className="legenda-onda minha">{modo === "gravando" ? "Gravando" : "Sua voz"}</span>
               </span>
@@ -551,6 +584,17 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
             </div>
           </div>
 
+          {temTomada && !ocupado && (
+            indice < total - 1 ? (
+              <button className="botao botao-verde botao-grande manter-proxima" onClick={() => irParaFala(indice + 1)}>
+                ✅ Ficou bom · Próxima fala →
+              </button>
+            ) : (
+              <Link className="botao botao-verde botao-grande manter-proxima" to={`/dub/${dub.id}`}>
+                ✅ Ficou bom · Ver o resultado →
+              </Link>
+            )
+          )}
           <div className="nav-falas">
             <button className="botao-texto" onClick={() => irParaFala(indice - 1)} disabled={ocupado || indice === 0}>
               ‹ Anterior

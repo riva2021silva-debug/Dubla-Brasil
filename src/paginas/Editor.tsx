@@ -68,6 +68,8 @@ export default function Editor() {
   const [progressoIa, setProgressoIa] = useState<Progresso | null>(null);
   const [novaCapa, setNovaCapa] = useState<Blob | null>(null);
   const [editandoVideo, setEditandoVideo] = useState(false);
+  const [progressoFundo, setProgressoFundo] = useState<import("../separacao").ProgressoFundo | null>(null);
+  const [avisoFundo, setAvisoFundo] = useState<string | null>(null);
   const [avisoEdicao, setAvisoEdicao] = useState<string | null>(null);
   const [previaCapa, setPreviaCapa] = useState<string | null>(null);
   const [avisoCapa, setAvisoCapa] = useState<string | null>(null);
@@ -375,6 +377,27 @@ export default function Editor() {
       setAvisoIa(`Não deu certo: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
       setProgressoIa(null);
+    }
+  };
+
+  /** Gera a trilha de fundo (música + efeitos, sem vozes) com a IA de separação. */
+  const gerarFundoComIa = async () => {
+    if (!video) return;
+    setAvisoFundo(null);
+    setProgressoFundo({ etapa: "lendo", fracao: 0, detalhe: "Começando…" });
+    try {
+      const { gerarTrilhaDeFundo } = await import("../separacao");
+      const inicio = Date.now();
+      const { arquivo } = await gerarTrilhaDeFundo(video.url, setProgressoFundo);
+      setFundo({ url: URL.createObjectURL(arquivo), novo: arquivo });
+      setAlterado(true);
+      setAvisoFundo(
+        `✅ Trilha de fundo pronta em ${Math.max(1, Math.round((Date.now() - inicio) / 60000))} min (${(arquivo.size / 1024 / 1024).toFixed(1).replace(".", ",")} MB). Ouça acima e toque em “Salvar cena”.`,
+      );
+    } catch (e) {
+      setAvisoFundo(`Não deu certo: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setProgressoFundo(null);
     }
   };
 
@@ -839,6 +862,31 @@ export default function Editor() {
               </span>
             </div>
             {fundo && <audio src={fundo.url} controls style={{ width: "100%" }} />}
+            <div className="cartao-ia pilha" style={{ gap: 8 }}>
+              <div className="linha entre">
+                <span>
+                  <strong>✨ Gerar trilha de fundo com IA</strong>
+                  <br />
+                  <span className="suave pequeno">
+                    A IA tira as vozes do vídeo e deixa só a música e os efeitos. Assim a dublagem fica limpa, sem a voz original.
+                    Na primeira vez baixa a IA (180 MB); funciona melhor no computador.
+                  </span>
+                </span>
+                <button className="botao botao-primario" disabled={!video || !!progressoFundo} onClick={() => void gerarFundoComIa()}>
+                  {progressoFundo ? "Gerando…" : fundo ? "✨ Gerar de novo" : "✨ Gerar"}
+                </button>
+              </div>
+              {progressoFundo && (
+                <div className="pilha" style={{ gap: 6 }}>
+                  <span className="pequeno">{progressoFundo.detalhe}</span>
+                  <div className="medidor">
+                    <div style={{ width: `${Math.round(progressoFundo.fracao * 100)}%` }} />
+                  </div>
+                  <span className="suave pequeno">Pode continuar editando as falas; não feche esta tela.</span>
+                </div>
+              )}
+              {avisoFundo && <p className="info pequeno" style={{ margin: 0 }}>{avisoFundo}</p>}
+            </div>
             <div className="linha" style={{ alignItems: "flex-start", flexWrap: "nowrap" }}>
               <div className="capa capa-editor">
                 {previaCapa || capaAtual ? <img src={previaCapa ?? capaAtual!} alt="Capa da cena" crossOrigin="anonymous" /> : <span aria-hidden>🎬</span>}

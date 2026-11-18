@@ -193,15 +193,18 @@ export interface FalaTurno {
 
 /**
  * Organiza as falas por TURNOS, como numa conversa: o homem fala até terminar, depois a mulher, depois o homem…
- * 1) Falas seguidas da mesma pessoa (com pausa curta) viram um turno só.
+ * 1) Pedacinhos seguidos da mesma pessoa (pausa curta) viram uma fala só; frases inteiras ficam separadas.
  * 2) Cada turno vai até o começo do próximo (sem buraco e sem invadir o outro), se o próximo vier logo depois.
  */
-export function organizarPorTurnos<T extends FalaTurno>(falas: T[], opcoes = { juntarAteMs: 1200, esticarAteMs: 2000, folgaMs: 80 }): T[] {
+export function organizarPorTurnos<T extends FalaTurno>(falas: T[], opcoes = { juntarAteMs: 450, pedacoMs: 1200, esticarAteMs: 2000, folgaMs: 80 }): T[] {
   const ord = [...falas].sort((a, b) => a.inicioMs - b.inicioMs);
   const turnos: T[] = [];
   for (const f of ord) {
     const ult = turnos[turnos.length - 1];
-    if (ult && ult.personagemId === f.personagemId && f.inicioMs - ult.fimMs <= opcoes.juntarAteMs) {
+    // Só junta PEDACINHOS da mesma pessoa (ex.: "Iai," + o resto da frase). Frases inteiras ficam separadas,
+    // uma fala por frase, mais fáceis de dublar.
+    const pedacinho = ult && (ult.fimMs - ult.inicioMs < opcoes.pedacoMs || f.fimMs - f.inicioMs < opcoes.pedacoMs);
+    if (ult && pedacinho && ult.personagemId === f.personagemId && f.inicioMs - ult.fimMs <= opcoes.juntarAteMs) {
       turnos[turnos.length - 1] = {
         ...ult,
         fimMs: Math.max(ult.fimMs, f.fimMs),

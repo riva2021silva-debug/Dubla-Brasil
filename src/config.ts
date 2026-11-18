@@ -23,6 +23,8 @@ export interface Configuracoes {
   alinharVoz: boolean;
   /** Nas suas falas (cena sem trilha de fundo), toca o som do vídeo sem a voz original: música e ambiente. */
   somAmbiente: boolean;
+  /** "Guia" no estúdio: ouvir a voz original baixinho enquanto grava (melhor com fone). */
+  guiaVoz?: boolean;
   /** Grava a câmera frontal junto com a voz e mostra no cantinho do vídeo, como numa chamada. */
   usarCamera?: boolean;
   /** Versão das preferências (para ligar padrões novos em quem já usava o app). */
