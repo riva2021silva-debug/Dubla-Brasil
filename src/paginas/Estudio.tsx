@@ -4,7 +4,7 @@ import Avatar from "../componentes/Avatar";
 import FormaDeOnda, { type PontoAoVivo } from "../componentes/FormaDeOnda";
 import { useConfig } from "../config";
 import { db } from "../db";
-import { buscarCena, useCarregar, useFormatoDoVideo, useMidiasDaCena, useTempoDoVideo } from "../ganchos";
+import { buscarCena, cenaDoDub, useCarregar, useFormatoDoVideo, useMidiasDaCena, useTempoDoVideo } from "../ganchos";
 import { Microfone } from "../audio/microfone";
 import { Camera } from "../audio/camera";
 import { decodificar, Mixer, type TomadaTocavel } from "../audio/mixer";
@@ -21,7 +21,7 @@ export default function Estudio() {
     if (!dub) throw new Error("Dub não encontrado.");
     const cena = await buscarCena(dub.cenaId);
     if (!cena) throw new Error("A cena deste dub não existe mais.");
-    return { dub, cena };
+    return { dub, cena: cenaDoDub(cena, dub) };
   }, [dubId]);
 
   if (dados.carregando) return <p className="suave">Carregando o estúdio…</p>;
@@ -419,6 +419,11 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
           ▶ Resultado {qtdFeitas}/{total}
         </Link>
       </div>
+      {dub.base && (
+        <div className="linha-dueto pequeno">
+          <span className="selo-dueto">🎭 Dueto com @{dub.base.apelido}</span> as outras vozes já estão no vídeo
+        </div>
+      )}
 
       {erroMidia && <p className="alerta">{erroMidia}</p>}
 
@@ -448,7 +453,7 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
           </div>
         )}
         {camStream && (
-          <div className={`pip-camera ${modo === "gravando" ? "gravando" : ""}`}>
+          <div className={`pip-camera ${modo === "gravando" ? "gravando" : ""} ${dub.base ? "esquerda" : ""}`}>
             <video
               ref={(el) => {
                 if (el && el.srcObject !== camStream) el.srcObject = camStream;

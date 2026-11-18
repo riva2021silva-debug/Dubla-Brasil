@@ -25,6 +25,9 @@ export interface Publicacao {
   comentarios: number;
   denuncias: number;
   criadaEm: number;
+  /** Dueto: id do dub original que esta pessoa "dublou junto" (e o apelido de quem fez o original). */
+  duetoDe: string | null;
+  duetoApelido: string | null;
 }
 
 export interface Comentario {
@@ -140,7 +143,7 @@ export async function definirApelido(apelido: string): Promise<string> {
 
 // ---------- Publicar ----------
 
-export async function publicar(dados: { video: Blob; capa?: Blob | null; cenaId: string; cenaTitulo: string; papeis: string[]; duracaoMs: number }): Promise<string> {
+export async function publicar(dados: { video: Blob; capa?: Blob | null; cenaId: string; cenaTitulo: string; papeis: string[]; duracaoMs: number; duetoDe?: string | null }): Promise<string> {
   if (dados.video.size > LIMITE_BYTES) throw new Error("O vídeo ficou grande demais para a galeria (limite de 15 MB). Use uma cena mais curta.");
   const id = await garantirSessao();
   const base = `${id}/${Date.now().toString(36)}`;
@@ -158,12 +161,12 @@ export async function publicar(dados: { video: Blob; capa?: Blob | null; cenaId:
       if (c.error) capaPath = null;
       else enviados.push(capaPath);
     }
-    const { data, error } = await supabase
-      .from("publicacoes")
-      .insert({ cena_id: dados.cenaId, cena_titulo: dados.cenaTitulo, papeis: dados.papeis, video_path: videoPath, capa_path: capaPath, duracao_ms: Math.round(dados.duracaoMs) })
-      .select("id")
-      .single();
-    if (error) erro(error, { "row-level security": "Escolha um apelido antes de publicar." });
+    const linha = { cena_id: dados.cenaId, cena_titulo: dados.cenaTitulo, papeis: dados.papeis, video_path: videoPath, capa_path: capaPath, duracao_ms: Math.round(dados.duracaoMs) };
+    const inserir = (extra: Record<string, unknown>) => supabase.from("publicacoes").insert({ ...linha, ...extra }).select("id").single();
+    let { data, error } = await inserir(dados.duetoDe ? { dueto_de: dados.duetoDe } : {});
+    // Servidor ainda sem o dueto (arquivo dueto-e-notificacoes.sql): publica normal, sem perder o vídeo.
+    if (error && dados.duetoDe && (error.code === "PGRST204" || error.code === "42703" || /dueto_de/.test(error.message))) ({ data, error } = await inserir({}));
+    if (error || !data) erro(error, { "row-level security": "Escolha um apelido antes de publicar." });
     return data.id as string;
   } catch (e) {
     if (enviados.length) await supabase.storage.from(PASTA).remove(enviados);
@@ -188,6 +191,8 @@ interface Linha {
   comentarios: number;
   denuncias: number;
   criada_em: string;
+  dueto_de?: string | null;
+  dueto_apelido?: string | null;
   perfis: { apelido: string; foto_path?: string | null } | null;
 }
 
@@ -211,6 +216,8 @@ function paraPublicacao(l: Linha): Publicacao {
     comentarios: l.comentarios,
     denuncias: l.denuncias,
     criadaEm: Date.parse(l.criada_em),
+    duetoDe: l.dueto_de ?? null,
+    duetoApelido: l.dueto_apelido ?? null,
   };
 }
 

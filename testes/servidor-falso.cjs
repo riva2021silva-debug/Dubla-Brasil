@@ -12,7 +12,7 @@ const assinantes = new Map(); // user_id -> { premium_ate, origem }
 const uso = new Map(); // user_id + dia -> dublagens
 const usuarioPorId = (id) => [...usuarios.values()].find((x) => x.id === id);
 const arquivos = new Map(); // "pasta/caminho" -> { tipo, dados }
-const dados = { cenas: new Map(), sons: new Map(), perfis: new Map(), publicacoes: new Map(), reacoes: new Map(), comentarios: new Map(), denuncias: new Map(), mensagens_ajuda: new Map() };
+const dados = { cenas: new Map(), sons: new Map(), perfis: new Map(), publicacoes: new Map(), reacoes: new Map(), comentarios: new Map(), denuncias: new Map(), mensagens_ajuda: new Map(), notificacoes: new Map() };
 
 const temPerfil = (u) => !!u.id && dados.perfis.has(u.id);
 const regras = {
@@ -34,7 +34,7 @@ const regras = {
   },
   publicacoes: {
     pk: ["id"],
-    padrao: (u) => ({ id: crypto.randomUUID(), autor_id: u.id, oculta: false, curtidas: 0, descurtidas: 0, comentarios: 0, denuncias: 0, papeis: [], capa_path: null, criada_em: agora() }),
+    padrao: (u) => ({ id: crypto.randomUUID(), autor_id: u.id, oculta: false, curtidas: 0, descurtidas: 0, comentarios: 0, denuncias: 0, papeis: [], capa_path: null, dueto_de: null, criada_em: agora() }),
     ler: (l, u) => !l.oculta || l.autor_id === u.id || u.admin,
     inserir: (l, u) => !!u.id && l.autor_id === u.id && temPerfil(u) && !l.oculta && !l.curtidas && !l.descurtidas && !l.comentarios && !l.denuncias,
     atualizar: (l, u) => u.admin,
@@ -66,6 +66,14 @@ const regras = {
     atualizar: (l, u) => u.admin,
     apagar: (l, u) => u.admin,
   },
+  // Notificações (supabase/dueto-e-notificacoes.sql): só os "gatilhos" criam; a pessoa lê, marca como lida e apaga as suas.
+  notificacoes: {
+    pk: ["id"],
+    ler: (l, u) => !!u.id && l.para === u.id,
+    inserir: () => false,
+    atualizar: (l, u) => !!u.id && l.para === u.id,
+    apagar: (l, u) => !!u.id && l.para === u.id,
+  },
   denuncias: {
     pk: ["publicacao_id", "user_id"],
     padrao: (u) => ({ user_id: u.id, criada_em: agora() }),
@@ -91,6 +99,28 @@ function contar(pubId) {
   p.descurtidas = r.filter((x) => x.valor === -1).length;
   p.comentarios = [...dados.comentarios.values()].filter((x) => x.publicacao_id === pubId).length;
   p.denuncias = [...dados.denuncias.values()].filter((x) => x.publicacao_id === pubId).length;
+}
+
+// Imita os gatilhos do SQL: apelido do dueto vem do servidor; curtida, comentário e dueto avisam o dono do dub.
+function antesDeInserir(tabela, l) {
+  if (tabela !== "publicacoes") return;
+  const orig = l.dueto_de ? dados.publicacoes.get(l.dueto_de) : null;
+  const apelido = orig && !orig.oculta ? dados.perfis.get(orig.autor_id)?.apelido : null;
+  l.dueto_de = apelido ? orig.id : null;
+  l.dueto_apelido = apelido ?? null;
+}
+function notificar(tabela, l) {
+  let quem, alvo, tipo;
+  if (tabela === "reacoes" && l.valor === 1) [quem, alvo, tipo] = [l.user_id, l.publicacao_id, "curtida"];
+  else if (tabela === "comentarios") [quem, alvo, tipo] = [l.autor_id, l.publicacao_id, "comentario"];
+  else if (tabela === "publicacoes" && l.dueto_de) [quem, alvo, tipo] = [l.autor_id, l.dueto_de, "dueto"];
+  else return;
+  const pub = dados.publicacoes.get(alvo);
+  if (!pub || pub.autor_id === quem) return;
+  const pubAviso = tipo === "dueto" ? l.id : alvo;
+  if (tipo === "curtida" && [...dados.notificacoes.values()].some((n) => n.tipo === "curtida" && n.para === pub.autor_id && n.de === quem && n.publicacao_id === alvo)) return;
+  const n = { id: crypto.randomUUID(), para: pub.autor_id, de: quem, de_apelido: dados.perfis.get(quem)?.apelido ?? null, tipo, publicacao_id: pubAviso, cena_titulo: pub.cena_titulo, texto: tipo === "comentario" ? String(l.texto).slice(0, 120) : null, lida: false, criada_em: agora() };
+  dados.notificacoes.set(n.id, n);
 }
 
 function apagarEmCascata(tabela, l) {
@@ -277,6 +307,7 @@ const servidor = http.createServer(async (req, res) => {
         const antes = tabela.get(k);
         if (antes && !upsert) return responder(res, 409, { code: "23505", message: `duplicate key value violates unique constraint "${nome}_pkey"` });
         const linha = antes ? { ...antes, ...entrada, atualizada_em: agora() } : { criada_em: agora(), ...candidata, atualizada_em: agora() };
+        if (!antes) antesDeInserir(nome, linha);
         const pode = antes ? regra.atualizar(antes, u) && regra.atualizar(linha, u) : regra.inserir(linha, u);
         if (!pode) return responder(res, 403, { code: "42501", message: `new row violates row-level security policy for table "${nome}"` });
         const problema = regra.validar ? regra.validar(linha) : null;
@@ -286,12 +317,15 @@ const servidor = http.createServer(async (req, res) => {
       for (const l of novas) {
         tabela.set(chave(nome, l), l);
         if (l.publicacao_id) contar(l.publicacao_id);
+        notificar(nome, l);
       }
       return prefer.includes("return=representation") ? entregar(novas, 201) : responder(res, 201);
     }
     if (req.method === "PATCH") {
       for (const l of filtrar(visiveis(), url.searchParams)) {
-        const nova = { ...l, ...json() };
+        const mudanca = json();
+        if (nome === "notificacoes" && Object.keys(mudanca).some((k) => k !== "lida")) return responder(res, 403, { code: "42501", message: "permission denied for table notificacoes" });
+        const nova = { ...l, ...mudanca };
         if (regra.atualizar(l, u) && regra.atualizar(nova, u)) tabela.set(chave(nome, l), nova);
       }
       return responder(res, 204);
@@ -350,6 +384,7 @@ const servidor = http.createServer(async (req, res) => {
       cenas: [...dados.cenas.values()], sons: [...dados.sons.values()], perfis: [...dados.perfis.values()],
       publicacoes: [...dados.publicacoes.values()], comentarios: [...dados.comentarios.values()],
       reacoes: [...dados.reacoes.values()], denuncias: [...dados.denuncias.values()], arquivos: [...arquivos.keys()],
+      notificacoes: [...dados.notificacoes.values()],
     });
 
   responder(res, 404, { message: `rota não simulada: ${req.method} ${p}` });

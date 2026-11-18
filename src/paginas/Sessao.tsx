@@ -6,7 +6,7 @@ import LegendaKaraoke from "../componentes/LegendaKaraoke";
 import LinhaDoTempo from "../componentes/LinhaDoTempo";
 import { useConfig } from "../config";
 import { db } from "../db";
-import { buscarCena, useCarregar, useFormatoDoVideo, useMidiasDaCena, useTempoDoVideo } from "../ganchos";
+import { buscarCena, cenaDoDub, useCarregar, useFormatoDoVideo, useMidiasDaCena, useTempoDoVideo } from "../ganchos";
 import { decodificar, Mixer } from "../audio/mixer";
 import { irPara } from "../audio/sincronia";
 import { trechoNoTempo } from "../audio/camera";
@@ -21,7 +21,7 @@ export default function Sessao() {
     if (!dub) throw new Error("Dub não encontrado.");
     const cena = await buscarCena(dub.cenaId);
     if (!cena) throw new Error("A cena deste dub não existe mais.");
-    return { dub, cena };
+    return { dub, cena: cenaDoDub(cena, dub) };
   }, [dubId]);
   if (dados.carregando) return <p className="suave">Carregando…</p>;
   if (dados.erro || !dados.dado) return <p className="alerta">{dados.erro}</p>;
@@ -214,7 +214,8 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
       if (p && trechoNoTempo(cameras, ms) && p.readyState >= 2 && p.videoWidth) {
         const lado = Math.round(Math.min(largura, altura) * (altura > largura ? 0.42 : 0.3));
         const mg = Math.round(Math.min(largura, altura) * 0.035);
-        const x = largura - lado - mg;
+        // Dueto: o vídeo base já tem a câmera da outra pessoa à direita; a sua fica à esquerda.
+        const x = dub.base ? mg : largura - lado - mg;
         const y = mg;
         const raio = Math.round(lado * 0.12);
         const borda = Math.max(2, Math.round(lado * 0.025));
@@ -327,8 +328,10 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
         capa,
         cenaId: cena.id,
         cenaTitulo: cena.titulo,
-        papeis: cena.personagens.filter((p) => dub.papeis.includes(p.id)).map((p) => p.nome),
+        // Dueto: o vídeo tem as vozes das duas pessoas (quem quiser dublar junto depois só pega quem sobrou).
+        papeis: [...new Set([...(dub.base?.papeis ?? []), ...cena.personagens.filter((p) => dub.papeis.includes(p.id)).map((p) => p.nome)])],
         duracaoMs: cena.duracaoMs,
+        duetoDe: dub.base?.publicacaoId ?? null,
       });
       navegar(`/galeria?p=${id}`);
     } catch (e) {
@@ -364,6 +367,7 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
                 {i < nomes.length - 1 ? " e " : ""}
               </span>
             ))}
+            {dub.base && <span className="selo-dueto" style={{ marginLeft: 8 }}>🎭 Dueto com @{dub.base.apelido}</span>}
           </span>
         </div>
         <Link className="botao" to={`/estudio/${dub.id}`}>
@@ -393,7 +397,7 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
           />
         )}
         {!!cameras?.length && (
-          <div className="pip-camera" hidden={!pipVisivel}>
+          <div className={`pip-camera ${dub.base ? "esquerda" : ""}`} hidden={!pipVisivel}>
             <video ref={pip} muted playsInline preload="auto" />
           </div>
         )}

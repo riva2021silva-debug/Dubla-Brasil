@@ -21,10 +21,13 @@ import { useEffect, useState } from "react";
 import { contarNovas } from "./ajuda";
 import { vigiarSeloExterno } from "./seloExterno";
 import { useAdmin } from "./admin";
+import Notificacoes from "./paginas/Notificacoes";
+import { useNaoLidas } from "./notificacoes";
 
 function Layout() {
   const { aberto } = useAdmin();
   const plano = usePlano();
+  const naoLidas = useNaoLidas();
   // Selo de fora (ex.: "Powered by Netlify"): a barra de botões sobe para não ficar por baixo dele.
   useEffect(() => vigiarSeloExterno(), []);
   // Administrador: quantas mensagens de Ajuda estão esperando (aparece no botão Admin).
@@ -63,6 +66,9 @@ function Layout() {
           )}
           <NavLink to="/conta" className={`botao botao-pequeno botao-premium ${plano.premium ? "eh-premium" : ""}`} aria-label="Minha conta e plano">
             {plano.premium ? "⭐ Premium" : "⭐ Seja Premium"}
+          </NavLink>
+          <NavLink to="/notificacoes" className="botao botao-pequeno botao-icone sino" aria-label={naoLidas ? `Notificações, ${naoLidas} novas` : "Notificações"}>
+            🔔{naoLidas > 0 && <span className="selo-novas selo-sino">{naoLidas > 9 ? "9+" : naoLidas}</span>}
           </NavLink>
           <NavLink to="/ajuda" className="botao botao-pequeno botao-icone" aria-label="Ajuda">
             ❓
@@ -130,6 +136,7 @@ export default function App() {
           <Route path="configuracoes" element={<Configuracoes />} />
           <Route path="conta" element={<Conta />} />
           <Route path="ajuda" element={<Ajuda />} />
+          <Route path="notificacoes" element={<Notificacoes />} />
           <Route path="premium" element={<Premium />} />
           <Route path="*" element={<NaoEncontrada />} />
         </Route>

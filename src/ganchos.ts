@@ -114,3 +114,8 @@ export function useFormatoDoVideo(video: HTMLVideoElement | null) {
     estilo: { aspectRatio: String(proporcao), "--proporcao": String(proporcao) } as React.CSSProperties,
   };
 }
+
+/** Dueto: o vídeo publicado na galeria (com a voz da outra pessoa) entra no lugar do vídeo original da cena. */
+export function cenaDoDub(cena: Cena, dub: Dub): Cena {
+  return dub.base ? { ...cena, video: { tipo: "url", url: dub.base.video } } : cena;
+}

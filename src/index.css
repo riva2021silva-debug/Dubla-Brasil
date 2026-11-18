@@ -535,3 +535,21 @@ kbd { background: var(--superficie-2); border: 1px solid var(--borda); border-bo
 .aviso-nivel { padding: 8px 12px; border-radius: 10px; font-weight: 700; font-size: .9rem; }
 .aviso-nivel.baixo { background: rgb(250 204 21 / 0.14); color: var(--amarelo); border: 1px solid rgb(250 204 21 / 0.5); }
 .aviso-nivel.alto { background: rgb(239 68 68 / 0.16); color: #f87171; border: 1px solid rgb(239 68 68 / 0.5); }
+
+/* ---------- Notificações ---------- */
+.sino { position: relative; }
+.selo-sino { position: absolute; top: -6px; right: -6px; margin: 0; }
+.lista-notificacoes { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.notificacao { width: 100%; display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; text-align: left; border-radius: 14px; border: 1px solid rgba(255,255,255,.08); background: rgba(255,255,255,.04); color: inherit; font: inherit; cursor: pointer; }
+.notificacao.nova { background: rgba(139,92,246,.16); border-color: rgba(139,92,246,.45); }
+.notificacao-icone { font-size: 22px; line-height: 1.2; }
+.notificacao-corpo { flex: 1; display: grid; gap: 3px; min-width: 0; }
+.notificacao-texto { opacity: .85; font-style: italic; overflow-wrap: anywhere; }
+.ponto-novo { width: 10px; height: 10px; border-radius: 50%; background: #ef4444; margin-top: 6px; flex: none; }
+
+/* ---------- Dueto ---------- */
+.selo-dueto { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; background: rgba(236,72,153,.2); color: #f9a8d4; font-size: 12px; font-weight: 700; }
+.aviso-dueto { padding: 12px 14px; border-radius: 14px; background: rgba(236,72,153,.12); border: 1px solid rgba(236,72,153,.4); }
+.ator.de-outro { opacity: .55; cursor: not-allowed; }
+.pip-camera.esquerda { right: auto; left: 3.5%; }
+.linha-dueto { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; opacity: .9; }

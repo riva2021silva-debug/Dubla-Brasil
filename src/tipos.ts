@@ -66,9 +66,20 @@ export interface Dub {
   tomadas: Record<string, Tomada>;
   /** Vídeos da câmera gravados junto com as falas (aparecem no cantinho, como numa chamada). */
   cameras?: TrechoCamera[];
+  /** Dueto: dublando junto com um dub da galeria. O vídeo publicado (com a voz da outra pessoa) vira a base. */
+  base?: DuetoBase;
   nome: string;
   criadoEm: number;
   atualizadoEm: number;
+}
+
+export interface DuetoBase {
+  publicacaoId: string;
+  /** Endereço do vídeo publicado na galeria. */
+  video: string;
+  apelido: string;
+  /** Nomes dos personagens que já têm voz no vídeo publicado. */
+  papeis: string[];
 }
 
 /** Um trecho gravado pela câmera frontal durante a dublagem. */

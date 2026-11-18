@@ -430,12 +430,30 @@ function ItemFeed(props: {
           <strong>@{p.apelido}</strong> <span className="suave">· {tempoAtras(p.criadaEm)}</span>
           {p.oculta && <span className="etiqueta" style={{ marginLeft: 6 }}>Oculto</span>}
         </div>
+        {p.duetoApelido && (
+          <div>
+            {p.duetoDe ? (
+              <Link to={`/galeria?p=${p.duetoDe}`} className="selo-dueto" aria-label={`Dueto com @${p.duetoApelido}, ver o original`}>
+                🎭 Dueto com @{p.duetoApelido}
+              </Link>
+            ) : (
+              <span className="selo-dueto">🎭 Dueto com @{p.duetoApelido}</span>
+            )}
+          </div>
+        )}
         <div className="post-cena">{p.cenaTitulo}</div>
         {p.papeis.length > 0 && <div className="suave pequeno">Dublando: {p.papeis.join(", ")}</div>}
         {p.cenaId && (
-          <Link className="botao botao-pequeno botao-primario" to={`/cena/${p.cenaId}`} style={{ marginTop: 6, alignSelf: "flex-start" }}>
-            🎙️ Dublar esta cena
-          </Link>
+          <div className="linha" style={{ marginTop: 6, gap: 6, flexWrap: "wrap" }}>
+            {!props.souAutor && (
+              <Link className="botao botao-pequeno botao-primario" to={`/cena/${p.cenaId}?dueto=${p.id}`} aria-label={`Dublar junto com @${p.apelido}`}>
+                🎭 Dublar junto
+              </Link>
+            )}
+            <Link className={`botao botao-pequeno ${props.souAutor ? "botao-primario" : ""}`} to={`/cena/${p.cenaId}`}>
+              🎙️ Dublar esta cena
+            </Link>
+          </div>
         )}
         <BarraComentario aoEnviar={props.aoComentarDireto} />
       </div>

@@ -1,13 +1,11 @@
 {
-  "versao": "3.9",
-  "codigo": 30,
+  "versao": "4.0",
+  "codigo": 31,
   "data": "2026-11-18",
   "novidades": [
-    "Estúdio: botão “✅ Ficou bom · Próxima fala” depois de cada gravação",
-    "Estúdio: “🔈 Guia” — ouça a voz original baixinho enquanto grava (use fone)",
-    "Estúdio: avisa se o microfone está baixo ou alto demais na hora de falar",
-    "Falas mais curtas: uma por frase, cada uma até a próxima começar",
-    "Admin: “✨ Gerar trilha de fundo com IA” — tira as vozes e deixa só a música e os efeitos"
+    "🎭 Dueto: toque em “Dublar junto” num dub da galeria e duble os personagens que sobraram — o vídeo sai com as duas vozes",
+    "🔔 Notificações: saiba quando alguém curtir, comentar ou dublar junto com você",
+    "Galeria: o dueto mostra “🎭 Dueto com @fulano” e leva ao dub original"
   ],
   "apk": "https://dublabr.netlify.app/baixar/DublaBrasilAI.apk"
 }
