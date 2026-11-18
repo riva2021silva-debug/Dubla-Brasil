@@ -1,11 +1,11 @@
 {
-  "versao": "3.1",
-  "codigo": 22,
+  "versao": "3.2",
+  "codigo": 23,
   "data": "2026-11-18",
   "novidades": [
-    "Publicar na galeria: cenas longas (1 a 3 minutos) agora cabem e aparecem para todo mundo",
-    "A qualidade do vídeo se ajusta sozinha ao tamanho da cena",
-    "Se algo der errado ao publicar, o aviso aparece perto do botão"
+    "Cenas de até 2 minutos: do envio do vídeo até a publicação na galeria",
+    "Admin: vídeo mais longo que 2 minutos? O app avisa e corta com um toque",
+    "Admin: vídeo pesado demais? Botão “Deixar mais leve” antes de salvar"
   ],
   "apk": "https://dublabr.netlify.app/baixar/DublaBrasilAI.apk"
 }

@@ -509,10 +509,7 @@ export default function Editor() {
             <button
               className="botao"
               disabled={retomando}
-              onClick={() => {
-                void apagarRascunho(chaveRascunho);
-                setRascunho(null);
-              }}
+              onClick={() => void apagarRascunho(chaveRascunho).then(() => setRascunho(null))}
             >
               Descartar
             </button>

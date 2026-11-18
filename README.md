@@ -313,3 +313,14 @@ No estúdio, a legenda em português aparece embaixo do vídeo no estilo karaok�
   - O erro aparece junto dos botões e a tela rola até ele.
 - **Teste:** `node testes/e2e-publicar-longo.cjs`. Uma cena de 1:35 difícil de comprimir saiu com 8,3 MB e
   apareceu na galeria.
+
+## Versão 3.2: cenas de até 2 minutos
+
+- **Editor:**
+  - limite de 2:00 (`DURACAO_MAXIMA_MS`) com aviso e botão **"✂️ Cortar para 2 minutos"**, que abre o Editar
+    vídeo já com o fim em 2:00;
+  - vídeo novo com mais de 45 MB: **"Deixar mais leve"** (regrava sem cortar);
+  - salvar recusa mais de 2:05 ou mais de 50 MB, com instrução.
+- **Editar vídeo:** a qualidade cabe em ~40 MB pelo tamanho do trecho (2 minutos ≈ 2,5 Mbps).
+- **Teste:** `node testes/e2e-dois-minutos.cjs`. Um vídeo pesado de 2:30 (74 MB) foi cortado para 2:00 e salvo
+  com 28,8 MB. O dub publicado na galeria teve 8,1 MB.

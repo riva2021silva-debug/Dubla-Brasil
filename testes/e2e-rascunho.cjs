@@ -61,6 +61,7 @@ const FIX = path.join(__dirname, "fixtures");
   await p.getByText("📝 Você tem uma edição não salva").waitFor({ timeout: 10000 });
   await p.screenshot({ path: path.join(SAIDA, "r3-aviso-editor.png") });
   await p.getByRole("button", { name: "Descartar" }).click();
+  await p.getByText("📝 Você tem uma edição não salva").waitFor({ state: "detached" });
   const depois = await p.getByLabel("Título").inputValue();
   await p.reload();
   await p.getByLabel("Título").waitFor();
