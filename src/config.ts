@@ -21,6 +21,8 @@ export interface Configuracoes {
   limparVoz: boolean;
   /** Depois de gravar: ajusta a voz no tempo para casar com a fala original (até 0,3 s). */
   alinharVoz: boolean;
+  /** Nas suas falas (cena sem trilha de fundo), toca o som do vídeo sem a voz original: música e ambiente. */
+  somAmbiente: boolean;
   /** Grava a câmera frontal junto com a voz e mostra no cantinho do vídeo, como numa chamada. */
   usarCamera?: boolean;
   /** Versão das preferências (para ligar padrões novos em quem já usava o app). */
@@ -38,6 +40,7 @@ export const PADRAO: Configuracoes = {
   reducaoRuido: true,
   limparVoz: true,
   alinharVoz: true,
+  somAmbiente: true,
   versao: 2,
 };
 

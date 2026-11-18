@@ -125,6 +125,7 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
     const m = new Mixer(video);
     mixer.current = m;
     m.volumeOriginalNaMinhaFala = cfg.volumeOriginalNaMinhaFala;
+    m.somAmbiente = cfg.somAmbiente;
     m.definirVolumeVoz(cfg.volumeVoz);
     // Só silencia o original nas falas que você de fato gravou.
     m.definirJanelas(minhas.filter((f) => dub.tomadas[f.id]));
@@ -150,7 +151,7 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
       m.destruir();
       mixer.current = null;
     };
-  }, [video, urls, dub, minhas, cfg.volumeOriginalNaMinhaFala, cfg.volumeVoz]);
+  }, [video, urls, dub, minhas, cfg.volumeOriginalNaMinhaFala, cfg.somAmbiente, cfg.volumeVoz]);
 
   useEffect(() => () => cancelar.current(), []);
 

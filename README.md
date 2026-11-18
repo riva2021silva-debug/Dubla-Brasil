@@ -324,3 +324,18 @@ No estúdio, a legenda em português aparece embaixo do vídeo no estilo karaok�
 - **Editar vídeo:** a qualidade cabe em ~40 MB pelo tamanho do trecho (2 minutos ≈ 2,5 Mbps).
 - **Teste:** `node testes/e2e-dois-minutos.cjs`. Um vídeo pesado de 2:30 (74 MB) foi cortado para 2:00 e salvo
   com 28,8 MB. O dub publicado na galeria teve 8,1 MB.
+
+## Versão 3.3: som ambiente nas falas do usuário
+
+- **Antes:** sem trilha de fundo enviada pelo admin, o som original era zerado na fala do usuário, e o vídeo
+  ficava só com a voz dublada.
+- **Agora:** o mixer tem um caminho "sem voz" (`montarSemVoz` em `src/audio/mixer.ts`), como nos karaokês:
+  - os **lados** do estéreo (E − D) tiram a voz, que fica no centro em filmes, séries e desenhos;
+  - os **graves** abaixo de ~120 Hz voltam por um filtro;
+  - o som sai igual nos dois canais, para não se cancelar no alto-falante mono do celular;
+  - vídeo mono: sai só o grave, sem vazar a voz.
+- Entra no lugar do original durante as falas do usuário quando a cena **não** tem trilha de fundo. A trilha de
+  fundo enviada pelo admin continua tendo prioridade, porque tem a qualidade melhor. Opção
+  `somAmbiente` em Configurações, ligada por padrão.
+- **Teste:** `node testes/e2e-ambiente.cjs`. No vídeo salvo, a voz no centro caiu 38 dB na fala, e a música dos
+  lados manteve o volume.

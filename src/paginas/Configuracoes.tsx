@@ -143,6 +143,17 @@ export default function Configuracoes() {
           Volume da sua voz: {Math.round(cfg.volumeVoz * 100)}%
           <input type="range" min={0} max={2} step={0.05} value={cfg.volumeVoz} onChange={(e) => salvar({ volumeVoz: +e.target.value })} />
         </label>
+        <label className="linha" style={{ alignItems: "flex-start" }}>
+          <input type="checkbox" checked={cfg.somAmbiente} onChange={(e) => salvar({ somAmbiente: e.target.checked })} />
+          <span>
+            <b>🎵 Manter o som ambiente nas minhas falas</b>
+            <br />
+            <span className="suave pequeno">
+              Tira só a voz original e deixa a música e os efeitos do vídeo tocando junto com a sua voz (quando a cena não tem
+              trilha de fundo). Funciona com vídeos em estéreo, que são quase todos.
+            </span>
+          </span>
+        </label>
         <label className="campo">
           Áudio original durante as suas falas (cenas sem trilha de fundo): {Math.round(cfg.volumeOriginalNaMinhaFala * 100)}%
           <input type="range" min={0} max={0.5} step={0.05} value={cfg.volumeOriginalNaMinhaFala} onChange={(e) => salvar({ volumeOriginalNaMinhaFala: +e.target.value })} />

@@ -106,8 +106,9 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
   useEffect(() => {
     if (!mixer.current) return;
     mixer.current.volumeOriginalNaMinhaFala = cfg.volumeOriginalNaMinhaFala;
+    mixer.current.somAmbiente = cfg.somAmbiente;
     mixer.current.definirVolumeVoz(cfg.volumeVoz);
-  }, [cfg.volumeOriginalNaMinhaFala, cfg.volumeVoz, video, urls]);
+  }, [cfg.volumeOriginalNaMinhaFala, cfg.somAmbiente, cfg.volumeVoz, video, urls]);
 
   // Decodifica as tomadas salvas.
   useEffect(() => {
@@ -589,8 +590,9 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
           </div>
           {!cena.fundo && (
             <p className="suave pequeno" style={{ margin: 0 }}>
-              Esta cena não tem trilha de fundo: durante as suas falas o áudio original fica{" "}
-              {cfg.volumeOriginalNaMinhaFala > 0 ? "baixinho" : "mudo"}.
+              {cfg.somAmbiente
+                ? "🎵 Som ambiente ligado: nas suas falas a voz original sai e a música e os efeitos do vídeo continuam."
+                : `Esta cena não tem trilha de fundo: durante as suas falas o áudio original fica ${cfg.volumeOriginalNaMinhaFala > 0 ? "baixinho" : "mudo"}.`}
             </p>
           )}
           <div className="lista-falas">

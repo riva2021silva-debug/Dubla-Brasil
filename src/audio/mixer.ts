@@ -33,6 +33,10 @@ export class Mixer {
   private ganhoVideo: GainNode;
   private ganhoFundo: GainNode;
   private ganhoVoz: GainNode;
+  /** Som do vídeo sem a voz (ambiente e música), para tocar junto com a sua fala quando não há trilha de fundo. */
+  private ganhoSemVoz: GainNode;
+  /** Liga o som ambiente automático nas suas falas. */
+  somAmbiente = true;
   readonly saida: GainNode;
   private fundo: AudioBuffer | null = null;
   private tomadas: TomadaTocavel[] = [];
@@ -60,7 +64,11 @@ export class Mixer {
     this.ganhoFundo.gain.value = 0;
     this.ganhoVoz = this.ctx.createGain();
     this.saida = this.ctx.createGain();
+    this.ganhoSemVoz = this.ctx.createGain();
+    this.ganhoSemVoz.gain.value = 0;
     fonte.connect(this.ganhoVideo).connect(this.saida);
+    const semVoz = montarSemVoz(this.ctx, fonte);
+    semVoz.connect(this.ganhoSemVoz).connect(this.saida);
     this.ganhoFundo.connect(this.saida);
     this.ganhoVoz.connect(this.saida);
     this.saida.connect(this.ctx.destination);
@@ -80,6 +88,7 @@ export class Mixer {
       video.removeEventListener("ended", parar);
       this.parar();
       fonte!.disconnect();
+      semVoz.disconnect();
       this.saida.disconnect();
     };
   }
@@ -156,6 +165,8 @@ export class Mixer {
     const agora = this.ctx.currentTime;
     this.ganhoFundo.gain.cancelScheduledValues(agora);
     this.ganhoFundo.gain.setValueAtTime(0, agora);
+    this.ganhoSemVoz.gain.cancelScheduledValues(agora);
+    this.ganhoSemVoz.gain.setValueAtTime(0, agora);
     this.ganhoVideo.gain.cancelScheduledValues(agora);
     this.ganhoVideo.gain.setValueAtTime(1, agora);
   }
@@ -174,16 +185,22 @@ export class Mixer {
     const dentro = !this.modoOriginal && this.janelas.some((j) => s0 >= j.inicioMs && s0 < j.fimMs);
     const gv = this.ganhoVideo.gain;
     const gf = this.ganhoFundo.gain;
+    // Sem trilha de fundo enviada: na sua fala entra o som do próprio vídeo sem a voz original.
+    const ambiente = !temFundo && this.somAmbiente;
+    const ga = this.ganhoSemVoz.gain;
     gv.setValueAtTime(dentro ? originalNaJanela : 1, t0);
     gf.setValueAtTime(dentro && temFundo ? 1 : 0, t0);
+    ga.setValueAtTime(dentro && ambiente ? 1 : 0, t0);
     for (const j of this.modoOriginal ? [] : this.janelas) {
       if (j.fimMs <= s0) continue;
       if (j.inicioMs > s0) {
         gv.setTargetAtTime(originalNaJanela, emCtx(j.inicioMs), SUAVIZACAO_S);
         if (temFundo) gf.setTargetAtTime(1, emCtx(j.inicioMs), SUAVIZACAO_S);
+        if (ambiente) ga.setTargetAtTime(1, emCtx(j.inicioMs), SUAVIZACAO_S);
       }
       gv.setTargetAtTime(1, emCtx(j.fimMs), SUAVIZACAO_S);
       if (temFundo) gf.setTargetAtTime(0, emCtx(j.fimMs), SUAVIZACAO_S);
+      if (ambiente) ga.setTargetAtTime(0, emCtx(j.fimMs), SUAVIZACAO_S);
     }
 
     if (this.fundo && s0 / 1000 < this.fundo.duration) {
@@ -210,4 +227,52 @@ export class Mixer {
 
 export async function decodificar(ctx: BaseAudioContext, blob: Blob): Promise<AudioBuffer> {
   return ctx.decodeAudioData(await blob.arrayBuffer());
+}
+
+/**
+ * "Tira a voz" do som do vídeo, como nos karaokês: em filmes, séries e desenhos a voz fica no centro do estéreo
+ * (igual nos dois lados), enquanto música e ambiente ficam espalhados. Tirando o centro (esquerda − direita) a voz
+ * some e o ambiente fica; os graves (batidas, explosões) voltam por um filtro abaixo de ~120 Hz, onde quase não há voz.
+ * Vídeo mono: não há o que separar — sai só o grave (a voz original não vaza).
+ */
+function montarSemVoz(ctx: AudioContext, fonte: AudioNode): AudioNode {
+  // Garante 2 canais (um vídeo mono vira esquerda = direita, e aí o "centro" inteiro é retirado).
+  const estereo = ctx.createGain();
+  estereo.channelCount = 2;
+  estereo.channelCountMode = "explicit";
+  estereo.channelInterpretation = "speakers";
+  fonte.connect(estereo);
+  const separa = ctx.createChannelSplitter(2);
+  estereo.connect(separa);
+
+  // Lados: E − D (sem a voz do centro), igual nos dois ouvidos — invertido num deles a sensação de espaço seria maior,
+  // mas o alto-falante do celular (que mistura os dois) cancelaria tudo.
+  const ladosE = ctx.createGain();
+  const ladosD = ctx.createGain();
+  ladosE.gain.value = 0.75;
+  ladosD.gain.value = -0.75;
+  separa.connect(ladosE, 0);
+  separa.connect(ladosD, 1);
+  const lados = ctx.createGain(); // soma E·0,75 − D·0,75
+  ladosE.connect(lados);
+  ladosD.connect(lados);
+
+  // Graves do centro (E + D) abaixo de ~120 Hz, com filtro de 4ª ordem.
+  const centro = ctx.createGain();
+  centro.gain.value = 0.5;
+  separa.connect(centro, 0);
+  separa.connect(centro, 1);
+  const pb1 = ctx.createBiquadFilter();
+  const pb2 = ctx.createBiquadFilter();
+  pb1.type = pb2.type = "lowpass";
+  pb1.frequency.value = pb2.frequency.value = 120;
+  pb1.Q.value = pb2.Q.value = 0.7;
+  centro.connect(pb1).connect(pb2);
+
+  const junta = ctx.createChannelMerger(2);
+  lados.connect(junta, 0, 0);
+  lados.connect(junta, 0, 1);
+  pb2.connect(junta, 0, 0);
+  pb2.connect(junta, 0, 1);
+  return junta;
 }
