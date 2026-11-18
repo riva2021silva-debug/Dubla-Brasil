@@ -56,6 +56,8 @@ export interface Tomada {
   inicioMs: number;
   duracaoMs: number;
   gravadaEm: number;
+  /** Quantas vezes esta fala já foi gravada (Tomada 1, 2, 3…). */
+  numero?: number;
 }
 
 export interface Dub {

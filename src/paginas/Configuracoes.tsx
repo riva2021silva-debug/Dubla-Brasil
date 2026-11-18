@@ -131,11 +131,6 @@ export default function Configuracoes() {
       <section className="cartao pilha">
         <h2>Gravação</h2>
         <label className="campo">
-          Tempo antes da fala: {(cfg.preRollMs / 1000).toFixed(1)} s
-          <input type="range" min={1000} max={5000} step={500} value={cfg.preRollMs} onChange={(e) => salvar({ preRollMs: +e.target.value })} />
-          <span className="suave pequeno">Quanto do vídeo toca antes de cada fala, para você entrar no clima.</span>
-        </label>
-        <label className="campo">
           Ajuste de sincronia: {cfg.latenciaMs > 0 ? "+" : ""}
           {cfg.latenciaMs} ms
           <input type="range" min={-300} max={500} step={10} value={cfg.latenciaMs} onChange={(e) => salvar({ latenciaMs: +e.target.value })} />

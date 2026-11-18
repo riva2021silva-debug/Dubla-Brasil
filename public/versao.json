@@ -3,9 +3,12 @@
   "codigo": 32,
   "data": "2026-11-18",
   "novidades": [
-    "🎙️ Microfone sem eco: enquanto você grava, o celular fica quase em silêncio na sua fala",
-    "🎙️ Voz sem chiado: novo redutor de ruído limpa o “shhh” do microfone",
-    "📱 Tamanho padrão no celular (Android e iPhone): topo compacto e barra de baixo acima dos botões do Android",
+    "🎬 Dublagem estilo estúdio: contagem 3, 2, 1 com a imagem parada e o vídeo toca só a sua fala",
+    "🎭 Cada um na sua vez: a sua voz nunca entra na fala do outro personagem",
+    "🔇 Vídeo mudo enquanto você grava (sem eco); o som ambiente volta no resultado",
+    "🎙️ Voz sem chiado: novo redutor de ruído",
+    "🔁 Contador de tomadas (Tomada 2, 3…)",
+    "📱 Tamanho padrão no celular (Android e iPhone)",
     "🎭 Botão “Dublar junto” em todos os dubs da galeria"
   ],
   "apk": "https://dublabr.netlify.app/baixar/DublaBrasilAI.apk"

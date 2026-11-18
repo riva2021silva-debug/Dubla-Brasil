@@ -124,6 +124,7 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
     if (!video || !urls) return;
     const m = new Mixer(video);
     mixer.current = m;
+    m.definirFalasDaCena(cena.falas);
     m.volumeOriginalNaMinhaFala = cfg.volumeOriginalNaMinhaFala;
     m.somAmbiente = cfg.somAmbiente;
     m.definirVolumeVoz(cfg.volumeVoz);

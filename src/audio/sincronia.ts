@@ -30,8 +30,10 @@ export function fatiarEmTomadas(
   cenaDaPrimeiraAmostra: number,
   falas: Fala[],
   compensacaoMs: number,
-  opcoes: { limpar?: boolean; alinharCom?: AudioBuffer | null } = {},
+  opcoes: { limpar?: boolean; alinharCom?: AudioBuffer | null; todasDaCena?: Fala[] } = {},
 ): Record<string, Tomada> {
+  // Todas as falas da cena (de qualquer personagem), em ordem: a tomada nunca entra na fala de outra pessoa.
+  const cena = [...(opcoes.todasDaCena ?? falas)].sort((a, b) => a.inicioMs - b.inicioMs);
   const inicioReal = cenaDaPrimeiraAmostra - compensacaoMs;
   const saida: Record<string, Tomada> = {};
   const ordem = [...falas].sort((a, b) => a.inicioMs - b.inicioMs);
@@ -39,8 +41,9 @@ export function fatiarEmTomadas(
     const f = ordem[k];
     // As folgas não podem invadir a fala vizinha (senão o mesmo trecho toca duas vezes = eco): param no meio do caminho.
     const ant = ordem[k - 1], prox = ordem[k + 1];
-    const de = Math.max(f.inicioMs - FOLGA_INICIO_MS, ant ? (ant.fimMs + f.inicioMs) / 2 : -Infinity);
-    const ate = Math.min(f.fimMs + FOLGA_FIM_MS, prox ? (f.fimMs + prox.inicioMs) / 2 : Infinity);
+    const vizinhas = limitesDaFala(f, cena);
+    const de = Math.min(f.inicioMs, Math.max(f.inicioMs - FOLGA_INICIO_MS, ant ? (ant.fimMs + f.inicioMs) / 2 : -Infinity, vizinhas.antes));
+    const ate = Math.max(f.fimMs, Math.min(f.fimMs + FOLGA_FIM_MS, prox ? (f.fimMs + prox.inicioMs) / 2 : Infinity, vizinhas.depois));
     const i = Math.max(0, Math.round(((de - inicioReal) / 1000) * g.taxa));
     const z = Math.min(g.amostras.length, Math.round(((ate - inicioReal) / 1000) * g.taxa));
     if (z - i < g.taxa * 0.1) continue;
@@ -57,6 +60,20 @@ export function fatiarEmTomadas(
     };
   }
   return saida;
+}
+
+/**
+ * Até onde a sobra de uma fala pode ir sem entrar na fala de outra pessoa: o fim da fala anterior e o começo da
+ * próxima (de qualquer personagem). Como no "cada um na sua vez" de uma conversa.
+ */
+export function limitesDaFala(f: { id: string; inicioMs: number; fimMs: number }, cena: { id: string; inicioMs: number; fimMs: number }[]) {
+  let antes = -Infinity, depois = Infinity;
+  for (const o of cena) {
+    if (o.id === f.id) continue;
+    if (o.fimMs <= f.inicioMs + 1) antes = Math.max(antes, o.fimMs);
+    if (o.inicioMs >= f.fimMs - 1) depois = Math.min(depois, o.inicioMs);
+  }
+  return { antes, depois };
 }
 
 /** Atraso total entre o som sair e a voz voltar pelo microfone (saída do sistema + ajuste manual). */

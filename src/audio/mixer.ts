@@ -1,3 +1,4 @@
+import { limitesDaFala } from "./sincronia";
 // Mixer: toca o vídeo, a trilha de fundo e as suas tomadas em sincronia.
 //
 // Regra de mixagem:
@@ -47,6 +48,8 @@ export class Mixer {
   private fundo: AudioBuffer | null = null;
   private tomadas: TomadaTocavel[] = [];
   private janelas: Janela[] = [];
+  /** Todas as falas da cena: a sua voz de uma fala para quando a próxima fala (de qualquer um) começa. */
+  private falasDaCena: { id: string; inicioMs: number; fimMs: number }[] = [];
   private ativas: AudioBufferSourceNode[] = [];
   private ancora: { ctx: number; cenaMs: number } | null = null;
   private ignorar = new Set<string>();
@@ -117,6 +120,11 @@ export class Mixer {
 
   definirTomadas(t: TomadaTocavel[]) {
     this.tomadas = t;
+    this.reagendarSeTocando();
+  }
+
+  definirFalasDaCena(falas: { id: string; inicioMs: number; fimMs: number }[]) {
+    this.falasDaCena = falas;
     this.reagendarSeTocando();
   }
 
@@ -243,7 +251,10 @@ export class Mixer {
     const tocaveis = (this.modoOriginal ? [] : this.tomadas).filter((t) => !this.ignorar.has(t.falaId)).sort((a, b) => a.inicioMs - b.inicioMs);
     tocaveis.forEach((t, k) => {
       const proxima = tocaveis[k + 1];
-      const fimMs = Math.min(t.inicioMs + t.buffer.duration * 1000, proxima ? proxima.inicioMs : Infinity);
+      // Também para quando começa a fala seguinte de OUTRO personagem (cada um fala na sua vez, sem invadir).
+      const f = this.falasDaCena.find((x) => x.id === t.falaId);
+      const limite = f ? limitesDaFala(f, this.falasDaCena).depois : Infinity;
+      const fimMs = Math.min(t.inicioMs + t.buffer.duration * 1000, proxima ? proxima.inicioMs : Infinity, Math.max(limite, f ? f.fimMs : 0));
       if (fimMs <= s0 || fimMs <= t.inicioMs) return;
       const src = this.ctx.createBufferSource();
       src.buffer = t.buffer;
@@ -251,7 +262,7 @@ export class Mixer {
       src.connect(g).connect(this.ganhoVoz);
       if (t.inicioMs >= s0) src.start(emCtx(t.inicioMs));
       else src.start(t0, (s0 - t.inicioMs) / 1000);
-      if (proxima && proxima.inicioMs < t.inicioMs + t.buffer.duration * 1000) {
+      if (fimMs < t.inicioMs + t.buffer.duration * 1000) {
         const corte = Math.max(t0, emCtx(fimMs));
         g.gain.setValueAtTime(1, Math.max(t0, corte - 0.03));
         g.gain.linearRampToValueAtTime(0, corte);

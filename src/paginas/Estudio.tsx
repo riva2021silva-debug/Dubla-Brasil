@@ -8,7 +8,10 @@ import { buscarCena, cenaDoDub, useCarregar, useFormatoDoVideo, useMidiasDaCena,
 import { Microfone } from "../audio/microfone";
 import { Camera } from "../audio/camera";
 import { decodificar, Mixer, type TomadaTocavel } from "../audio/mixer";
-import { compensacao, fatiarEmTomadas, FOLGA_FIM_MS, irPara, picoDe } from "../audio/sincronia";
+import { compensacao, fatiarEmTomadas, FOLGA_FIM_MS, irPara, limitesDaFala, picoDe } from "../audio/sincronia";
+
+/** Quanto antes da fala o vídeo volta a andar depois do "1" (um respiro para entrar na hora certa). */
+const ENTRADA_MS = 250;
 import type { Cena, Dub, Fala, TrechoCamera } from "../tipos";
 import { formatarTempo, novoId } from "../util";
 
@@ -53,6 +56,9 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
   const camInicioCtx = useRef(0);
   const [camStream, setCamStream] = useState<MediaStream | null>(null);
   const mic = useRef<Microfone | null>(null);
+  /** Contagem 3, 2, 1 com a imagem parada no começo da fala (antes de gravar). */
+  const [contagemPrep, setContagemPrep] = useState<number | null>(null);
+  const vezDaGravacao = useRef(0);
   const [micPronto, setMicPronto] = useState(false);
   const [nivel, setNivel] = useState(0);
   const [avisoNivel, setAvisoNivel] = useState<"baixo" | "alto" | null>(null);
@@ -85,6 +91,7 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
     if (!video || !urls) return;
     const m = new Mixer(video);
     mixer.current = m;
+    m.definirFalasDaCena(cena.falas);
     const todosOsPapeis = cena.personagens.filter((p) => cena.falas.some((f) => f.personagemId === p.id)).every((p) => dub.papeis.includes(p.id));
     m.definirJanelas(minhas, todosOsPapeis);
     let vivo = true;
@@ -208,6 +215,8 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
   }, []);
 
   const parar = useCallback(() => {
+    vezDaGravacao.current++;
+    setContagemPrep(null);
     if (mixer.current) {
       mixer.current.guia = 0;
       mixer.current.gravando = false;
@@ -234,8 +243,11 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
     await m.ctx.resume();
     m.definirModoOriginal(false);
     m.ignorarTomadas(falas.map((f) => f.id));
-    const inicio = falas[0].inicioMs - cfg.preRollMs;
-    const fimMs = Math.max(...falas.map((f) => f.fimMs)) + FOLGA_FIM_MS + 100;
+    // Como no estúdio de dublagem: a imagem para no começo da SUA fala, conta 3, 2, 1 e toca só a sua fala
+    // (sem a fala do outro personagem antes). Para sozinho no fim, antes da próxima fala de qualquer um.
+    const ultima = falas.reduce((a, b) => (b.fimMs > a.fimMs ? b : a));
+    const inicio = Math.max(0, falas[0].inicioMs - ENTRADA_MS);
+    const fimMs = Math.max(ultima.fimMs, Math.min(ultima.fimMs + FOLGA_FIM_MS, limitesDaFala(ultima, cena.falas).depois)) + 100;
     video.pause();
     await irPara(video, inicio);
     setAlvo({ falas, fimMs });
@@ -245,6 +257,14 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
       mixer.current.guia = cfg.guiaVoz ? 0.3 : 0;
       mixer.current.gravando = true;
     }
+    const vez = ++vezDaGravacao.current;
+    for (const n of [3, 2, 1]) {
+      setContagemPrep(n);
+      await new Promise((r) => setTimeout(r, 700));
+      if (vez !== vezDaGravacao.current) return; // parou durante a contagem
+    }
+    setContagemPrep(null);
+    if (!mic.current) return;
     mic.current.iniciar();
     if (camera.current) {
       camera.current.iniciar();
@@ -281,8 +301,10 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
     const novas = fatiarEmTomadas(g, cenaInicio, falas, compensacao(m, cfg.latenciaMs), {
       limpar: cfg.limparVoz,
       alinharCom: cfg.alinharVoz ? original : null,
+      todasDaCena: cena.falas,
     });
     const idsGravados = Object.keys(novas);
+    for (const id of idsGravados) novas[id].numero = (dub.tomadas[id]?.numero ?? (dub.tomadas[id] ? 1 : 0)) + 1;
     // A câmera antiga dessas falas não combina mais com a voz nova: sai.
     const camerasMantidas = (dub.cameras ?? []).filter((t) => !t.falas.some((f) => idsGravados.includes(f)));
     const atualizado: Dub = { ...dub, tomadas: { ...dub.tomadas, ...novas }, cameras: camerasMantidas, atualizadoEm: Date.now() };
@@ -374,9 +396,7 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
     return () => window.removeEventListener("keydown", tecla);
   });
 
-  const proximaFala = alvo?.falas.find((f) => f.fimMs > tempo);
-  const contagem =
-    modo === "gravando" && proximaFala && tempo < proximaFala.inicioMs ? Math.ceil((proximaFala.inicioMs - tempo) / 1000) : null;
+  const contagem = contagemPrep;
   const falando = modo === "gravando" && alvo?.falas.some((f) => tempo >= f.inicioMs && tempo < f.fimMs + 200);
   falandoRef.current = !!falando;
   const total = minhas.length;
@@ -579,8 +599,11 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
                 <span className={modo === "gravando" ? "quadrado" : "circulo"} />
               </button>
               <span className="rotulo-redondo" style={{ color: modo === "gravando" ? "var(--gravando)" : undefined }}>
-                {modo === "gravando" ? "Parar" : temTomada ? "Regravar" : "Gravar"}
+                {contagemPrep !== null ? "Prepare-se…" : modo === "gravando" ? "Parar" : temTomada ? "Regravar" : "Gravar"}
               </span>
+              {temTomada && modo !== "gravando" && (dub.tomadas[falaSel.id].numero ?? 1) > 1 && (
+                <span className="suave pequeno">Tomada {dub.tomadas[falaSel.id].numero}</span>
+              )}
             </div>
             <div className="botao-redondo-grupo">
               <button
