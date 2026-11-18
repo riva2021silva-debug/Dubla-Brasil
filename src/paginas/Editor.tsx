@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import LinhaDoTempo from "../componentes/LinhaDoTempo";
 import Legenda from "../componentes/Legenda";
 import { urlDaMidia } from "../db";
@@ -9,6 +9,7 @@ import type { Progresso } from "../transcricao";
 import Avatar from "../componentes/Avatar";
 import EditarVideo from "../componentes/EditarVideo";
 import { ajustarFalas, cortarAudio, type Edicao } from "../edicaoVideo";
+import { apagarRascunho, chaveDoRascunho, comoArquivo, guardarArquivo, guardarRascunho, lerArquivo, lerRascunho, quandoFoi, type Rascunho } from "../rascunho";
 import { buscarCena, useFormatoDoVideo, useTempoDoVideo, useUrlDaMidia } from "../ganchos";
 import type { Cena, Fala, Personagem } from "../tipos";
 import { estaPublicada } from "../tipos";
@@ -107,6 +108,94 @@ export default function Editor() {
       vivo = false;
     };
   }, [id]);
+
+  // ---------- Rascunho automático (retomar a edição depois de sair da tela) ----------
+  const [busca] = useSearchParams();
+  const chaveRascunho = chaveDoRascunho(id);
+  const [rascunho, setRascunho] = useState<Rascunho | null>(null);
+  const [retomando, setRetomando] = useState(false);
+  const [rascunhoSalvoEm, setRascunhoSalvoEm] = useState<number | null>(null);
+  const videoGuardado = useRef<File | undefined>(undefined);
+  const fundoGuardado = useRef<File | undefined>(undefined);
+
+  useEffect(() => {
+    let vivo = true;
+    void lerRascunho(chaveRascunho).then((r) => vivo && r && setRascunho(r));
+    return () => {
+      vivo = false;
+    };
+  }, [chaveRascunho]);
+
+  const retomarRascunho = async (r: Rascunho) => {
+    setRetomando(true);
+    try {
+      if (r.temVideo) {
+        const b = await lerArquivo(chaveRascunho, "video");
+        if (b) {
+          const f = comoArquivo(b, r.videoNome, "video.mp4");
+          videoGuardado.current = f;
+          setVideo({ url: URL.createObjectURL(f), novo: f });
+        }
+      }
+      if (r.fundo === "novo") {
+        const b = await lerArquivo(chaveRascunho, "fundo");
+        if (b) {
+          const f = comoArquivo(b, r.fundoNome, "fundo.m4a");
+          fundoGuardado.current = f;
+          setFundo({ url: URL.createObjectURL(f), novo: f });
+        }
+      } else if (r.fundo === "removido") setFundo(null);
+      setCena(r.cena);
+      setNovosRostos(r.novosRostos ?? {});
+      setPrevias(Object.fromEntries(Object.entries(r.novosRostos ?? {}).flatMap(([pid, b]) => (b ? [[pid, URL.createObjectURL(b)]] : []))));
+      if (r.novaCapa) {
+        setNovaCapa(r.novaCapa);
+        setPreviaCapa(URL.createObjectURL(r.novaCapa));
+      }
+      setAlterado(true);
+      setRascunhoSalvoEm(r.salvoEm);
+      setRascunho(null);
+    } finally {
+      setRetomando(false);
+    }
+  };
+
+  // Vindo do aviso da Administração ("Retomar edição"): retoma direto.
+  useEffect(() => {
+    if (rascunho && busca.get("retomar") === "1" && (!id || cena)) void retomarRascunho(rascunho);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rascunho, cena === null]);
+
+  // Guarda o rascunho sozinho (0,8 s depois da última mudança), enquanto houver alterações não salvas.
+  useEffect(() => {
+    if (!alterado || !cena || rascunho || salvando) return;
+    const t = setTimeout(() => {
+      void (async () => {
+        if (video?.novo !== videoGuardado.current) {
+          await guardarArquivo(chaveRascunho, "video", video?.novo ?? null);
+          videoGuardado.current = video?.novo;
+        }
+        if (fundo?.novo !== fundoGuardado.current) {
+          await guardarArquivo(chaveRascunho, "fundo", fundo?.novo ?? null);
+          fundoGuardado.current = fundo?.novo;
+        }
+        const agora = Date.now();
+        await guardarRascunho({
+          chave: chaveRascunho,
+          salvoEm: agora,
+          cena,
+          temVideo: !!video?.novo,
+          videoNome: video?.novo?.name ?? null,
+          fundo: fundo?.novo ? "novo" : !fundo && (id ? !!cena.caminhos?.fundo : false) ? "removido" : null,
+          fundoNome: fundo?.novo?.name ?? null,
+          novosRostos,
+          novaCapa,
+        });
+        setRascunhoSalvoEm(agora);
+      })();
+    }, 800);
+    return () => clearTimeout(t);
+  }, [alterado, cena, video, fundo, novosRostos, novaCapa, rascunho, salvando, chaveRascunho, id]);
 
   // Aviso ao sair com alterações não salvas.
   useEffect(() => {
@@ -383,6 +472,7 @@ export default function Editor() {
         rostos: { ...novosRostos, ...automaticos },
       });
       setAlterado(false);
+      await apagarRascunho(chaveRascunho);
       navegar("/admin");
     } catch (e) {
       setProblemas([`Não foi possível salvar: ${mensagemDeErro(e)}`]);
@@ -394,12 +484,41 @@ export default function Editor() {
 
   return (
     <div className="pilha">
+      {rascunho && (
+        <div className="aviso-rascunho" role="alert">
+          <div>
+            <b>📝 Você tem uma edição não salva</b>
+            <span className="suave pequeno">
+              {" "}
+              de {quandoFoi(rascunho.salvoEm)}
+              {rascunho.cena.titulo ? ` · “${rascunho.cena.titulo}”` : ""} · {rascunho.cena.falas.length} falas
+              {rascunho.temVideo ? " · com o vídeo" : ""}
+            </span>
+          </div>
+          <div className="linha" style={{ gap: 8 }}>
+            <button className="botao botao-primario" disabled={retomando} onClick={() => void retomarRascunho(rascunho)}>
+              {retomando ? "Abrindo…" : "↩ Retomar edição"}
+            </button>
+            <button
+              className="botao"
+              disabled={retomando}
+              onClick={() => {
+                void apagarRascunho(chaveRascunho);
+                setRascunho(null);
+              }}
+            >
+              Descartar
+            </button>
+          </div>
+        </div>
+      )}
       <div className="linha entre">
         <div>
           <Link to="/admin" className="pequeno">
             ← Administração
           </Link>
           <h1>{id ? "Editar cena" : "Adicionar vídeo"}</h1>
+          {rascunhoSalvoEm && alterado && <span className="selo-rascunho">📝 Rascunho salvo no aparelho às {quandoFoi(rascunhoSalvoEm).split(" ")[1]}</span>}
           <p className="suave" style={{ margin: 0 }}>
             Envie o vídeo, cadastre os personagens e marque quando cada fala começa e termina.
           </p>

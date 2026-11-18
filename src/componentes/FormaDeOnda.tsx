@@ -60,9 +60,11 @@ export default function FormaDeOnda(p: Props) {
     const meio = h / 2;
     const larg = w / BARRAS;
 
-    // Faixa da fala.
-    g.fillStyle = "rgba(168, 85, 247, 0.12)";
-    g.fillRect(x(p.falaInicioMs), 0, x(p.falaFimMs) - x(p.falaInicioMs), h);
+    const xi = x(p.falaInicioMs);
+    const xf = x(p.falaFimMs);
+    // Faixa da fala (onde você fala) e o resto escurecido (antes/depois: não é a sua vez).
+    g.fillStyle = "rgba(168, 85, 247, 0.16)";
+    g.fillRect(xi, 0, xf - xi, h);
     g.fillStyle = "rgba(255,255,255,0.08)";
     g.fillRect(0, meio, w, 1);
 
@@ -75,7 +77,14 @@ export default function FormaDeOnda(p: Props) {
       }
     };
 
-    if (p.original) barras(picos(p.original, 0, p.deMs, p.ateMs), "rgba(56, 189, 248, 0.55)", 1.6);
+    if (p.original) {
+      // Dentro da fala: azul forte. Fora (pode ser a fala de outro personagem): cinza apagado.
+      const v = picos(p.original, 0, p.deMs, p.ateMs);
+      const dentro = Array.from(v, (a, b) => ((b + 0.5) * larg >= xi && (b + 0.5) * larg <= xf ? a : 0));
+      const fora = Array.from(v, (a, b) => ((b + 0.5) * larg >= xi && (b + 0.5) * larg <= xf ? 0 : a));
+      barras(fora, "rgba(148, 163, 184, 0.28)", 1.6);
+      barras(dentro, "rgba(56, 189, 248, 0.75)", 1.6);
+    }
     if (p.tomada) barras(picos(p.tomada.buffer, p.tomada.inicioMs, p.deMs, p.ateMs), cor("--amarelo"), 1.4);
     if (p.aoVivo.length) {
       const vivos = new Array(BARRAS).fill(0);
@@ -85,6 +94,24 @@ export default function FormaDeOnda(p: Props) {
       }
       barras(vivos, cor("--gravando"), 1.3);
     }
+
+    // Marcas de começar (verde) e parar (vermelho), com rótulo.
+    const marca = (xm: number, corMarca: string, texto: string, alinhar: "left" | "right") => {
+      g.fillStyle = corMarca;
+      g.fillRect(xm - 1.5, 0, 3, h);
+      g.font = "800 10px Inter, system-ui, sans-serif";
+      const tw = g.measureText(texto).width + 10;
+      const bx = alinhar === "left" ? Math.min(xm, w - tw) : Math.max(0, xm - tw);
+      g.beginPath();
+      g.roundRect?.(bx, 2, tw, 16, 4);
+      if (!g.roundRect) g.rect(bx, 2, tw, 16);
+      g.fill();
+      g.fillStyle = "#0b0420";
+      g.textBaseline = "middle";
+      g.fillText(texto, bx + 5, 10.5);
+    };
+    marca(xi, "#22c55e", "▶ FALE", "left");
+    marca(xf, "#ef4444", "PARE ■", "right");
 
     // Cabeça de leitura.
     if (p.tempoMs >= p.deMs && p.tempoMs <= p.ateMs) {

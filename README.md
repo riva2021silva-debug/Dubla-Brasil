@@ -286,3 +286,18 @@ No estúdio, a legenda em português aparece embaixo do vídeo no estilo karaok�
   - Limite de 5 mensagens por dia. A resposta aparece em "Minhas mensagens".
   - O admin vê o número de mensagens novas no botão Admin e responde e resolve em **Admin → 💬 Mensagens**.
 - **Testes:** `node testes/e2e-ajuda.cjs`. As regras do SQL e a função foram testadas no Postgres local.
+
+## Versão 3.0: sinal de fala e rascunho do editor
+
+- **Estúdio, na onda da fala:** marcas **▶ FALE** (verde) e **PARE ■** (vermelha). O som original fora da fala
+  (por exemplo, a fala de outro personagem) fica cinza.
+- **Estúdio, faixa de sinal acima da onda:** "Comece no traço verde e pare no vermelho" quando está parado.
+  Ao gravar ou ouvir, passa por **⏳ Prepare-se (fale em X s)**, **🎙️ FALE AGORA (faltam X s)** com barra, e
+  **✋ PARE**.
+- **Editor, rascunho automático** (`src/rascunho.ts`, loja `rascunhos` no IndexedDB, versão 3):
+  - guarda tudo 0,8 s depois de cada mudança: cena, falas, personagens, fotos, capa, e o vídeo e a trilha à
+    parte, só quando mudam;
+  - ao voltar, aparece **"📝 Você tem uma edição não salva" → ↩ Retomar edição / Descartar**;
+  - a Administração mostra **"📝 Vídeo novo em edição"**;
+  - salvar a cena apaga o rascunho.
+- **Testes:** `node testes/e2e-sinal.cjs` e `node testes/e2e-rascunho.cjs`.

@@ -481,6 +481,12 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
             )}
           </div>
 
+          <SinalDeFala
+            fala={(modo === "gravando" && alvo ? alvo.falas.find((f) => tempo < f.fimMs + 400) : null) ?? falaSel}
+            tempoMs={tempo}
+            ativo={modo === "gravando" || modo === "original"}
+            gravando={modo === "gravando"}
+          />
           <div className={`painel-onda ${modo === "gravando" ? "gravando" : ""}`}>
             <div className="linha entre pequeno">
               <span className="linha" style={{ gap: 12 }}>
@@ -627,6 +633,45 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
           </div>
         </div>
       </details>
+    </div>
+  );
+}
+
+/** Faixa que diz, na hora, quando começar e quando parar de falar. */
+function SinalDeFala({ fala, tempoMs, ativo, gravando }: { fala: Fala; tempoMs: number; ativo: boolean; gravando: boolean }) {
+  const dur = Math.max(1, fala.fimMs - fala.inicioMs);
+  if (!ativo)
+    return (
+      <div className="sinal-fala parado" aria-live="polite">
+        <span>
+          <b className="cor-fale">▶ Comece</b> no traço verde e <b className="cor-pare">pare ■</b> no vermelho
+        </span>
+        <span className="sinal-tempo">{(dur / 1000).toFixed(1).replace(".", ",")} s de fala</span>
+      </div>
+    );
+  if (tempoMs < fala.inicioMs) {
+    const falta = (fala.inicioMs - tempoMs) / 1000;
+    return (
+      <div className="sinal-fala prepare" aria-live="polite">
+        <span>⏳ {gravando ? "Prepare-se…" : "Escute…"}</span>
+        <span className="sinal-tempo">{gravando ? "fale" : "a fala começa"} em {falta.toFixed(1).replace(".", ",")} s</span>
+        <span className="sinal-barra" style={{ width: `${Math.max(0, 100 - (falta / 2) * 100)}%` }} />
+      </div>
+    );
+  }
+  if (tempoMs < fala.fimMs) {
+    const resta = (fala.fimMs - tempoMs) / 1000;
+    return (
+      <div className="sinal-fala fale" aria-live="polite">
+        <span>🎙️ {gravando ? "FALE AGORA" : "Fala do personagem"}</span>
+        <span className="sinal-tempo">faltam {resta.toFixed(1).replace(".", ",")} s</span>
+        <span className="sinal-barra" style={{ width: `${((tempoMs - fala.inicioMs) / dur) * 100}%` }} />
+      </div>
+    );
+  }
+  return (
+    <div className="sinal-fala pare" aria-live="polite">
+      <span>✋ {gravando ? "PARE de falar" : "Fim da fala"}</span>
     </div>
   );
 }

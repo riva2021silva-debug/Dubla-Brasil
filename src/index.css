@@ -482,3 +482,22 @@ kbd { background: var(--superficie-2); border: 1px solid var(--borda); border-bo
 .lista-pagamentos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .lista-pagamentos li { display: flex; flex-direction: column; padding: 8px 10px; border-radius: 10px; background: rgb(255 255 255 / 0.04); border-left: 3px solid var(--verde); }
 .lista-pagamentos li.recusado { border-left-color: #ef4444; }
+
+/* Sinal de fala no estúdio: quando começar e quando parar */
+.sinal-fala { position: relative; overflow: hidden; display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 9px 14px; border-radius: 12px; font-weight: 800; border: 2px solid var(--borda); background: var(--superficie); transition: background .15s, border-color .15s; }
+.sinal-fala > span { position: relative; z-index: 1; }
+.sinal-fala .sinal-tempo { font-weight: 700; font-variant-numeric: tabular-nums; opacity: .9; }
+.sinal-fala .sinal-barra { position: absolute; z-index: 0; left: 0; top: 0; bottom: 0; opacity: .25; transition: width .08s linear; }
+.sinal-fala.parado { font-weight: 600; font-size: .9rem; color: var(--texto-suave, #c4b5fd); }
+.sinal-fala .cor-fale { color: #22c55e; }
+.sinal-fala .cor-pare { color: #ef4444; }
+.sinal-fala.prepare { border-color: var(--amarelo); color: var(--amarelo); }
+.sinal-fala.prepare .sinal-barra { background: var(--amarelo); }
+.sinal-fala.fale { border-color: #22c55e; background: rgb(34 197 94 / 0.14); color: #4ade80; font-size: 1.05rem; }
+.sinal-fala.fale .sinal-barra { background: #22c55e; }
+.sinal-fala.pare { border-color: #ef4444; background: rgb(239 68 68 / 0.16); color: #f87171; font-size: 1.05rem; animation: piscar-pare .5s ease-in-out 2; }
+@keyframes piscar-pare { 50% { background: rgb(239 68 68 / 0.38); } }
+
+/* Rascunho do editor */
+.aviso-rascunho { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 16px; border-radius: var(--raio); border: 2px solid var(--amarelo); background: rgb(250 204 21 / 0.1); }
+.selo-rascunho { display: inline-block; margin: 2px 0 6px; font-size: 12px; font-weight: 700; color: var(--verde); }

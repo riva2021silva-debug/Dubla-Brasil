@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { entrar, sair, useAdmin } from "../admin";
 import { Capa } from "../componentes/CartaoCena";
@@ -12,6 +12,7 @@ import AdminSons from "./AdminSons";
 import AdminGaleria from "./AdminGaleria";
 import AdminAssinantes from "./AdminAssinantes";
 import AdminMensagens from "./AdminMensagens";
+import { apagarRascunho, lerRascunho, quandoFoi, type Rascunho } from "../rascunho";
 
 /** Protege uma página: só abre para o administrador logado. */
 export function SoAdmin({ children }: { children: React.ReactNode }) {
@@ -231,6 +232,7 @@ function Painel() {
         <h1 style={{ margin: 0 }}>Administração</h1>
         <span className="suave pequeno">Conectado como {email}</span>
       </div>
+      <AvisoRascunho />
       <EnviarDoAparelho aoTerminar={() => setVersao((v) => v + 1)} />
       <div className="abas" role="tablist">
         <button role="tab" aria-selected={aba === "cenas"} className={aba === "cenas" ? "ativa" : ""} onClick={() => setAba("cenas")}>
@@ -347,4 +349,32 @@ export default function Admin() {
   const { aberto, carregando } = useAdmin();
   if (carregando) return <p className="suave">Verificando acesso…</p>;
   return aberto ? <Painel /> : <TelaLogin />;
+}
+
+/** Vídeo novo que ficou pela metade no editor: oferece retomar. */
+function AvisoRascunho() {
+  const [r, setR] = useState<Rascunho | null>(null);
+  useEffect(() => {
+    void lerRascunho("nova").then((x) => setR(x ?? null));
+  }, []);
+  if (!r) return null;
+  return (
+    <div className="aviso-rascunho" role="alert">
+      <div>
+        <b>📝 Vídeo novo em edição</b>
+        <span className="suave pequeno">
+          {" "}
+          {r.cena.titulo ? `“${r.cena.titulo}” · ` : ""}salvo em {quandoFoi(r.salvoEm)} · {r.cena.falas.length} falas
+        </span>
+      </div>
+      <div className="linha" style={{ gap: 8 }}>
+        <Link className="botao botao-primario" to="/admin/cena/nova?retomar=1">
+          ↩ Retomar edição
+        </Link>
+        <button className="botao" onClick={() => void apagarRascunho("nova").then(() => setR(null))}>
+          Descartar
+        </button>
+      </div>
+    </div>
+  );
 }

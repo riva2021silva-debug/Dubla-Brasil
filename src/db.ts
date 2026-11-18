@@ -2,7 +2,7 @@
 import type { Cena, Dub, FonteMidia, Imitacao, Som } from "./tipos";
 
 const NOME_DB = "dubla-brasil";
-const VERSAO = 2;
+const VERSAO = 3;
 
 let conexao: Promise<IDBDatabase> | null = null;
 
@@ -17,6 +17,7 @@ function abrir(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains("midias")) db.createObjectStore("midias");
       if (!db.objectStoreNames.contains("sons")) db.createObjectStore("sons", { keyPath: "id" });
       if (!db.objectStoreNames.contains("imitacoes")) db.createObjectStore("imitacoes", { keyPath: "somId" });
+      if (!db.objectStoreNames.contains("rascunhos")) db.createObjectStore("rascunhos");
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
@@ -59,6 +60,10 @@ export const db = {
   obterImitacao: (somId: string) => operar<Imitacao | undefined>("imitacoes", "readonly", (s) => s.get(somId)),
   salvarImitacao: (i: Imitacao) => operar<IDBValidKey>("imitacoes", "readwrite", (s) => s.put(i)),
   excluirImitacao: (somId: string) => operar<undefined>("imitacoes", "readwrite", (s) => s.delete(somId)),
+
+  salvarRascunho: (chave: string, r: unknown) => operar<IDBValidKey>("rascunhos", "readwrite", (s) => s.put(r, chave)),
+  obterRascunho: <T>(chave: string) => operar<T | undefined>("rascunhos", "readonly", (s) => s.get(chave)),
+  excluirRascunho: (chave: string) => operar<undefined>("rascunhos", "readwrite", (s) => s.delete(chave)),
 
   salvarMidia: (chave: string, b: Blob) => operar<IDBValidKey>("midias", "readwrite", (s) => s.put(b, chave)),
   obterMidia: (chave: string) => operar<Blob | undefined>("midias", "readonly", (s) => s.get(chave)),

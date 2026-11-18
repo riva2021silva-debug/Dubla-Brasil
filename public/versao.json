@@ -1,11 +1,11 @@
 {
-  "versao": "2.9",
-  "codigo": 20,
+  "versao": "3.0",
+  "codigo": 21,
   "data": "2026-11-18",
   "novidades": [
-    "Nova área de Ajuda (❓ no topo): mande sua mensagem e veja a resposta da equipe",
-    "Assinatura Premium liberada automaticamente depois do pagamento",
-    "Cancelamento e reembolso também atualizam o Premium sozinhos"
+    "Estúdio: marcas ▶ FALE e PARE ■ na linha do tempo de cada fala",
+    "Estúdio: aviso ao vivo — Prepare-se, FALE AGORA (com o tempo que falta) e PARE",
+    "Editor (admin): rascunho automático — saiu da tela? Toque em Retomar edição"
   ],
   "apk": "https://dublabr.netlify.app/baixar/DublaBrasilAI.apk"
 }
