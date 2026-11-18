@@ -10,7 +10,6 @@ import Avatar from "../componentes/Avatar";
 import EditarVideo from "../componentes/EditarVideo";
 import { ajustarFalas, cortarAudio, type Edicao } from "../edicaoVideo";
 import { buscarCena, useFormatoDoVideo, useTempoDoVideo, useUrlDaMidia } from "../ganchos";
-import { irPara } from "../audio/sincronia";
 import type { Cena, Fala, Personagem } from "../tipos";
 import { estaPublicada } from "../tipos";
 import { corLivre, duracaoDoArquivo, formatarTempo, gerarCapa, IDIOMAS, lerSrt, novoId } from "../util";
@@ -52,7 +51,8 @@ export default function Editor() {
   const [fundo, setFundo] = useState<Arquivo | null>(null);
   const [el, setEl] = useState<HTMLVideoElement | null>(null);
   const [sel, setSel] = useState<string | null>(null);
-  const [previa, setPrevia] = useState<number | null>(null);
+  const [previa, setPrevia] = useState<string | null>(null); // id da fala que está tocando
+  const [erroPrevia, setErroPrevia] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [etapa, setEtapa] = useState<string | null>(null);
   const [problemas, setProblemas] = useState<string[]>([]);
@@ -116,13 +116,9 @@ export default function Editor() {
     return () => window.removeEventListener("beforeunload", f);
   }, [alterado]);
 
-  // Para a prévia de uma fala no fim dela.
-  useEffect(() => {
-    if (previa !== null && el && tempo >= previa) {
-      el.pause();
-      setPrevia(null);
-    }
-  }, [tempo, previa, el]);
+  // A prévia de uma fala para sozinha no fim dela (olhando o próprio vídeo, quadro a quadro).
+  const pararPrevia = useRef<() => void>(() => {});
+  useEffect(() => () => pararPrevia.current(), []);
 
   const atualizar = (fn: (c: Cena) => Cena) => {
     setCena((c) => (c ? fn(c) : c));
@@ -260,11 +256,35 @@ export default function Editor() {
     atualizar((c) => ({ ...c, falas: [...c.falas, ...lidas.map((l) => ({ ...l, id: novoId(), personagemId: pid }))] }));
   };
 
-  const previaFala = async (f: Fala) => {
+  const previaFala = (f: Fala) => {
     if (!el) return;
-    await irPara(el, f.inicioMs);
-    setPrevia(f.fimMs);
-    await el.play();
+    const mesma = previa === f.id;
+    pararPrevia.current();
+    if (mesma) return; // tocar de novo no ⏸ só para
+    setErroPrevia(null);
+    // play() direto no toque (o celular só deixa tocar com som assim).
+    el.currentTime = f.inicioMs / 1000;
+    el.play().catch((e) => {
+      setPrevia(null);
+      setErroPrevia(`Não foi possível tocar o vídeo (${e instanceof Error ? e.message : e}). Toque no ▶ do vídeo lá em cima e tente de novo.`);
+    });
+    setPrevia(f.id);
+    let raf = 0;
+    const fim = () => {
+      cancelAnimationFrame(raf);
+      el.removeEventListener("pause", fim);
+      if (!el.paused) el.pause();
+      setPrevia(null);
+      pararPrevia.current = () => {};
+    };
+    const vigiar = () => {
+      if (el.currentTime * 1000 >= f.fimMs || el.ended) return fim();
+      raf = requestAnimationFrame(vigiar);
+    };
+    raf = requestAnimationFrame(vigiar);
+    // Se a pessoa pausar pelo vídeo, a prévia acaba.
+    setTimeout(() => el.addEventListener("pause", fim), 300);
+    pararPrevia.current = fim;
   };
 
   const validar = (): string[] => {
@@ -407,7 +427,7 @@ export default function Editor() {
         <div className="pilha">
           {video ? (
             <>
-              <div className={`palco ${formato.vertical ? "vertical" : ""}`} style={formato.estilo}>
+              <div className={`palco ${formato.vertical ? "vertical" : ""} ${previa ? "palco-mini" : ""}`} style={formato.estilo}>
                 <video crossOrigin="anonymous" ref={setEl} src={video.url} controls playsInline preload="auto" />
                 <Legenda falas={cena.falas} personagens={cena.personagens} tempoMs={tempo} />
               </div>
@@ -514,6 +534,7 @@ export default function Editor() {
                 Ou faça à mão: toque o vídeo até o começo de uma fala e clique em “+ Fala aqui”, ou importe um arquivo de legendas .srt.
               </p>
             )}
+            {erroPrevia && <p className="alerta">{erroPrevia}</p>}
             {cena.falas.length > 0 && (
               <p className="dica-legendas pequeno">
                 ✏️ <b>Corrigir legenda:</b> toque no texto de qualquer fala e escreva o que o personagem realmente diz. Use ▶ para ouvir só
@@ -564,8 +585,8 @@ export default function Editor() {
                   <div className="linha tempos" style={{ gap: 4 }}>
                     <AjusteTempo rotulo="início" ms={f.inicioMs} onMarcar={() => atualizarFala(f.id, { inicioMs: Math.round(tempo) })} onMudar={(ms) => atualizarFala(f.id, { inicioMs: ms })} />
                     <AjusteTempo rotulo="fim" ms={f.fimMs} onMarcar={() => atualizarFala(f.id, { fimMs: Math.round(tempo) })} onMudar={(ms) => atualizarFala(f.id, { fimMs: ms })} />
-                    <button className="botao botao-pequeno botao-icone" title="Ouvir esta fala" aria-label="Ouvir esta fala" onClick={(e) => { e.stopPropagation(); void previaFala(f); }}>
-                      ▶
+                    <button className="botao botao-pequeno botao-icone" title="Ouvir esta fala" aria-label="Ouvir esta fala" onClick={(e) => { e.stopPropagation(); previaFala(f); }}>
+                      {previa === f.id ? "⏸" : "▶"}
                     </button>
                     <button
                       className="botao botao-pequeno botao-icone botao-perigo"

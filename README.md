@@ -207,7 +207,7 @@ No estúdio, a legenda em português aparece embaixo do vídeo no estilo karaok�
 
 ## iPhone (iOS)
 
-- **Projeto:** está em `ios/`, com Capacitor 8 e Swift Package Manager (iOS 15 ou mais novo). Versão 2.5 (build 16).
+- **Projeto:** está em `ios/`, com Capacitor 8 e Swift Package Manager (iOS 15 ou mais novo). Versão 2.6 (build 17).
   Já tem as permissões de microfone, câmera e galeria.
 - **Ajustes para iPhone:** o quadradinho da câmera é desenhado sem `roundRect`. A gravação do vídeo cai para
   30 quadros por segundo quando o aparelho não tem `requestFrame`.
@@ -240,3 +240,6 @@ No estúdio, a legenda em português aparece embaixo do vídeo no estilo karaok�
 - No editor, cada fala tem uma caixa de texto que cresce com o texto, com a legenda em português. Embaixo fica o
   texto original, também editável, quando a fala veio da IA. Uma dica em destaque explica como corrigir.
 - Teste: `node testes/e2e-legendas.cjs`. O administrador corrige o texto e o usuário vê a correção no estúdio.
+- **2.6:** o ▶ de cada fala no editor toca o trecho direto no toque e para sozinho no fim, vigiando o próprio vídeo.
+  Antes ele podia parar na hora quando o vídeo já tinha passado da fala. Enquanto toca, o vídeo vira um
+  miniplayer no canto da tela, com a legenda, e tocar de novo (⏸) para.

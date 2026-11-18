@@ -24,7 +24,7 @@ workflows:
       - name: Número da versão (cada envio precisa de um número maior)
         script: |
           cd ios/App
-          agvtool new-version -all $((BUILD_NUMBER + 16))
+          agvtool new-version -all $((BUILD_NUMBER + 17))
       - name: Assinatura da Apple
         script: xcode-project use-profiles --project ios/App/App.xcodeproj
       - name: Gerar o arquivo .ipa

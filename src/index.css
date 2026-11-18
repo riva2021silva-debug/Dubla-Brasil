@@ -455,3 +455,10 @@ kbd { background: var(--superficie-2); border: 1px solid var(--borda); border-bo
 .original-editavel { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
 .original-editavel input { flex: 1; min-width: 0; font-size: 0.85rem; padding: 5px 8px; opacity: 0.85; }
 .dica-legendas { margin: 0; padding: 8px 10px; border-radius: 10px; background: rgb(250 204 21 / 0.08); border: 1px dashed rgb(250 204 21 / 0.4); }
+
+/* Prévia de uma fala no editor: o vídeo vira um miniplayer no canto, para ver e ouvir sem sair da lista */
+.palco.palco-mini { position: fixed; z-index: 40; right: 12px; bottom: calc(86px + env(safe-area-inset-bottom)); width: min(58vw, 340px) !important; height: auto !important; max-height: 42dvh; aspect-ratio: auto; box-shadow: 0 10px 30px rgb(0 0 0 / 0.6); border-color: var(--amarelo); }
+.palco.palco-mini.vertical { width: min(38vw, 200px) !important; }
+.palco.palco-mini video { height: auto; max-height: 42dvh; }
+.palco.palco-mini .legenda { font-size: 12px; }
+@media (min-width: 900px) { .palco.palco-mini { bottom: 20px; } }

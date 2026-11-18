@@ -21,6 +21,24 @@ const SAIDA = path.join(__dirname, "saida");
   const cena = (await (await fetch(`${SERVIDOR}/__estado`)).json()).cenas.find((c) => c.titulo === "Cena da legenda");
   await adm.goto(BASE + "#/admin/cena/" + cena.id);
   await adm.getByText("Corrigir legenda:").waitFor();
+  // Caso do celular: o vídeo já passou do fim da fala (aqui, parado no final) e a pessoa toca ▶ numa fala lá embaixo.
+  await adm.waitForFunction(() => document.querySelector(".palco video")?.readyState >= 2);
+  await adm.evaluate(() => { document.querySelector(".palco video").currentTime = 19; });
+  await adm.waitForTimeout(500);
+  const botoes = adm.getByRole("button", { name: "Ouvir esta fala" });
+  await botoes.nth(1).scrollIntoViewIfNeeded();
+  await botoes.nth(1).click();
+  await adm.locator(".palco.palco-mini").waitFor();
+  await adm.waitForTimeout(1200);
+  const tocando = await adm.evaluate(() => { const v = document.querySelector(".palco video"); return { t: v.currentTime, pausado: v.paused }; });
+  const miniVisivel = await adm.locator(".palco.palco-mini").isVisible();
+  await adm.screenshot({ path: path.join(SAIDA, "l2-ouvir-fala.png") });
+  console.log(`▶ da fala 2 toca o trecho certo (em ${tocando.t.toFixed(1)} s, tocando: ${!tocando.pausado}, miniplayer visível: ${miniVisivel}):`,
+    !tocando.pausado && tocando.t >= 3.8 && tocando.t < 6.2 && miniVisivel ? "ok" : "FALHOU");
+  await adm.waitForFunction(() => document.querySelector(".palco video").paused, null, { timeout: 6000 });
+  const parou = await adm.evaluate(() => document.querySelector(".palco video").currentTime);
+  await adm.locator(".palco.palco-mini").waitFor({ state: "detached" });
+  console.log(`Para sozinha no fim da fala (6,2 s): parou em ${parou.toFixed(2)} s`, parou >= 6.1 && parou < 6.6 ? "ok" : "FALHOU");
   const primeira = adm.getByLabel("Texto da fala").first();
   await primeira.fill("Tucano, cadê o meu chinelo de estimação?");
   await adm.screenshot({ path: path.join(SAIDA, "l1-corrigir-legenda.png") });
