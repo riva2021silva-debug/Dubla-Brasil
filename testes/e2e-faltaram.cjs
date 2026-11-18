@@ -26,8 +26,8 @@ const SAIDA = path.join(__dirname, "saida");
   console.log(`A IA separou ${antes.length} falas:`, antes.map((f) => `${f.tempo} "${f.texto}"`).join(" | "));
 
   // Já de cara, a IA não deixa buraco: procurar de novo não acha nada.
-  await p.getByRole("button", { name: /Encontrar falas que faltaram/ }).click();
-  await p.getByText(/Não encontrei trechos falados sem fala marcada|Encontrei \d+ falas? que falta/).waitFor({ timeout: 600000 });
+  await p.getByRole("button", { name: /Arrumar falas com IA/ }).click();
+  await p.getByText(/Está tudo certo|encontrei \d+ falas? que falta/).waitFor({ timeout: 600000 });
   const primeira = await p.locator(".cartao-ia .info").innerText();
   console.log("Procurando logo depois de separar:", primeira.startsWith("✅") ? "nenhum buraco (ok)" : primeira);
 
@@ -36,8 +36,8 @@ const SAIDA = path.join(__dirname, "saida");
   await p.locator(".linha-fala").nth(1).getByRole("button", { name: "Excluir fala" }).click();
   console.log(`Apaguei a fala ${apagada.tempo} "${apagada.texto}"`);
   const t0 = Date.now();
-  await p.getByRole("button", { name: /Encontrar falas que faltaram/ }).click();
-  await p.getByText(/Encontrei \d+ falas? que falta/).waitFor({ timeout: 600000 });
+  await p.getByRole("button", { name: /Arrumar falas com IA/ }).click();
+  await p.getByText(/encontrei \d+ falas? que falta/).waitFor({ timeout: 600000 });
   const aviso = await p.locator(".cartao-ia .info").innerText();
   const depois = await falas();
   const voltou = depois.find((f) => f.tempo === apagada.tempo || Math.abs(parseFloat(f.tempo.replace(":", ".").replace(",", ".")) - parseFloat(apagada.tempo.replace(":", ".").replace(",", "."))) < 0.01 + 0.5);

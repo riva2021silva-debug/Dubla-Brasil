@@ -341,25 +341,31 @@ export default function Editor() {
     }
   };
 
-  /** Procura trechos em que alguém fala e não há fala marcada (sem mexer nas que já existem). */
+  /** Arruma as falas com a IA: divide as que juntam duas vozes e completa as que faltaram (sem refazer tudo). */
   const encontrarQueFaltaram = async () => {
     if (!video || !cena) return;
     setAvisoIa(null);
-    setProgressoIa({ etapa: "preparando", detalhe: "Procurando falas que faltaram…" });
+    setProgressoIa({ etapa: "preparando", detalhe: "Arrumando as falas…" });
     try {
-      const { encontrarFalasQueFaltaram } = await import("../transcricao");
-      const novas = await encontrarFalasQueFaltaram({ urlVideo: video.url, idioma: cena.idioma, falas: cena.falas, personagens: cena.personagens, aoProgredir: setProgressoIa });
-      if (!novas.length) {
-        setAvisoIa("✅ Não encontrei trechos falados sem fala marcada. A cena está completa.");
+      const { arrumarFalas } = await import("../transcricao");
+      const r = await arrumarFalas({ urlVideo: video.url, idioma: cena.idioma, falas: cena.falas, personagens: cena.personagens, aoProgredir: setProgressoIa });
+      if (!r.divididas && !r.novas.length) {
+        setAvisoIa("✅ Está tudo certo: nenhuma fala junta duas vozes e não ficou trecho falado sem fala.");
         return;
       }
-      atualizar((c) => ({ ...c, falas: [...c.falas, ...novas].sort((a, b) => a.inicioMs - b.inicioMs) }));
-      setSel(novas[0].id);
-      const semTexto = novas.filter((f) => f.texto === "…").length;
+      atualizar((c) => ({ ...c, falas: r.falas }));
+      if (r.novas[0]) setSel(r.novas[0].id);
+      const partes: string[] = [];
+      if (r.divididas) partes.push(`✂️ dividi ${r.divididas} ${r.divididas === 1 ? "fala que juntava duas vozes" : "falas que juntavam duas vozes"}`);
+      if (r.novas.length)
+        partes.push(
+          `🔍 encontrei ${r.novas.length} ${r.novas.length === 1 ? "fala que faltava" : "falas que faltavam"} (em ${r.novas.map((f) => formatarTempo(f.inicioMs)).join(", ")})`,
+        );
+      const semTexto = r.novas.filter((f) => f.texto === "…").length;
       setAvisoIa(
-        `🔍 Encontrei ${novas.length} ${novas.length === 1 ? "fala que faltava" : "falas que faltavam"} (em ${novas.map((f) => formatarTempo(f.inicioMs)).join(", ")}). ` +
-          (semTexto ? `${semTexto} ficaram com “…” (não deu para entender as palavras): escreva o texto. ` : "") +
-          "Confira o personagem de cada uma e salve.",
+        `${partes.join(" e ")}. Agora são ${r.falas.length} falas. ` +
+          (semTexto ? `${semTexto} ficaram com “…”: escreva o texto. ` : "") +
+          "Confira o personagem e o texto de cada uma (use ▶ para ouvir) e salve.",
       );
     } catch (e) {
       setAvisoIa(`Não deu certo: ${e instanceof Error ? e.message : String(e)}`);
@@ -677,9 +683,9 @@ export default function Editor() {
               </div>
               {cena.falas.length > 0 && !progressoIa && !confirmarSubstituir && (
                 <div className="linha entre pequeno">
-                  <span className="suave">Ficou algum pedaço sem fala, onde alguém fala no vídeo?</span>
+                  <span className="suave">Alguma fala junta duas pessoas, ou ficou pedaço sem fala?</span>
                   <button className="botao botao-pequeno" disabled={!video} onClick={() => void encontrarQueFaltaram()}>
-                    🔍 Encontrar falas que faltaram
+                    🔧 Arrumar falas com IA
                   </button>
                 </div>
               )}

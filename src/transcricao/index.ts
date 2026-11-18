@@ -287,6 +287,64 @@ async function completarBuracos(o: {
   });
 }
 
+/** Tom típico (semitons) de cada personagem, pelas falas que já têm. */
+function tonsPorPersonagem(audio: Float32Array, falas: Fala[]) {
+  const tons = new Map<string, number[]>();
+  for (const f of falas) {
+    const t = tomMedio(audio, f.inicioMs, f.fimMs);
+    if (t) tons.set(f.personagemId, [...(tons.get(f.personagemId) ?? []), 12 * Math.log2(t)]);
+  }
+  return [...tons].map(([pid, v]) => ({ pid, st: [...v].sort((a, b) => a - b)[Math.floor(v.length / 2)] }));
+}
+
+/**
+ * Para o editor: arruma as falas que já existem, sem refazer tudo.
+ * 1) Divide as falas que juntam duas vozes (com pausa no meio) e escolhe o personagem de cada pedaço pelo tom.
+ * 2) Completa os trechos falados que ficaram sem fala.
+ */
+export async function arrumarFalas(opcoes: {
+  urlVideo: string;
+  idioma: string;
+  falas: Fala[];
+  personagens: Personagem[];
+  modelo?: "base" | "tiny";
+  aoProgredir: (p: Progresso) => void;
+}): Promise<{ falas: Fala[]; divididas: number; novas: Fala[] }> {
+  opcoes.aoProgredir({ etapa: "preparando", detalhe: "Ouvindo as vozes da cena…" });
+  const som = await audioDoVideo(opcoes.urlVideo);
+  const regioes = detectarFala(som.esq, som.dir, TAXA);
+  const tipico = tonsPorPersonagem(som.mono, opcoes.falas);
+  let divididas = 0;
+  const arrumadas: Fala[] = [];
+  for (const f of [...opcoes.falas].sort((a, b) => a.inicioMs - b.inicioMs)) {
+    const pedacos = dividirPorPausas([{ inicioMs: f.inicioMs, fimMs: f.fimMs, texto: f.texto, original: f.original ?? "" }], regioes);
+    if (pedacos.length < 2) {
+      arrumadas.push(f);
+      continue;
+    }
+    divididas++;
+    pedacos.forEach((p, i) => {
+      const t = tomMedio(som.mono, p.inicioMs, p.fimMs);
+      let pid = f.personagemId;
+      if (t && tipico.length > 1) {
+        const st = 12 * Math.log2(t);
+        pid = tipico.reduce((m, x) => (Math.abs(x.st - st) < Math.abs(m.st - st) ? x : m)).pid;
+      }
+      arrumadas.push({ ...f, id: i === 0 ? f.id : novoId(), personagemId: pid, texto: p.texto, original: p.original || undefined, inicioMs: p.inicioMs, fimMs: p.fimMs });
+    });
+  }
+  const novas = await completarBuracos({
+    som,
+    copia: som.mono,
+    falas: arrumadas,
+    personagens: opcoes.personagens,
+    idioma: IDIOMAS_WHISPER[opcoes.idioma] ?? "english",
+    modelo: opcoes.modelo ?? "base",
+    aoProgredir: opcoes.aoProgredir,
+  });
+  return { falas: [...arrumadas, ...novas].sort((a, b) => a.inicioMs - b.inicioMs), divididas, novas };
+}
+
 /** Para o editor: procura falas que ficaram de fora (sem refazer as que já existem). */
 export async function encontrarFalasQueFaltaram(opcoes: {
   urlVideo: string;

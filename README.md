@@ -399,3 +399,13 @@ No estúdio, a legenda em português aparece embaixo do vídeo no estilo karaok�
 - **Falas grudadas:** `dividirPorPausas` (em `vozes.ts`) quebra um trecho do Whisper que junta duas vozes nas
   pausas do detector, repartindo as palavras. Cada pedaço ganha seu personagem pelo tom.
   Teste: `node --experimental-strip-types testes/unidade-dividir.mjs`.
+
+## Versão 3.7: Arrumar falas com IA
+
+- O botão do editor virou **🔧 Arrumar falas com IA** (`arrumarFalas` em `src/transcricao/index.ts`). Para
+  cenas já cadastradas, sem refazer tudo:
+  1. divide cada fala que junta duas vozes, com pausa no meio (`dividirPorPausas`), e escolhe o personagem de
+     cada pedaço pelo tom de voz típico de cada personagem;
+  2. completa os trechos falados sem fala (detector + Whisper).
+- **Teste:** `node testes/e2e-arrumar.cjs`. Uma fala com duas pessoas virou duas, Ana e Beto, com os textos
+  certos.

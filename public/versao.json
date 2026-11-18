@@ -1,12 +1,10 @@
 {
-  "versao": "3.6",
-  "codigo": 27,
+  "versao": "3.7",
+  "codigo": 28,
   "data": "2026-11-18",
   "novidades": [
-    "Sem eco: uma fala dublada não invade mais a outra quando estão bem pertinho",
-    "Dublando todos os personagens, a voz original não volta no meio da sua dublagem",
-    "IA separa melhor as falas: divide as que vinham grudadas e acha as que faltavam",
-    "Admin: botão “🔍 Encontrar falas que faltaram” no editor"
+    "Admin: botão “🔧 Arrumar falas com IA” — divide as falas que juntam duas pessoas e completa as que faltaram",
+    "Cada pedaço ganha o personagem certo pelo tom de voz, sem refazer o que você já arrumou"
   ],
   "apk": "https://dublabr.netlify.app/baixar/DublaBrasilAI.apk"
 }
