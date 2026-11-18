@@ -21,10 +21,15 @@ function alturaOcupadaEmbaixo(): number {
     const sombra = (el as HTMLElement).shadowRoot;
     if (sombra) for (const filho of Array.from(sombra.children).slice(0, 30)) olhar(filho, profundidade + 1);
   };
+  let suspeito = false;
   for (const el of Array.from(document.body.children)) {
     if (el === raiz || el.tagName === "SCRIPT" || el.tagName === "STYLE" || el.tagName === "NOSCRIPT") continue;
     olhar(el, 0);
+    // Selo dentro de "shadow DOM fechado" não dá para medir: reconhece pelo nome (ex.: <netlify-badge>, id/classe "netlify").
+    const nome = `${el.tagName} ${el.id} ${typeof el.className === "string" ? el.className : ""}`;
+    if (/netlify|badge/i.test(nome) && getComputedStyle(el).display !== "none") suspeito = true;
   }
+  if (!ocupado && suspeito) ocupado = 64;
   return Math.ceil(ocupado);
 }
 

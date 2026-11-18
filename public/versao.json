@@ -1,11 +1,11 @@
 {
-  "versao": "3.3",
-  "codigo": 24,
+  "versao": "3.4",
+  "codigo": 25,
   "data": "2026-11-18",
   "novidades": [
-    "Som ambiente: na sua fala sai só a voz original — a música e os efeitos do vídeo continuam junto com a sua voz",
-    "Vale no estúdio, no resultado, no vídeo salvo e no publicado na galeria",
-    "Dá para desligar em Configurações"
+    "Galeria: comente direto no vídeo — escreva em “Faça um comentário…” e toque em ➤",
+    "Comentários: o campo de escrever fica no topo da janela",
+    "iPhone: botões e comentários não ficam mais por baixo do selo do site"
   ],
   "apk": "https://dublabr.netlify.app/baixar/DublaBrasilAI.apk"
 }

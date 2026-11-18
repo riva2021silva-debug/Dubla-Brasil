@@ -97,6 +97,25 @@ export default function Galeria() {
 
   const mudar = (id: string, parcial: Partial<Publicacao>) => setItens((l) => l.map((p) => (p.id === id ? { ...p, ...parcial } : p)));
 
+  // Comentário escrito direto na barra do vídeo (sem abrir a gaveta). Sem apelido: pede e depois envia.
+  const [comentarioPendente, setComentarioPendente] = useState<{ p: Publicacao; texto: string; feito: (ok: boolean) => void } | null>(null);
+  const enviarComentario = async (p: Publicacao, texto: string) => {
+    await comentar(p.id, texto);
+    setEu(await idAtual());
+    setItens((l) => l.map((x) => (x.id === p.id ? { ...x, comentarios: x.comentarios + 1 } : x)));
+    avisar("💬 Comentário enviado!");
+  };
+  const comentarDireto = async (p: Publicacao, texto: string): Promise<boolean> => {
+    try {
+      if (!(await meuApelido())) return await new Promise<boolean>((feito) => setComentarioPendente({ p, texto, feito }));
+      await enviarComentario(p, texto);
+      return true;
+    } catch (e) {
+      avisar(e instanceof Error ? e.message : String(e));
+      return false;
+    }
+  };
+
   const reagirEm = async (p: Publicacao, valor: 1 | -1) => {
     const atual = reacoes[p.id] ?? 0;
     const novo = atual === valor ? 0 : valor;
@@ -170,6 +189,7 @@ export default function Galeria() {
               aoFicarVisivelUltimo={carregarMais}
               aoReagir={(v) => void reagirEm(p, v)}
               aoComentar={() => setComentariosDe(p)}
+              aoComentarDireto={(texto) => comentarDireto(p, texto)}
               aoCompartilhar={() => void compartilhar(p)}
               aoDenunciar={() => void denunciarDub(p)}
               aoOcultar={async () => {
@@ -205,6 +225,25 @@ export default function Galeria() {
           aoEntrar={(id) => setEu(id)}
         />
       )}
+      {comentarioPendente && (
+        <PedirApelido
+          aoFechar={() => {
+            comentarioPendente.feito(false);
+            setComentarioPendente(null);
+          }}
+          aoConfirmar={() => {
+            const { p, texto, feito } = comentarioPendente;
+            setComentarioPendente(null);
+            enviarComentario(p, texto).then(
+              () => feito(true),
+              (e) => {
+                avisar(e instanceof Error ? e.message : String(e));
+                feito(false);
+              },
+            );
+          }}
+        />
+      )}
       {aviso && (
         <div className="aviso-flutuante" role="status">
           {aviso}
@@ -223,6 +262,8 @@ function ItemFeed(props: {
   aoFicarVisivelUltimo: () => void;
   aoReagir: (v: 1 | -1) => void;
   aoComentar: () => void;
+  /** Comenta direto pela barra do vídeo; devolve true se enviou. */
+  aoComentarDireto: (texto: string) => Promise<boolean>;
   aoCompartilhar: () => void;
   aoDenunciar: () => void;
   aoOcultar: () => void;
@@ -391,9 +432,7 @@ function ItemFeed(props: {
             🎙️ Dublar esta cena
           </Link>
         )}
-        <button className="post-barra-comentario" onClick={props.aoComentar}>
-          Faça um comentário…
-        </button>
+        <BarraComentario aoEnviar={props.aoComentarDireto} />
       </div>
     </article>
   );
@@ -447,6 +486,14 @@ function GavetaComentarios(props: { p: Publicacao; eu: string | null; admin: boo
             ✕
           </button>
         </div>
+        {/* Campo de escrever no topo da gaveta: longe do rodapé (onde o teclado e selos de fora ficam). */}
+        <form className="linha" style={{ flexWrap: "nowrap" }} onSubmit={enviar}>
+          <input id="novo-comentario" className="entrada" placeholder="Escreva um comentário…" maxLength={300} value={texto} onChange={(e) => setTexto(e.target.value)} />
+          <button className="botao botao-primario" type="submit" disabled={enviando || !texto.trim()}>
+            Enviar
+          </button>
+        </form>
+        {erro && <p className="alerta pequeno" style={{ margin: 0 }}>{erro}</p>}
         <div className="lista-comentarios">
           {lista === null ? (
             <p className="suave">Carregando…</p>
@@ -480,13 +527,6 @@ function GavetaComentarios(props: { p: Publicacao; eu: string | null; admin: boo
             ))
           )}
         </div>
-        {erro && <p className="alerta pequeno" style={{ margin: 0 }}>{erro}</p>}
-        <form className="linha" style={{ flexWrap: "nowrap" }} onSubmit={enviar}>
-          <input id="novo-comentario" className="entrada" placeholder="Escreva um comentário…" maxLength={300} value={texto} onChange={(e) => setTexto(e.target.value)} />
-          <button className="botao botao-primario" type="submit" disabled={enviando || !texto.trim()}>
-            Enviar
-          </button>
-        </form>
       </div>
       {pedirApelido && (
         <PedirApelido
@@ -498,5 +538,41 @@ function GavetaComentarios(props: { p: Publicacao; eu: string | null; admin: boo
         />
       )}
     </div>
+  );
+}
+
+/** Barra "Faça um comentário…" do vídeo, com o botão de enviar ao lado (comenta sem abrir a gaveta). */
+function BarraComentario({ aoEnviar }: { aoEnviar: (texto: string) => Promise<boolean> }) {
+  const [texto, setTexto] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const enviar = async (e: FormEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!texto.trim() || enviando) return;
+    setEnviando(true);
+    try {
+      if (await aoEnviar(texto)) {
+        setTexto("");
+        (document.activeElement as HTMLElement | null)?.blur();
+      }
+    } finally {
+      setEnviando(false);
+    }
+  };
+  return (
+    <form className="post-barra-comentario" onSubmit={(e) => void enviar(e)} onClick={(e) => e.stopPropagation()}>
+      <input
+        className="post-campo-comentario"
+        placeholder="Faça um comentário…"
+        maxLength={300}
+        value={texto}
+        onChange={(e) => setTexto(e.target.value)}
+        aria-label="Faça um comentário"
+        enterKeyHint="send"
+      />
+      <button type="submit" className="post-enviar-comentario" disabled={!texto.trim() || enviando} aria-label="Enviar comentário">
+        {enviando ? "…" : "➤"}
+      </button>
+    </form>
   );
 }

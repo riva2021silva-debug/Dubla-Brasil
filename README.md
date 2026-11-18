@@ -348,3 +348,13 @@ No estúdio, a legenda em português aparece embaixo do vídeo no estilo karaok�
   comentários (o botão Enviar fica acima do selo), e
   preenche o espaço por baixo. Só no navegador: no app instalado não há selo.
 - **Teste:** `node testes/e2e-selo.cjs`, que simula o selo no tamanho do iPhone.
+
+## Versão 3.4: comentar direto no vídeo
+
+- **Galeria:** a barra "Faça um comentário…" de cada vídeo virou um campo com o botão **➤** ao lado
+  (`BarraComentario`). Se a pessoa ainda não tem apelido, o app pede e depois envia. O número de comentários
+  sobe na hora.
+- **Gaveta de comentários:** o campo de escrever fica no topo, longe do rodapé, onde ficam o teclado e o selo do
+  Netlify.
+- **Selo:** um selo em shadow DOM fechado não pode ser medido, então ele é reconhecido pelo nome
+  (netlify/badge), e o app reserva 64 px.

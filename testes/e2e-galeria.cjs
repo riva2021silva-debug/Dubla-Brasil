@@ -93,6 +93,13 @@ const estado = async () => (await fetch(`${SERVIDOR}/__estado`)).json();
   await beto.getByRole("button", { name: "Fechar" }).click();
   await beto.getByRole("button", { name: "Comentários (1)" }).waitFor();
   console.log("Comentário publicado com @Beto_2: ok");
+  // Comentar direto na barra do vídeo, com o botão ➤ ao lado (sem abrir a gaveta).
+  await beto.getByLabel("Faça um comentário").first().fill("Direto pela barra!");
+  await beto.getByRole("button", { name: "Enviar comentário" }).first().click();
+  await beto.getByText("💬 Comentário enviado!").waitFor();
+  await beto.getByRole("button", { name: "Comentários (2)" }).waitFor();
+  await beto.screenshot({ path: path.join(SAIDA, "g5-comentar-na-barra.png") });
+  console.log("Comentar direto na barra do vídeo (➤): ok");
   await beto.getByRole("button", { name: "Denunciar" }).click();
   await beto.getByText("Obrigado! O administrador vai revisar").waitFor();
   await beto.getByRole("button", { name: "Denunciar" }).click();
