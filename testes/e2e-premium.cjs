@@ -59,9 +59,15 @@ function diferencaNoCantoDeBaixo(video) {
   await u.locator("#conta-senha").fill("senha123");
   await u.getByRole("button", { name: "Criar conta", exact: true }).last().click();
   await u.getByRole("heading", { name: "Dubla Brasil Premium" }).waitFor();
-  await u.getByRole("button", { name: /Assinar por/ }).click();
-  await u.getByText("O pagamento ainda está sendo configurado").waitFor();
-  console.log("Assinar pede conta, cria a conta e volta ao Premium (pagamento ainda sem link): ok");
+  // O checkout da Cakto abre em outra janela; aqui o teste responde no lugar do site (nada sai para a internet).
+  await u.context().route("https://pay.cakto.com.br/**", (r) => r.fulfill({ status: 200, contentType: "text/html", body: "<h1>Checkout</h1>" }));
+  const [checkout] = await Promise.all([u.context().waitForEvent("page"), u.getByRole("button", { name: /Assinar por/ }).click()]);
+  await checkout.waitForLoadState();
+  const url = new URL(checkout.url());
+  await u.getByText("Depois de pagar, volte aqui").waitFor();
+  console.log(`Assinar pede conta, cria a conta e abre o checkout da Cakto (${url.origin}${url.pathname}, e-mail ${url.searchParams.get("email")}):`,
+    url.pathname === "/mtt98bn_1338782" && url.searchParams.get("email") === "maria@teste.dev" ? "ok" : "FALHOU");
+  await checkout.close();
 
   await adm.goto(BASE + "#/admin");
   await adm.getByRole("tab", { name: /Assinantes/ }).click();

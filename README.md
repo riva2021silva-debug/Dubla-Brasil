@@ -207,7 +207,7 @@ No estúdio, a legenda em português aparece embaixo do vídeo no estilo karaok�
 
 ## iPhone (iOS)
 
-- **Projeto:** está em `ios/`, com Capacitor 8 e Swift Package Manager (iOS 15 ou mais novo). Versão 2.6 (build 17).
+- **Projeto:** está em `ios/`, com Capacitor 8 e Swift Package Manager (iOS 15 ou mais novo). Versão 2.7 (build 18).
   Já tem as permissões de microfone, câmera e galeria.
 - **Ajustes para iPhone:** o quadradinho da câmera é desenhado sem `roundRect`. A gravação do vídeo cai para
   30 quadros por segundo quando o aparelho não tem `requestFrame`.
@@ -243,3 +243,6 @@ No estúdio, a legenda em português aparece embaixo do vídeo no estilo karaok�
 - **2.6:** o ▶ de cada fala no editor toca o trecho direto no toque e para sozinho no fim, vigiando o próprio vídeo.
   Antes ele podia parar na hora quando o vídeo já tinha passado da fala. Enquanto toca, o vídeo vira um
   miniplayer no canto da tela, com a legenda, e tocar de novo (⏸) para.
+- **2.7:** o botão "Assinar" abre o checkout da Cakto (`LINK_ASSINATURA`), com `?email=` da conta. Por enquanto
+  o administrador libera o Premium à mão, na aba Assinantes, depois de ver a venda na Cakto. A liberação
+  automática depende de um webhook da Cakto para uma Edge Function do Supabase.
