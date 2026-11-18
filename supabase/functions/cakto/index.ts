@@ -41,9 +41,9 @@ export async function tratar(req: Request, env: (k: string) => string | undefine
     return new Response("JSON inválido", { status: 400 });
   }
   const aviso = lerAviso(corpo);
-  const esperado = env("CAKTO_SECRET") ?? "";
+  const esperado = (env("CAKTO_SECRET") ?? "").trim();
   // O segredo pode vir no corpo (campo "secret") ou no endereço do webhook (?segredo=...).
-  const recebido = aviso.segredo || new URL(req.url).searchParams.get("segredo") || req.headers.get("x-cakto-secret") || "";
+  const recebido = (aviso.segredo || new URL(req.url).searchParams.get("segredo") || req.headers.get("x-cakto-secret") || "").trim();
   const base = env("SUPABASE_URL") ?? "";
   const chave = env("SUPABASE_SERVICE_ROLE_KEY") ?? env("SUPABASE_SECRET_KEY") ?? "";
   const cabecalhos: Record<string, string> = { apikey: chave, "Content-Type": "application/json" };
@@ -54,7 +54,13 @@ export async function tratar(req: Request, env: (k: string) => string | undefine
 
   if (!esperado || !iguais(recebido, esperado)) {
     await rpc("cakto_recusado", { p_evento: aviso.evento, p_email: aviso.email, p_corpo: semSegredo }).catch(() => {});
-    return new Response("segredo inválido", { status: 401 });
+    // Diz o que não confere (só tamanhos, nunca as senhas) para facilitar o acerto.
+    const dica = !esperado
+      ? "o CAKTO_SECRET não está salvo no Supabase (Edge Functions → Secrets)"
+      : !recebido
+        ? "a Cakto não mandou a chave secreta (preencha 'Chave secreta do webhook' na Cakto)"
+        : `as senhas são diferentes (Cakto mandou ${recebido.length} caracteres; o Supabase tem ${esperado.length})`;
+    return new Response(`segredo inválido: ${dica}`, { status: 401 });
   }
   const r = await rpc("cakto_aplicar", { p_email: aviso.email, p_acao: aviso.acao, p_referencia: aviso.referencia, p_evento: aviso.evento, p_corpo: semSegredo });
   if (!r.ok) return new Response(`erro no banco: ${await r.text()}`, { status: 500 });
