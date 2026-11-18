@@ -339,3 +339,11 @@ No estúdio, a legenda em português aparece embaixo do vídeo no estilo karaok�
   `somAmbiente` em Configurações, ligada por padrão.
 - **Teste:** `node testes/e2e-ambiente.cjs`. No vídeo salvo, a voz no centro caiu 38 dB na fala, e a música dos
   lados manteve o volume.
+
+## Selo do Netlify no iPhone (site)
+
+- No plano grátis, o Netlify coloca uma pílula "Powered by Netlify" fixa no rodapé, que cobria a barra de botões.
+- `src/seloExterno.ts` mede qualquer elemento fixo no rodapé que não seja do app, inclusive em shadow DOM
+  aberto, e liga a classe `com-selo-externo`. Ela sobe a barra inferior (`--folga-selo`) e o conteúdo, e
+  preenche o espaço por baixo. Só no navegador: no app instalado não há selo.
+- **Teste:** `node testes/e2e-selo.cjs`, que simula o selo no tamanho do iPhone.

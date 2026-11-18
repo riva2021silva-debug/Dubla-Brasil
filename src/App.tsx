@@ -19,11 +19,14 @@ import AvisoAtualizacao from "./componentes/AvisoAtualizacao";
 import Ajuda from "./paginas/Ajuda";
 import { useEffect, useState } from "react";
 import { contarNovas } from "./ajuda";
+import { vigiarSeloExterno } from "./seloExterno";
 import { useAdmin } from "./admin";
 
 function Layout() {
   const { aberto } = useAdmin();
   const plano = usePlano();
+  // Selo de fora (ex.: "Powered by Netlify"): a barra de botões sobe para não ficar por baixo dele.
+  useEffect(() => vigiarSeloExterno(), []);
   // Administrador: quantas mensagens de Ajuda estão esperando (aparece no botão Admin).
   const [novas, setNovas] = useState(0);
   useEffect(() => {

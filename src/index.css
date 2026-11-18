@@ -501,3 +501,14 @@ kbd { background: var(--superficie-2); border: 1px solid var(--borda); border-bo
 /* Rascunho do editor */
 .aviso-rascunho { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 16px; border-radius: var(--raio); border: 2px solid var(--amarelo); background: rgb(250 204 21 / 0.1); }
 .selo-rascunho { display: inline-block; margin: 2px 0 6px; font-size: 12px; font-weight: 700; color: var(--verde); }
+
+/* Selo de fora do app no rodapé (ex.: "Powered by Netlify"): a barra de botões e o conteúdo sobem acima dele */
+@media (max-width: 720px) {
+  .com-selo-externo .barra-inferior { bottom: var(--folga-selo, 0px); padding-bottom: 8px; box-shadow: 0 var(--folga-selo, 0px) 0 rgb(8 2 31); background: rgb(8 2 31); }
+  .com-selo-externo .pagina { padding-bottom: calc(110px + var(--folga-selo, 0px)); }
+  .com-selo-externo .rodape { padding-bottom: calc(90px + var(--folga-selo, 0px)); }
+  .com-selo-externo .palco.palco-mini { bottom: calc(86px + var(--folga-selo, 0px)); }
+}
+@media (max-width: 720px) {
+  .com-selo-externo .feed { height: calc(100dvh - 76px - 72px - env(safe-area-inset-bottom, 0px) - var(--folga-selo, 0px)); }
+}
