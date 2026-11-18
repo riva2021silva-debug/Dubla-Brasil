@@ -138,3 +138,5 @@ drop trigger if exists notificar_dueto on public.publicacoes;
 create trigger notificar_dueto
   after insert on public.publicacoes
   for each row execute function public.criar_notificacao();
+
+select 'dueto e notificações prontos' as resultado;
