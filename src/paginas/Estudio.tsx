@@ -531,7 +531,7 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
                 <button
                   className={`botao-guia ${cfg.guiaVoz ? "ligada" : ""}`}
                   aria-pressed={!!cfg.guiaVoz}
-                  title="Guia: ouvir a voz original baixinho enquanto grava (use fone de ouvido)"
+                  title="Guia: com fone de ouvido, a cena toca enquanto você grava e a voz original fica baixinha na sua fala. Desligado, o vídeo fica mudo durante a gravação (sem eco)."
                   disabled={ocupado}
                   onClick={() => salvarCfg({ guiaVoz: !cfg.guiaVoz })}
                 >
