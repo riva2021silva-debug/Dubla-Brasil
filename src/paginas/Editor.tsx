@@ -7,6 +7,8 @@ import { mensagemDeErro, salvarCena } from "../nuvem";
 import { gerarRostos, rostoDaImagem, rostoDoQuadro } from "../rostos";
 import type { Progresso } from "../transcricao";
 import Avatar from "../componentes/Avatar";
+import EditarVideo from "../componentes/EditarVideo";
+import { ajustarFalas, cortarAudio, type Edicao } from "../edicaoVideo";
 import { buscarCena, useFormatoDoVideo, useTempoDoVideo, useUrlDaMidia } from "../ganchos";
 import { irPara } from "../audio/sincronia";
 import type { Cena, Fala, Personagem } from "../tipos";
@@ -61,6 +63,8 @@ export default function Editor() {
   const [rostoOcupado, setRostoOcupado] = useState<string | null>(null);
   const [progressoIa, setProgressoIa] = useState<Progresso | null>(null);
   const [novaCapa, setNovaCapa] = useState<Blob | null>(null);
+  const [editandoVideo, setEditandoVideo] = useState(false);
+  const [avisoEdicao, setAvisoEdicao] = useState<string | null>(null);
   const [previaCapa, setPreviaCapa] = useState<string | null>(null);
   const [avisoCapa, setAvisoCapa] = useState<string | null>(null);
   const entradaCapa = useRef<HTMLInputElement>(null);
@@ -136,6 +140,7 @@ export default function Editor() {
   // Atalhos: I/O marcam início e fim, Espaço toca.
   useEffect(() => {
     const tecla = (e: KeyboardEvent) => {
+      if (editandoVideo) return; // a janela de editar vídeo usa as setas nos controles dela
       if ((e.target as HTMLElement).closest("input, textarea, select") || !el) return;
       const ms = Math.round(el.currentTime * 1000);
       if (e.key === " ") {
@@ -176,6 +181,25 @@ export default function Editor() {
       URL.revokeObjectURL(url);
       alert(e instanceof Error ? e.message : String(e));
     }
+  };
+
+  /** Troca o vídeo pelo editado (cortado e/ou no novo formato) e ajusta falas e trilha de fundo ao corte. */
+  const aplicarEdicao = async (arquivo: File, ed: Edicao) => {
+    const cortou = ed.inicioMs > 0 || ed.fimMs < cena.duracaoMs - 50;
+    let novoFundo: File | null = null;
+    if (cortou && fundo) novoFundo = await cortarAudio(fundo.url, ed.inicioMs, ed.fimMs);
+    const url = URL.createObjectURL(arquivo);
+    const duracaoMs = await duracaoDoArquivo(url, "video").catch(() => ed.fimMs - ed.inicioMs);
+    setVideo({ url, novo: arquivo });
+    if (novoFundo) setFundo({ url: URL.createObjectURL(novoFundo), novo: novoFundo });
+    atualizar((c) => ({ ...c, duracaoMs, falas: cortou ? ajustarFalas(c.falas, ed.inicioMs, ed.fimMs) : c.falas }));
+    setEditandoVideo(false);
+    const tamanho = (arquivo.size / 1024 / 1024).toFixed(1).replace(".", ",");
+    setAvisoEdicao(
+      `✅ Vídeo editado (${formatarTempo(duracaoMs)}, ${tamanho} MB)${ed.formato !== "original" ? `, formato ${ed.formato}` : ""}. ` +
+        "Confira as falas e toque em “Salvar cena” para enviar." +
+        (ed.formato !== "original" ? " Dica: gere a capa de novo pelo quadro atual." : ""),
+    );
   };
 
   const escolherFundo = async (f: File) => {
@@ -406,10 +430,30 @@ export default function Editor() {
                 <button className="botao" onClick={() => entradaSrt.current?.click()}>
                   📄 Importar legendas (.srt)
                 </button>
+                <button
+                  className="botao"
+                  onClick={() => {
+                    el?.pause();
+                    setAvisoEdicao(null);
+                    setEditandoVideo(true);
+                  }}
+                >
+                  ✂️ Editar vídeo
+                </button>
                 <span className="tempo">
                   {formatarTempo(tempo)} / {formatarTempo(cena.duracaoMs)}
                 </span>
               </div>
+              {avisoEdicao && <p className="info" style={{ margin: 0 }}>{avisoEdicao}</p>}
+              {editandoVideo && (
+                <EditarVideo
+                  url={video.url}
+                  duracaoMs={cena.duracaoMs}
+                  avisoFalas={cena.falas.length > 0 || !!fundo}
+                  aoAplicar={aplicarEdicao}
+                  aoFechar={() => setEditandoVideo(false)}
+                />
+              )}
               <p className="suave pequeno" style={{ margin: 0 }}>
                 Atalhos: <kbd>Espaço</kbd> tocar · <kbd>I</kbd> marcar início · <kbd>O</kbd> marcar fim da fala selecionada ·{" "}
                 <kbd>←</kbd>

@@ -207,7 +207,7 @@ No estúdio, a legenda em português aparece embaixo do vídeo no estilo karaok�
 
 ## iPhone (iOS)
 
-- **Projeto:** está em `ios/`, com Capacitor 8 e Swift Package Manager (iOS 15 ou mais novo). Versão 2.3 (build 14).
+- **Projeto:** está em `ios/`, com Capacitor 8 e Swift Package Manager (iOS 15 ou mais novo). Versão 2.4 (build 15).
   Já tem as permissões de microfone, câmera e galeria.
 - **Ajustes para iPhone:** o quadradinho da câmera é desenhado sem `roundRect`. A gravação do vídeo cai para
   30 quadros por segundo quando o aparelho não tem `requestFrame`.
@@ -223,3 +223,14 @@ No estúdio, a legenda em português aparece embaixo do vídeo no estilo karaok�
   Cada envio ao GitHub atualiza o site sozinho.
 - No iPhone: abrir o link no Safari → Compartilhar → "Adicionar à Tela de Início".
 - No celular pelo navegador, "Salvar na galeria" abre o menu de compartilhar, onde aparece "Salvar vídeo".
+
+## Versão 2.4: editar o vídeo no editor de cenas
+
+- O botão **✂️ Editar vídeo** fica ao lado de "Importar legendas". Ele corta o começo e o fim por barras de
+  arrastar ou por "Começar aqui" e "Terminar aqui", e muda o formato para **Original, 9:16 (em pé), 1:1 ou 16:9**.
+- Nos formatos com recorte, uma moldura amarela mostra a parte que fica, e uma barra escolhe a posição do recorte.
+- O vídeo é regravado no aparelho, tocando o trecho uma vez, e por isso leva o mesmo tempo do trecho
+  (`src/edicaoVideo.ts`). Sai em MP4/H.264 quando o aparelho suporta, até 1280 px, sem aumentar a imagem.
+- As falas são ajustadas ao corte: as que ficam fora saem e as outras têm os tempos mudados. A trilha de fundo é
+  cortada no mesmo trecho e vira WAV.
+- Teste: `node testes/e2e-edicao.cjs`.

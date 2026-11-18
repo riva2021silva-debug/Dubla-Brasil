@@ -431,3 +431,21 @@ kbd { background: var(--superficie-2); border: 1px solid var(--borda); border-bo
 .lista-assinantes li { padding: 12px 14px; }
 @media (max-width: 720px) { .botao-premium { font-size: 13px; padding: 6px 10px; } }
 .botao-link { background: none; border: none; padding: 0; color: var(--texto-suave, #a78bfa); text-decoration: underline; cursor: pointer; font: inherit; }
+
+/* Editar vídeo (admin) */
+.editar-video { width: min(560px, 100%); max-height: calc(100dvh - 32px); overflow-y: auto; }
+.previa-recorte { background: #000; border-radius: 12px; overflow: hidden; line-height: 0; display: flex; justify-content: center; }
+.quadro-recorte { position: relative; overflow: hidden; }
+.quadro-recorte video { display: block; max-width: 100%; max-height: 42dvh; width: auto; height: auto; }
+.moldura-recorte { position: absolute; border: 3px solid var(--amarelo); box-shadow: 0 0 0 9999px rgb(0 0 0 / 0.55); pointer-events: none; border-radius: 4px; }
+.escolhas-formato { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.escolha-formato { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 4px; border-radius: 12px; border: 2px solid var(--borda); background: var(--superficie); color: inherit; cursor: pointer; font: inherit; }
+.escolha-formato small { font-size: 11px; opacity: .75; text-align: center; line-height: 1.2; }
+.escolha-formato.ativa { border-color: var(--amarelo); background: rgb(250 204 21 / 0.1); }
+.icone-formato { display: block; border: 2px solid currentColor; border-radius: 3px; }
+.icone-formato.f-original { width: 26px; height: 18px; border-style: dashed; }
+.icone-formato.f-9x16 { width: 14px; height: 25px; }
+.icone-formato.f-1x1 { width: 20px; height: 20px; }
+.icone-formato.f-16x9 { width: 28px; height: 16px; }
+.progresso-edicao { height: 10px; border-radius: 999px; background: var(--borda); overflow: hidden; }
+.progresso-edicao span { display: block; height: 100%; background: linear-gradient(90deg, var(--verde), var(--amarelo)); transition: width .2s linear; }
