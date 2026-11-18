@@ -409,3 +409,15 @@ No estúdio, a legenda em português aparece embaixo do vídeo no estilo karaok�
   2. completa os trechos falados sem fala (detector + Whisper).
 - **Teste:** `node testes/e2e-arrumar.cjs`. Uma fala com duas pessoas virou duas, Ana e Beto, com os textos
   certos.
+
+## Versão 3.8: dublagem por turnos
+
+- `organizarPorTurnos` (em `vozes.ts`):
+  - junta falas seguidas da mesma pessoa (pausa ≤ 1,2 s) num turno só;
+  - estica cada turno até a próxima pessoa começar (espaço ≤ 2 s), com 80 ms de folga;
+  - nunca deixa um turno passar por cima do seguinte.
+- Roda no fim do **✨ Separar falas** e do **🔧 Arrumar falas com IA**. O aviso diz "🗣️ organizei por turnos".
+- **Testes:**
+  - `node --experimental-strip-types testes/unidade-turnos.mjs`;
+  - `e2e-ia`, `e2e-arrumar` e `e2e-faltaram`: as falas ficam encadeadas, por exemplo 1,0–4,7 · 4,8–8,4 ·
+    8,5–12,2 · 12,3–15,1.

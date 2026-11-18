@@ -181,3 +181,41 @@ export function dividirPorPausas(partes: { inicioMs: number; fimMs: number; text
   }
   return saida;
 }
+
+export interface FalaTurno {
+  personagemId: string;
+  inicioMs: number;
+  fimMs: number;
+  texto: string;
+  original?: string;
+  id: string;
+}
+
+/**
+ * Organiza as falas por TURNOS, como numa conversa: o homem fala até terminar, depois a mulher, depois o homem…
+ * 1) Falas seguidas da mesma pessoa (com pausa curta) viram um turno só.
+ * 2) Cada turno vai até o começo do próximo (sem buraco e sem invadir o outro), se o próximo vier logo depois.
+ */
+export function organizarPorTurnos<T extends FalaTurno>(falas: T[], opcoes = { juntarAteMs: 1200, esticarAteMs: 2000, folgaMs: 80 }): T[] {
+  const ord = [...falas].sort((a, b) => a.inicioMs - b.inicioMs);
+  const turnos: T[] = [];
+  for (const f of ord) {
+    const ult = turnos[turnos.length - 1];
+    if (ult && ult.personagemId === f.personagemId && f.inicioMs - ult.fimMs <= opcoes.juntarAteMs) {
+      turnos[turnos.length - 1] = {
+        ...ult,
+        fimMs: Math.max(ult.fimMs, f.fimMs),
+        texto: [ult.texto, f.texto].filter((t) => t && t !== "…").join(" ") || "…",
+        original: [ult.original, f.original].filter(Boolean).join(" ") || undefined,
+      };
+    } else turnos.push({ ...f });
+  }
+  for (let i = 0; i < turnos.length - 1; i++) {
+    const a = turnos[i], b = turnos[i + 1];
+    const espaco = b.inicioMs - a.fimMs;
+    // Vai até a próxima pessoa começar (espaço curto) e nunca passa por cima dela.
+    if (espaco >= 0 && espaco <= opcoes.esticarAteMs) turnos[i] = { ...a, fimMs: b.inicioMs - opcoes.folgaMs };
+    else if (espaco < 0) turnos[i] = { ...a, fimMs: Math.max(a.inicioMs + 300, b.inicioMs - opcoes.folgaMs) };
+  }
+  return turnos;
+}

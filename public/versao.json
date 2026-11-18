@@ -1,10 +1,11 @@
 {
-  "versao": "3.7",
-  "codigo": 28,
+  "versao": "3.8",
+  "codigo": 29,
   "data": "2026-11-18",
   "novidades": [
-    "Admin: botão “🔧 Arrumar falas com IA” — divide as falas que juntam duas pessoas e completa as que faltaram",
-    "Cada pedaço ganha o personagem certo pelo tom de voz, sem refazer o que você já arrumou"
+    "Dublagem por turnos: cada personagem fala até terminar, e só então começa o próximo",
+    "Cada fala vai até a outra pessoa começar — dá tempo de dublar a frase inteira",
+    "Admin: “✨ Separar falas” e “🔧 Arrumar falas com IA” já organizam por turnos"
   ],
   "apk": "https://dublabr.netlify.app/baixar/DublaBrasilAI.apk"
 }

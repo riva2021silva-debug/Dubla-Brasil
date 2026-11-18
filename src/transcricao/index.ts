@@ -5,7 +5,7 @@ import { contextoDeAudio } from "../audio/mixer";
 import type { Fala, Personagem } from "../tipos";
 import { novoId } from "../util";
 import type { Mensagem, Pedido } from "./trabalhador";
-import { audioEstereo, detectarFala, dividirPorPausas, trechosSemFala, type Trecho } from "./vozes";
+import { audioEstereo, detectarFala, dividirPorPausas, organizarPorTurnos, trechosSemFala, type Trecho } from "./vozes";
 
 const TAXA = 16000;
 const MAX_FALA_MS = 7000;
@@ -217,7 +217,8 @@ export async function separarFalas(opcoes: {
   }));
   // O Whisper às vezes pula falas curtas ou rápidas: o detector de voz acha esses buracos e completa.
   const extras = await completarBuracos({ som, copia, falas, personagens, idioma, modelo: opcoes.modelo ?? "base", aoProgredir });
-  return [...falas, ...extras].sort((a, b) => a.inicioMs - b.inicioMs);
+  // Por turnos: cada pessoa fala até terminar e o turno vai até a próxima pessoa começar.
+  return organizarPorTurnos([...falas, ...extras]);
 }
 
 /** Acha trechos com voz sem fala marcada, transcreve só eles e escolhe o personagem pelo tom de voz. */
@@ -342,7 +343,7 @@ export async function arrumarFalas(opcoes: {
     modelo: opcoes.modelo ?? "base",
     aoProgredir: opcoes.aoProgredir,
   });
-  return { falas: [...arrumadas, ...novas].sort((a, b) => a.inicioMs - b.inicioMs), divididas, novas };
+  return { falas: organizarPorTurnos([...arrumadas, ...novas]), divididas, novas };
 }
 
 /** Para o editor: procura falas que ficaram de fora (sem refazer as que já existem). */

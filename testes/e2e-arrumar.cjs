@@ -35,7 +35,7 @@ const SRT = path.join(SAIDA, "cena-fala-juntas.srt");
   await p.getByLabel("Personagem", { exact: true }).nth(2).selectOption({ label: "Beto" }); // fala 3 é da 2ª pessoa
   const t0 = Date.now();
   await p.getByRole("button", { name: /Arrumar falas com IA/ }).click();
-  await p.getByText(/dividi 1 fala que juntava duas vozes/).waitFor({ timeout: 600000 });
+  await p.getByText(/dividi 1 fala que juntava duas vozes/i).waitFor({ timeout: 600000 });
   const aviso = await p.locator(".cartao-ia .info").innerText();
   const linhas = await p.locator(".linha-fala").evaluateAll((els) =>
     els.map((el) => ({ personagem: el.querySelector("select").selectedOptions[0]?.textContent, texto: el.querySelector('[aria-label="Texto da fala"]').value, tempo: [...el.querySelectorAll(".ajuste-tempo button:nth-child(2)")].map((b) => b.textContent).join("→") })),

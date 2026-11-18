@@ -349,8 +349,10 @@ export default function Editor() {
     try {
       const { arrumarFalas } = await import("../transcricao");
       const r = await arrumarFalas({ urlVideo: video.url, idioma: cena.idioma, falas: cena.falas, personagens: cena.personagens, aoProgredir: setProgressoIa });
-      if (!r.divididas && !r.novas.length) {
-        setAvisoIa("✅ Está tudo certo: nenhuma fala junta duas vozes e não ficou trecho falado sem fala.");
+      const chave = (l: Fala[]) => [...l].sort((a, b) => a.inicioMs - b.inicioMs).map((f) => `${f.personagemId}:${f.inicioMs}-${f.fimMs}`).join("|");
+      const turnosMudaram = chave(r.falas) !== chave(cena.falas);
+      if (!r.divididas && !r.novas.length && !turnosMudaram) {
+        setAvisoIa("✅ Está tudo certo: as falas já estão por turnos, nenhuma junta duas vozes e não ficou trecho falado sem fala.");
         return;
       }
       atualizar((c) => ({ ...c, falas: r.falas }));
@@ -361,9 +363,11 @@ export default function Editor() {
         partes.push(
           `🔍 encontrei ${r.novas.length} ${r.novas.length === 1 ? "fala que faltava" : "falas que faltavam"} (em ${r.novas.map((f) => formatarTempo(f.inicioMs)).join(", ")})`,
         );
+      if (turnosMudaram) partes.push("🗣️ organizei por turnos (cada pessoa fala até a outra começar)");
       const semTexto = r.novas.filter((f) => f.texto === "…").length;
+      const lista = partes.length > 1 ? `${partes.slice(0, -1).join(", ")} e ${partes[partes.length - 1]}` : partes[0];
       setAvisoIa(
-        `${partes.join(" e ")}. Agora são ${r.falas.length} falas. ` +
+        `${lista[0].toUpperCase()}${lista.slice(1)}. Agora são ${r.falas.length} falas. ` +
           (semTexto ? `${semTexto} ficaram com “…”: escreva o texto. ` : "") +
           "Confira o personagem e o texto de cada uma (use ▶ para ouvir) e salve.",
       );
