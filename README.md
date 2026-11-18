@@ -301,3 +301,15 @@ No estúdio, a legenda em português aparece embaixo do vídeo no estilo karaok�
   - a Administração mostra **"📝 Vídeo novo em edição"**;
   - salvar a cena apaga o rascunho.
 - **Testes:** `node testes/e2e-sinal.cjs` e `node testes/e2e-rascunho.cjs`.
+
+## Versão 3.1: publicar cenas longas na galeria
+
+- **Problema:** a galeria aceita até 15 MB por vídeo, e o vídeo era gerado sempre a 1,5 Mbps. Uma cena de 1:30
+  dava cerca de 18 MB e era recusada no fim, com o erro aparecendo só no topo da tela.
+- **Correção:**
+  - `qualidadeParaGaleria()` escolhe os bits por segundo e o tamanho da imagem para caber em 80% do limite.
+    Por exemplo: 20 s → 720p a 1,5 Mbps; 1:30 → 720p a ~0,9 Mbps; 3:00 → 540p a ~0,4 Mbps.
+  - Se o aparelho passar do alvo, o vídeo é gerado de novo, mais leve, sozinho.
+  - O erro aparece junto dos botões e a tela rola até ele.
+- **Teste:** `node testes/e2e-publicar-longo.cjs`. Uma cena de 1:35 difícil de comprimir saiu com 8,3 MB e
+  apareceu na galeria.

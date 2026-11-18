@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import PedirApelido from "../componentes/PedirApelido";
-import { meuApelido, publicar } from "../galeria";
+import { LIMITE_BYTES, meuApelido, publicar } from "../galeria";
 import LegendaKaraoke from "../componentes/LegendaKaraoke";
 import LinhaDoTempo from "../componentes/LinhaDoTempo";
 import { useConfig } from "../config";
@@ -64,6 +64,12 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
   const [salvo, setSalvo] = useState<string | null>(null);
   const [pedirApelido, setPedirApelido] = useState(false);
   const [etapaPublicar, setEtapaPublicar] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
+  const caixaErro = useRef<HTMLParagraphElement>(null);
+  // Erro aparece perto dos botões e a tela rola até ele (antes ficava só no topo e passava despercebido).
+  useEffect(() => {
+    if (erro) caixaErro.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [erro]);
   const navegar = useNavigate();
   const tempo = useTempoDoVideo(video);
   const formato = useFormatoDoVideo(video);
@@ -158,7 +164,7 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
   };
 
   /** Toca a cena do começo ao fim gravando imagem + mixagem; devolve o vídeo (ou null se cancelado). */
-  const gerarVideo = async (larguraMax: number, bitrate: number): Promise<{ blob: Blob; ext: string } | null> => {
+  const gerarVideo = async (larguraMax: number, bitrate: number, bitrateAudio = 128_000): Promise<{ blob: Blob; ext: string } | null> => {
     const m = mixer.current;
     const formato = formatoDeExportacao();
     if (!video || !m) return null;
@@ -186,7 +192,7 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
     const porQuadro = comRequestFrame && "requestVideoFrameCallback" in HTMLVideoElement.prototype;
     const trilha = tela.captureStream(porQuadro ? 0 : 30).getVideoTracks()[0] as MediaStreamTrack & { requestFrame?: () => void };
     const fluxo = new MediaStream([trilha, ...destino.stream.getAudioTracks()]);
-    const gravador = new MediaRecorder(fluxo, { mimeType: formato.mime, videoBitsPerSecond: bitrate, audioBitsPerSecond: 128_000 });
+    const gravador = new MediaRecorder(fluxo, { mimeType: formato.mime, videoBitsPerSecond: bitrate, audioBitsPerSecond: bitrateAudio });
     const comMarca = !plano.premium; // Premium: vídeo sem marca d'água
     const logo = new Image();
     logo.src = "marca/logo-pequeno.webp";
@@ -294,8 +300,21 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
       const apelido = apelidoConfirmado ?? (await meuApelido());
       if (!apelido) return setPedirApelido(true);
       setAcao("publicar");
-      const v = await gerarVideo(720, 1_500_000);
+      // A galeria aceita até 15 MB por vídeo: a qualidade se ajusta ao tamanho da cena para sempre caber.
+      let q = qualidadeParaGaleria(cena.duracaoMs, LIMITE_BYTES * 0.8);
+      let v = await gerarVideo(q.largura, q.video, q.audio);
       if (!v) return;
+      if (v.blob.size > LIMITE_BYTES * 0.97) {
+        // O aparelho passou do alvo: gera de novo, mais leve, sem a pessoa precisar fazer nada.
+        q = qualidadeParaGaleria(cena.duracaoMs, (LIMITE_BYTES * 0.8 * LIMITE_BYTES * 0.8) / v.blob.size);
+        setEtapaPublicar(null);
+        setErro(null);
+        setAviso("O vídeo ficou um pouco grande para a galeria. Gerando de novo em qualidade menor…");
+        v = await gerarVideo(q.largura, q.video, q.audio);
+        setAviso(null);
+        if (!v) return;
+        if (v.blob.size > LIMITE_BYTES) throw new Error("Mesmo em qualidade menor o vídeo passou de 15 MB. Esta cena é longa demais para a galeria; use “Salvar na galeria” para guardar no celular.");
+      }
       setEtapaPublicar("Enviando para a galeria…");
       const primeira = minhas.find((f) => dub.tomadas[f.id]) ?? minhas[0];
       const capa = urls ? await gerarCapa(urls.video, primeira ? (primeira.inicioMs + primeira.fimMs) / 2 : 1000, 480) : null;
@@ -354,7 +373,6 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
         </p>
       )}
       {erroMidia && <p className="alerta">{erroMidia}</p>}
-      {erro && <p className="alerta">{erro}</p>}
       {salvo && <p className="info">{salvo}</p>}
 
       <div className={`palco ${formato.vertical ? "vertical" : ""}`} style={formato.estilo}>
@@ -422,6 +440,12 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
           O vídeo sai com a marca d'água do Dubla Brasil. <Link to="/premium">⭐ Tire a marca com o Premium</Link>
         </p>
       )}
+      {aviso && <p className="info">{aviso}</p>}
+      {erro && (
+        <p ref={caixaErro} className="alerta" role="alert">
+          {erro}
+        </p>
+      )}
       {pedirApelido && (
         <PedirApelido
           aoFechar={() => setPedirApelido(false)}
@@ -436,4 +460,17 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
       )}
     </div>
   );
+}
+
+/**
+ * Qualidade do vídeo da galeria para caber em `alvoBytes`: menos bits por segundo (e imagem menor)
+ * quanto mais longa a cena. Ex.: 20 s → 720p a 1,5 Mbps; 1:30 → 720p a ~0,9 Mbps; 3:00 → 540p a ~0,4 Mbps.
+ */
+export function qualidadeParaGaleria(duracaoMs: number, alvoBytes: number) {
+  const seg = Math.max(5, duracaoMs / 1000 + 1);
+  const audio = seg > 120 ? 64_000 : 96_000;
+  const total = (alvoBytes * 8) / seg;
+  const video = Math.round(Math.min(1_500_000, Math.max(200_000, total - audio - 30_000)));
+  const largura = video >= 700_000 ? 720 : video >= 400_000 ? 540 : 426;
+  return { video, audio, largura };
 }

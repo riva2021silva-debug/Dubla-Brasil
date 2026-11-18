@@ -1,11 +1,11 @@
 {
-  "versao": "3.0",
-  "codigo": 21,
+  "versao": "3.1",
+  "codigo": 22,
   "data": "2026-11-18",
   "novidades": [
-    "Estúdio: marcas ▶ FALE e PARE ■ na linha do tempo de cada fala",
-    "Estúdio: aviso ao vivo — Prepare-se, FALE AGORA (com o tempo que falta) e PARE",
-    "Editor (admin): rascunho automático — saiu da tela? Toque em Retomar edição"
+    "Publicar na galeria: cenas longas (1 a 3 minutos) agora cabem e aparecem para todo mundo",
+    "A qualidade do vídeo se ajusta sozinha ao tamanho da cena",
+    "Se algo der errado ao publicar, o aviso aparece perto do botão"
   ],
   "apk": "https://dublabr.netlify.app/baixar/DublaBrasilAI.apk"
 }

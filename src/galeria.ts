@@ -2,7 +2,8 @@
 import { mensagemDeErro, supabase } from "./nuvem";
 
 const PASTA = "dubs";
-const LIMITE_BYTES = 15 * 1024 * 1024;
+/** Limite de cada vídeo da galeria (igual ao da pasta "dubs" no Supabase). */
+export const LIMITE_BYTES = 15 * 1024 * 1024;
 
 export interface Publicacao {
   id: string;
