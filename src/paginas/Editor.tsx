@@ -21,6 +21,9 @@ interface Arquivo {
   novo?: File;
 }
 
+/** As cenas podem ter até 2 minutos. */
+const DURACAO_MAXIMA_MS = 120_000;
+
 function rascunhoVazio(): Cena {
   const agora = Date.now();
   return {
@@ -380,6 +383,10 @@ export default function Editor() {
     const p: string[] = [];
     if (!cena.titulo.trim()) p.push("Dê um título para a cena.");
     if (!video) p.push("Escolha o vídeo da cena.");
+    if (cena.duracaoMs > DURACAO_MAXIMA_MS + 5000)
+      p.push(`O vídeo tem ${formatarTempo(cena.duracaoMs)}. O máximo é 2 minutos: toque em “✂️ Editar vídeo” e corte o trecho que quer.`);
+    if (video?.novo && video.novo.size > 50 * 1024 * 1024)
+      p.push(`O vídeo tem ${(video.novo.size / 1024 / 1024).toFixed(0)} MB (máximo 50 MB). Toque em “✂️ Editar vídeo” → “Aplicar” para deixar mais leve.`);
     if (cena.personagens.length === 0) p.push("Adicione pelo menos um personagem.");
     if (cena.personagens.some((x) => !x.nome.trim())) p.push("Todos os personagens precisam de nome.");
     if (cena.falas.length === 0) p.push("Adicione pelo menos uma fala.");
@@ -584,11 +591,25 @@ export default function Editor() {
                 </span>
               </div>
               {avisoEdicao && <p className="info" style={{ margin: 0 }}>{avisoEdicao}</p>}
+              {(cena.duracaoMs > DURACAO_MAXIMA_MS + 5000 || (video.novo && video.novo.size > 45 * 1024 * 1024)) && !editandoVideo && (
+                <div className="aviso-rascunho">
+                  <span>
+                    {cena.duracaoMs > DURACAO_MAXIMA_MS + 5000
+                      ? `⚠️ O vídeo tem ${formatarTempo(cena.duracaoMs)}. As cenas podem ter até 2 minutos: corte o trecho que quer.`
+                      : `⚠️ O vídeo tem ${((video.novo?.size ?? 0) / 1024 / 1024).toFixed(0)} MB. Deixe mais leve antes de salvar (o máximo é 50 MB).`}
+                  </span>
+                  <button className="botao botao-primario" onClick={() => (el?.pause(), setAvisoEdicao(null), setEditandoVideo(true))}>
+                    ✂️ {cena.duracaoMs > DURACAO_MAXIMA_MS + 5000 ? "Cortar para 2 minutos" : "Deixar mais leve"}
+                  </button>
+                </div>
+              )}
               {editandoVideo && (
                 <EditarVideo
                   url={video.url}
                   duracaoMs={cena.duracaoMs}
                   avisoFalas={cena.falas.length > 0 || !!fundo}
+                  deixarLeve={!!video.novo && video.novo.size > 45 * 1024 * 1024}
+                  duracaoMaxMs={DURACAO_MAXIMA_MS}
                   aoAplicar={aplicarEdicao}
                   aoFechar={() => setEditandoVideo(false)}
                 />
@@ -603,7 +624,7 @@ export default function Editor() {
             <button className="cartao vazio" style={{ cursor: "pointer", borderStyle: "dashed" }} onClick={() => entradaVideo.current?.click()}>
               <div style={{ fontSize: "2.5rem" }}>🎬</div>
               <strong>Escolher o vídeo da cena</strong>
-              <p className="pequeno">MP4 ou WebM, de preferência curto (até 1 minuto).</p>
+              <p className="pequeno">MP4 ou WebM, de até 2 minutos.</p>
             </button>
           )}
 

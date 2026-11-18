@@ -101,7 +101,10 @@ export function processarVideo(
         const pixels = tela.width * tela.height;
         gravador = new MediaRecorder(fluxo, {
           mimeType: formato.mime,
-          videoBitsPerSecond: Math.round(Math.min(3_000_000, Math.max(1_200_000, pixels * 3))),
+          // Até 3 Mbps, mas sempre cabendo em ~40 MB (limite do servidor: 50 MB) — 2 minutos saem com ~2,5 Mbps.
+          videoBitsPerSecond: Math.round(
+            Math.min(3_000_000, Math.max(700_000, pixels * 3), (40 * 1024 * 1024 * 8) / Math.max(1, (ed.fimMs - ed.inicioMs) / 1000) - 160_000),
+          ),
           audioBitsPerSecond: 128_000,
         });
         gravador.ondataavailable = (e) => e.data.size && partes.push(e.data);

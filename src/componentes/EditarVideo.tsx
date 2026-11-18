@@ -19,13 +19,17 @@ export default function EditarVideo(props: {
   url: string;
   duracaoMs: number;
   avisoFalas: boolean;
+  /** Vídeo pesado demais: deixa aplicar mesmo sem cortar (só regrava mais leve). */
+  deixarLeve?: boolean;
+  /** Duração máxima da cena: se o vídeo for mais longo, já abre com o corte nesse tamanho. */
+  duracaoMaxMs?: number;
   aoAplicar: (arquivo: File, ed: Edicao) => Promise<void> | void;
   aoFechar: () => void;
 }) {
   const [v, setV] = useState<HTMLVideoElement | null>(null);
   const [ed, setEd] = useState<Edicao>({
     inicioMs: 0,
-    fimMs: props.duracaoMs,
+    fimMs: props.duracaoMaxMs ? Math.min(props.duracaoMs, props.duracaoMaxMs) : props.duracaoMs,
     formato: "original",
     posicao: 0.5,
   });
@@ -50,6 +54,7 @@ export default function EditarVideo(props: {
   }, [v, ed.inicioMs, ed.fimMs]);
 
   const mudou =
+    !!props.deixarLeve ||
     ed.formato !== "original" ||
     ed.inicioMs > 0 ||
     ed.fimMs < props.duracaoMs - 50;
