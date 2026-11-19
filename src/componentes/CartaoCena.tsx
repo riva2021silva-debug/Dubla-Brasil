@@ -14,10 +14,11 @@ export default function CartaoCena({ cena, para }: { cena: Cena; para?: string }
       <Capa cena={cena} />
       <div className="corpo">
         <h3>{cena.titulo}</h3>
+        {cena.tipo === "musica" && <span className="selo-musica">🎤 Música · cantar</span>}
         <div className="linha pequeno suave">
           <span>{formatarTempo(cena.duracaoMs, false)}</span>·
           <span>
-            {cena.falas.length} {cena.falas.length === 1 ? "fala" : "falas"}
+            {cena.falas.length} {cena.tipo === "musica" ? (cena.falas.length === 1 ? "trecho" : "trechos") : cena.falas.length === 1 ? "fala" : "falas"}
           </span>
           ·
           <span>

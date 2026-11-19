@@ -51,7 +51,11 @@ function wavEstereo(esq: Float32Array, dir: Float32Array, taxa: number): Blob {
   return new Blob([dados.buffer], { type: "audio/wav" });
 }
 
-export async function gerarTrilhaDeFundo(urlVideo: string, aoProgredir: (p: ProgressoFundo) => void): Promise<{ arquivo: File; motor: string }> {
+export async function gerarTrilhaDeFundo(
+  urlVideo: string,
+  aoProgredir: (p: ProgressoFundo) => void,
+  opcoes: { comVoz?: boolean } = {},
+): Promise<{ arquivo: File; motor: string; voz?: File }> {
   aoProgredir({ etapa: "lendo", fracao: 0, detalhe: "Lendo o áudio do vídeo…" });
   const { esq, dir } = await audioDoVideo(urlVideo);
   return new Promise((resolve, reject) => {
@@ -63,17 +67,19 @@ export async function gerarTrilhaDeFundo(urlVideo: string, aoProgredir: (p: Prog
         w.terminate();
         if (m.tipo === "pronto") {
           const wav = wavEstereo(m.esq, m.dir, TAXA);
+          const wavVoz = opcoes.comVoz && m.vozEsq && m.vozDir ? wavEstereo(m.vozEsq, m.vozDir, TAXA) : null;
           // Comprime (M4A, umas 10x menor): ocupa menos espaço no servidor e baixa mais rápido no celular.
           aoProgredir({ etapa: "separando", fracao: 1, detalhe: "Comprimindo a trilha…" });
-          void import("../otimizarVideo")
-            .then(({ comprimirAudio }) => comprimirAudio(wav))
-            .catch(() => null)
-            .then((m4a) =>
-              resolve({
-                arquivo: m4a ? new File([m4a], "fundo-ia.m4a", { type: "audio/mp4" }) : new File([wav], "fundo-ia.wav", { type: "audio/wav" }),
-                motor: m.motor,
-              }),
-            );
+          void (async () => {
+            const { comprimirAudio } = await import("../otimizarVideo").catch(() => ({ comprimirAudio: async () => null }));
+            const m4a = await comprimirAudio(wav).catch(() => null);
+            const vozM4a = wavVoz ? await comprimirAudio(wavVoz).catch(() => null) : null;
+            resolve({
+              arquivo: m4a ? new File([m4a], "fundo-ia.m4a", { type: "audio/mp4" }) : new File([wav], "fundo-ia.wav", { type: "audio/wav" }),
+              motor: m.motor,
+              ...(wavVoz ? { voz: vozM4a ? new File([vozM4a], "voz-ia.m4a", { type: "audio/mp4" }) : new File([wavVoz], "voz-ia.wav", { type: "audio/wav" }) } : {}),
+            });
+          })();
         }
         else reject(new Error(/fetch|network|Failed to fetch|NetworkError/i.test(m.mensagem) ? "Sem internet para baixar a IA. Conecte-se e tente de novo." : m.mensagem));
       }

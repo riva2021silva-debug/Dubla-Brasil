@@ -82,6 +82,8 @@ interface LinhaCena {
   publicada: boolean;
   criada_em: string;
   atualizada_em: string;
+  tipo?: string | null;
+  voz_path?: string | null;
 }
 
 function linhaParaCena(l: LinhaCena): Cena {
@@ -99,10 +101,13 @@ function linhaParaCena(l: LinhaCena): Cena {
     publicada: l.publicada,
     criadaEm: Date.parse(l.criada_em),
     atualizadaEm: Date.parse(l.atualizada_em),
+    tipo: l.tipo === "musica" ? "musica" : "cena",
+    voz: l.voz_path ? { tipo: "url", url: urlPublica(l.voz_path) } : null,
     caminhos: {
       video: l.video_path,
       fundo: l.fundo_path,
       capa: l.capa_path,
+      voz: l.voz_path ?? null,
       rostos: Object.fromEntries((l.personagens ?? []).filter((p) => p.fotoPath).map((p) => [p.id, p.fotoPath as string])),
     },
   };
@@ -128,7 +133,7 @@ export async function obterCena(id: string): Promise<Cena | undefined> {
  */
 export async function salvarCena(
   cena: Cena,
-  arquivos: { video?: Blob; fundo?: Blob | null; capa?: Blob; rostos?: Record<string, Blob | null> } = {},
+  arquivos: { video?: Blob; fundo?: Blob | null; capa?: Blob; voz?: Blob | null; rostos?: Record<string, Blob | null> } = {},
 ): Promise<Cena> {
   const antes = cena.caminhos;
   const pasta = `cenas/${cena.id}`;
@@ -141,6 +146,9 @@ export async function salvarCena(
     if (arquivos.fundo) novos.push(fundo!);
     const capa = arquivos.capa ? await enviar(pasta, "capa", arquivos.capa) : (antes?.capa ?? null);
     if (arquivos.capa) novos.push(capa!);
+    // Música: a voz do cantor separada (para a nota de afinação). Vídeo novo invalida a voz antiga.
+    const voz = arquivos.voz ? await enviar(pasta, "voz", arquivos.voz) : arquivos.voz === null || arquivos.video ? null : (antes?.voz ?? null);
+    if (arquivos.voz) novos.push(voz!);
     // Rostos: Blob = foto nova; null = remover; ausente = manter a atual.
     const personagens = [];
     for (const p of cena.personagens) {
@@ -166,9 +174,16 @@ export async function salvarCena(
       falas: cena.falas,
       publicada: cena.publicada !== false,
     };
-    const { data, error } = await supabase.from("cenas").upsert(linha).select("*").single();
+    const extras = { tipo: cena.tipo === "musica" ? "musica" : "cena", voz_path: voz };
+    let { data, error } = await supabase.from("cenas").upsert({ ...linha, ...extras }).select("*").single();
+    // Servidor ainda sem o Modo Cantar (arquivo modo-cantar.sql): salva a cena normal.
+    if (error && /tipo|voz_path|PGRST204|42703/.test(`${error.code} ${error.message}`)) {
+      if (cena.tipo === "musica") throw new Error("O Modo Cantar ainda não foi ativado no servidor: rode o arquivo modo-cantar.sql no Supabase.");
+      ({ data, error } = await supabase.from("cenas").upsert(linha).select("*").single());
+    }
     if (error) falhou(error);
     await apagarArquivos([
+      voz !== (antes?.voz ?? null) ? antes?.voz : null,
       arquivos.video ? antes?.video : null,
       arquivos.fundo !== undefined ? antes?.fundo : null,
       arquivos.capa ? antes?.capa : null,
@@ -189,7 +204,7 @@ export async function publicarCena(id: string, publicada: boolean) {
 export async function excluirCena(c: Cena) {
   const { error } = await supabase.from("cenas").delete().eq("id", c.id);
   if (error) falhou(error);
-  await apagarArquivos([c.caminhos?.video, c.caminhos?.fundo, c.caminhos?.capa, ...Object.values(c.caminhos?.rostos ?? {})]);
+  await apagarArquivos([c.caminhos?.video, c.caminhos?.fundo, c.caminhos?.capa, c.caminhos?.voz, ...Object.values(c.caminhos?.rostos ?? {})]);
 }
 
 // ---------- Sons ----------

@@ -588,3 +588,10 @@ kbd { background: var(--superficie-2); border: 1px solid var(--borda); border-bo
 .aviso-espaco { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; padding: 14px 16px; border-radius: 16px; background: rgb(250 204 21 / 0.1); border: 1px solid rgb(250 204 21 / 0.5); }
 .barra-espaco { margin-top: 8px; height: 8px; width: min(320px, 100%); border-radius: 999px; background: rgb(255 255 255 / 0.1); overflow: hidden; }
 .barra-espaco span { display: block; height: 100%; background: linear-gradient(90deg, #facc15, #ef4444); }
+/* Modo Cantar */
+.aviso-cantar { padding: 8px 12px; border-radius: 12px; background: rgb(236 72 153 / 0.12); border: 1px solid rgb(236 72 153 / 0.45); }
+.nota-afinacao { margin-top: 6px; display: inline-flex; gap: 6px; align-items: center; padding: 4px 10px; border-radius: 999px; background: rgb(34 197 94 / 0.15); border: 1px solid rgb(34 197 94 / 0.5); font-size: 14px; }
+.selo-musica { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; background: rgb(236 72 153 / 0.25); color: #fbcfe8; font-size: 12px; font-weight: 700; }
+.filtro-tipo { display: flex; gap: 6px; flex-wrap: wrap; }
+.filtro-tipo button { border: 1px solid var(--borda); background: transparent; color: inherit; padding: 6px 12px; border-radius: 999px; font: inherit; cursor: pointer; }
+.filtro-tipo button.ativo { background: var(--amarelo); color: #1a0b3d; border-color: var(--amarelo); font-weight: 700; }

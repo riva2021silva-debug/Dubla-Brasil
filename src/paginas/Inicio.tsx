@@ -24,6 +24,11 @@ export default function Inicio() {
             <Link className="botao botao-primario botao-grande" to="/cenas">
               Escolher uma cena →
             </Link>
+            {(cenas.dado ?? []).some((c) => c.tipo === "musica") && (
+              <Link className="botao botao-grande" to="/cenas?tipo=musica">
+                🎤 Cantar
+              </Link>
+            )}
             <Link className="botao botao-grande" to="/meus-dubs">
               Meus dubs
             </Link>

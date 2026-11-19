@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import CartaoCena from "../componentes/CartaoCena";
 import { todasAsCenas, useCarregar } from "../ganchos";
 
@@ -8,10 +9,13 @@ export default function Biblioteca() {
   const cenas = useCarregar(() => todasAsCenas(), []);
   const [busca, setBusca] = useState("");
   const [ordem, setOrdem] = useState<Ordem>("recentes");
+  const [params, setParams] = useSearchParams();
+  const tipo = (params.get("tipo") as "cena" | "musica" | null) ?? "todas";
+  const temMusicas = (cenas.dado ?? []).some((c) => c.tipo === "musica");
 
   const visiveis = useMemo(() => {
     const q = busca.trim().toLowerCase();
-    const lista = (cenas.dado ?? []).filter((c) =>
+    const lista = (cenas.dado ?? []).filter((c) => tipo === "todas" || (tipo === "musica" ? c.tipo === "musica" : c.tipo !== "musica")).filter((c) =>
       !q
         ? true
         : [c.titulo, c.descricao, ...c.personagens.map((p) => p.nome), ...c.falas.map((f) => f.texto)].join(" ").toLowerCase().includes(q),
@@ -23,11 +27,26 @@ export default function Biblioteca() {
       falas: (a, b) => a.falas.length - b.falas.length,
     };
     return [...lista].sort(cmp[ordem]);
-  }, [cenas.dado, busca, ordem]);
+  }, [cenas.dado, busca, ordem, tipo]);
 
   return (
     <>
-      <h1>Cenas</h1>
+      <h1>{tipo === "musica" ? "🎤 Músicas" : "Cenas"}</h1>
+      {(temMusicas || tipo !== "todas") && (
+        <div className="filtro-tipo" role="group" aria-label="Mostrar" style={{ marginBottom: 12 }}>
+          {(
+            [
+              ["todas", "Tudo"],
+              ["cena", "🎬 Dublar cenas"],
+              ["musica", "🎤 Cantar músicas"],
+            ] as const
+          ).map(([v, rotulo]) => (
+            <button key={v} className={tipo === v ? "ativo" : ""} aria-pressed={tipo === v} onClick={() => setParams(v === "todas" ? {} : { tipo: v })}>
+              {rotulo}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="linha" style={{ marginBottom: 18 }}>
         <input
           id="busca-cenas"

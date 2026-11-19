@@ -63,6 +63,8 @@ export class Mixer {
    * alto-falante (era isso que fazia eco e chiado). O som ambiente do vídeo entra depois, no resultado final.
    */
   gravando = false;
+  /** Modo Cantar: enquanto grava, o instrumental continua tocando (a pessoa usa fone de ouvido). */
+  cantando = false;
   private limpar: () => void;
 
   private video: HTMLVideoElement;
@@ -210,8 +212,9 @@ export class Mixer {
     const originalNaJanela = gravando ? this.guia : Math.max(this.guia, temFundo ? 0 : this.volumeOriginalNaMinhaFala);
     // Gravando: vídeo mudo (o microfone só capta você). O som ambiente entra depois, no resultado.
     // Com o "Guia" ligado (fone de ouvido) a cena continua tocando e a voz original fica baixinha na sua fala.
-    const nivelFundo = gravando ? 0 : 1;
-    const foraDaJanela = gravando && this.guia === 0 ? 0 : 1;
+    const mudo = gravando && !this.cantando;
+    const nivelFundo = mudo ? 0 : 1;
+    const foraDaJanela = mudo && this.guia === 0 ? 0 : 1;
     const janelas = gravando
       ? this.janelas.map((j) => ({ inicioMs: Math.max(0, j.inicioMs - MARGEM_GRAVANDO_ANTES_MS), fimMs: j.fimMs + MARGEM_GRAVANDO_DEPOIS_MS }))
       : this.janelas;

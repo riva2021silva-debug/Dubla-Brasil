@@ -11,7 +11,8 @@ import { decodificar, Mixer } from "../audio/mixer";
 import { irPara } from "../audio/sincronia";
 import { trechoNoTempo } from "../audio/camera";
 import { usePlano } from "../plano";
-import type { Cena, Dub } from "../tipos";
+import { ehMusica, type Cena, type Dub } from "../tipos";
+import { rotuloAfinacao } from "../audio/afinacao";
 import { formatarTempo, gerarCapa, nomeArquivo, salvarVideoNaGaleria } from "../util";
 
 export default function Sessao() {
@@ -344,6 +345,8 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
   };
 
   const nomes = cena.personagens.filter((p) => dub.papeis.includes(p.id));
+  const valoresNota = Object.values(dub.notas ?? {});
+  const notaFinal = valoresNota.length ? Math.round(valoresNota.reduce((a, b) => a + b, 0) / valoresNota.length) : null;
 
   return (
     <div className="pilha" style={{ maxWidth: 960, margin: "0 auto" }}>
@@ -360,8 +363,13 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
             </button>
           </span>
           <h1 style={{ marginTop: 8 }}>{cena.titulo}</h1>
+          {ehMusica(cena) && notaFinal !== null && (
+            <div className="nota-afinacao" style={{ marginBottom: 6 }}>
+              🎤 Nota final: <b>{notaFinal}%</b> · {rotuloAfinacao(notaFinal)}
+            </div>
+          )}
           <span className="suave">
-            Você dublou:{" "}
+            {ehMusica(cena) ? "Você cantou" : "Você dublou"}:{" "}
             {nomes.map((p, i) => (
               <span key={p.id} style={{ color: p.cor, fontWeight: 800 }}>
                 {p.nome}

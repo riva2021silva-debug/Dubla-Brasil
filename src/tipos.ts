@@ -44,8 +44,14 @@ export interface Cena {
   /** Imagem de capa gerada a partir do vídeo. */
   capa?: FonteMidia | null;
   /** Caminhos dos arquivos no servidor (pasta "midias"), quando a cena vem do servidor. */
-  caminhos?: { video: string; fundo: string | null; capa: string | null; rostos?: Record<string, string> };
+  caminhos?: { video: string; fundo: string | null; capa: string | null; voz?: string | null; rostos?: Record<string, string> };
+  /** "musica" = Modo Cantar (karaokê com nota de afinação). Ausente = cena de dublagem. */
+  tipo?: "cena" | "musica";
+  /** Música: a voz do cantor separada pela IA (para comparar a afinação). */
+  voz?: FonteMidia | null;
 }
+
+export const ehMusica = (c: Cena) => c.tipo === "musica";
 
 export const estaPublicada = (c: Cena) => c.publicada !== false;
 
@@ -68,6 +74,8 @@ export interface Dub {
   tomadas: Record<string, Tomada>;
   /** Vídeos da câmera gravados junto com as falas (aparecem no cantinho, como numa chamada). */
   cameras?: TrechoCamera[];
+  /** Modo Cantar: nota de afinação (0 a 100) de cada fala cantada. */
+  notas?: Record<string, number>;
   /** Dueto: dublando junto com um dub da galeria. O vídeo publicado (com a voz da outra pessoa) vira a base. */
   base?: DuetoBase;
   nome: string;

@@ -1,24 +1,27 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { urlDaMidia } from "../db";
 import { mensagemDeErro, salvarCena } from "../nuvem";
 import type { Cena } from "../tipos";
 
 type Estado = { titulo: string; texto: string; tipo: "feito" | "erro" | "andando" };
+const CHAVE_AUTO = "dubla-brasil:gerar-fundo";
+
+/** Cena que ainda precisa da IA: sem trilha de fundo, ou música sem a voz separada (para a nota). */
+const precisa = (c: Cena) => !!c.caminhos?.video && (!c.caminhos?.fundo || (c.tipo === "musica" && !c.caminhos?.voz));
 
 /**
- * Admin: gera a "trilha de fundo" (o som da cena SEM as vozes: música e efeitos) de todas as cenas que ainda não
- * têm, com a IA de separação. É o que deixa a dublagem limpa: na fala da Rose sai só a voz dela (a música continua)
- * e entra a voz de quem dubla; na fala do Jack toca o original.
+ * Admin: gera a "trilha de fundo" (o som da cena SEM as vozes: música e efeitos) com a IA de separação. É o que deixa
+ * a dublagem limpa. Nas músicas também guarda a voz do cantor, para dar a nota de afinação no Modo Cantar.
+ * Logo depois de salvar uma cena nova sem trilha, começa sozinho para ela.
  */
 export default function GerarFundos({ cenas, aoTerminar }: { cenas: Cena[]; aoTerminar: () => void }) {
   const [rodando, setRodando] = useState(false);
   const [estados, setEstados] = useState<Estado[]>([]);
-  const semFundo = cenas.filter((c) => c.caminhos?.video && !c.caminhos?.fundo);
-  if (!cenas.length) return null;
+  const caixa = useRef<HTMLElement>(null);
+  const semFundo = cenas.filter(precisa);
 
-  const rodar = async () => {
+  const rodar = async (fila: Cena[]) => {
     setRodando(true);
-    const fila = semFundo;
     const lista: Estado[] = fila.map((c) => ({ titulo: c.titulo.trim(), texto: "na fila…", tipo: "andando" }));
     setEstados([...lista]);
     const mudar = (i: number, e: Partial<Estado>) => {
@@ -32,11 +35,12 @@ export default function GerarFundos({ cenas, aoTerminar }: { cenas: Cena[]; aoTe
       try {
         const inicio = Date.now();
         const url = await urlDaMidia(c.video);
-        const { arquivo } = await gerarTrilhaDeFundo(url, (p) => mudar(i, { texto: `${p.detalhe} ${Math.round(p.fracao * 100)}%` }));
+        const musica = c.tipo === "musica";
+        const { arquivo, voz } = await gerarTrilhaDeFundo(url, (p) => mudar(i, { texto: `${p.detalhe} ${Math.round(p.fracao * 100)}%` }), { comVoz: musica });
         mudar(i, { texto: "enviando…" });
-        await salvarCena(c, { fundo: arquivo });
+        await salvarCena(c, { fundo: arquivo, ...(voz ? { voz } : {}) });
         feitas++;
-        mudar(i, { texto: `✅ trilha de fundo pronta (${Math.max(1, Math.round((Date.now() - inicio) / 60000))} min)`, tipo: "feito" });
+        mudar(i, { texto: `✅ ${musica ? "instrumental e voz separados" : "trilha de fundo pronta"} (${Math.max(1, Math.round((Date.now() - inicio) / 60000))} min)`, tipo: "feito" });
       } catch (e) {
         mudar(i, { texto: `não deu: ${mensagemDeErro(e)}`, tipo: "erro" });
       }
@@ -45,8 +49,33 @@ export default function GerarFundos({ cenas, aoTerminar }: { cenas: Cena[]; aoTe
     if (feitas) aoTerminar();
   };
 
+  // Cena nova acabou de ser salva sem trilha: começa sozinho (só para ela).
+  const jaComecou = useRef(false);
+  useEffect(() => {
+    if (jaComecou.current) return;
+    let id: string | null = null;
+    try {
+      id = sessionStorage.getItem(CHAVE_AUTO);
+    } catch {
+      /* sem armazenamento */
+    }
+    const alvo = id ? cenas.find((c) => c.id === id && precisa(c)) : undefined;
+    if (!alvo) return;
+    jaComecou.current = true;
+    try {
+      sessionStorage.removeItem(CHAVE_AUTO);
+    } catch {
+      /* ok */
+    }
+    caixa.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    void rodar([alvo]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cenas]);
+
+  if (!cenas.length) return null;
+
   return (
-    <section className="cartao pilha" style={{ gap: 8 }}>
+    <section className="cartao pilha" style={{ gap: 8 }} ref={caixa}>
       <div className="linha entre" style={{ flexWrap: "wrap", gap: 8 }}>
         <div>
           <b>✨ Trilha de fundo com IA (dublagem limpa)</b>
@@ -57,14 +86,19 @@ export default function GerarFundos({ cenas, aoTerminar }: { cenas: Cena[]; aoTe
           </div>
         </div>
         {semFundo.length > 0 && (
-          <button className="botao botao-primario" disabled={rodando} onClick={() => void rodar()}>
+          <button className="botao botao-primario" disabled={rodando} onClick={() => void rodar(semFundo)}>
             {rodando ? "Gerando…" : `✨ Gerar ${semFundo.length === 1 ? "a trilha" : `as ${semFundo.length} trilhas`}`}
           </button>
         )}
       </div>
+      {rodando && (
+        <p className="pequeno" style={{ margin: 0 }}>
+          ⏳ A IA está trabalhando. Deixe esta página aberta até terminar (alguns minutos por cena).
+        </p>
+      )}
       {semFundo.length > 0 && !rodando && !estados.length && (
         <p className="suave pequeno" style={{ margin: 0 }}>
-          Use o Chrome do computador: a IA (180 MB, baixa uma vez só) leva alguns minutos por cena. Deixe a página aberta até terminar.
+          Melhor no Chrome do computador: a IA (180 MB, baixa uma vez só) leva alguns minutos por cena. Deixe a página aberta até terminar.
         </p>
       )}
       {estados.length > 0 && (

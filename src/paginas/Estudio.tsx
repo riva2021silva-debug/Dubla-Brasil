@@ -3,16 +3,17 @@ import { Link, useParams } from "react-router-dom";
 import Avatar from "../componentes/Avatar";
 import FormaDeOnda, { type PontoAoVivo } from "../componentes/FormaDeOnda";
 import { useConfig } from "../config";
-import { db } from "../db";
+import { db, urlDaMidia } from "../db";
 import { buscarCena, cenaDoDub, useCarregar, useFormatoDoVideo, useMidiasDaCena, useTempoDoVideo } from "../ganchos";
 import { Microfone } from "../audio/microfone";
 import { Camera } from "../audio/camera";
 import { decodificar, Mixer, type TomadaTocavel } from "../audio/mixer";
+import { notaDeAfinacao, rotuloAfinacao } from "../audio/afinacao";
 import { compensacao, fatiarEmTomadas, FOLGA_FIM_MS, irPara, limitesDaFala, picoDe } from "../audio/sincronia";
 
 /** Quanto antes da fala o vídeo volta a andar depois do "1" (um respiro para entrar na hora certa). */
 const ENTRADA_MS = 250;
-import type { Cena, Dub, Fala, TrechoCamera } from "../tipos";
+import { ehMusica, type Cena, type Dub, type Fala, type TrechoCamera } from "../tipos";
 import { formatarTempo, novoId } from "../util";
 
 type Modo = "parado" | "gravando" | "original" | "minha" | "tocando";
@@ -68,6 +69,9 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
   const [dub, setDub] = useState(dubInicial);
   const [buffers, setBuffers] = useState<Record<string, AudioBuffer>>({});
   const [original, setOriginal] = useState<AudioBuffer | null>(null);
+  /** Modo Cantar: a voz do cantor separada pela IA (referência para a nota de afinação). */
+  const [vozCantor, setVozCantor] = useState<AudioBuffer | null>(null);
+  const musica = ehMusica(cena);
   const [modo, setModo] = useState<Modo>("parado");
   const [alvo, setAlvo] = useState<{ falas: Fala[]; fimMs: number } | null>(null);
   const [aoVivo, setAoVivo] = useState<PontoAoVivo[]>([]);
@@ -93,6 +97,7 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
     const m = new Mixer(video);
     mixer.current = m;
     m.definirFalasDaCena(cena.falas);
+    m.cantando = ehMusica(cena);
     const todosOsPapeis = cena.personagens.filter((p) => cena.falas.some((f) => f.personagemId === p.id)).every((p) => dub.papeis.includes(p.id));
     m.definirJanelas(minhas, todosOsPapeis);
     let vivo = true;
@@ -102,6 +107,13 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
         .then((b) => decodificar(m.ctx, b))
         .then((buf) => vivo && m.definirFundo(buf))
         .catch(() => vivo && setAviso("Não foi possível carregar a trilha de fundo; o áudio original será usado."));
+    if (ehMusica(cena) && cena.voz)
+      void urlDaMidia(cena.voz)
+        .then((u) => fetch(u))
+        .then((r) => r.blob())
+        .then((b) => decodificar(m.ctx, b))
+        .then((buf) => vivo && setVozCantor(buf))
+        .catch(() => {});
     // Áudio original para desenhar a forma de onda (opcional: se falhar, só não aparece).
     fetch(urls.video)
       .then((r) => r.blob())
@@ -328,7 +340,31 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
       return c;
     });
     void db.salvarDub(atualizado);
-  }, [tempo, alvo, modo, video, dub, cfg.latenciaMs, cfg.limparVoz, cfg.alinharVoz, original, parar]);
+    // Modo Cantar: nota de afinação de cada fala cantada (comparando com a voz do cantor).
+    const referencia = vozCantor ?? original;
+    if (musica && referencia) {
+      void (async () => {
+        const notas: Record<string, number> = {};
+        for (const id of idsGravados) {
+          const f = cena.falas.find((x) => x.id === id);
+          if (!f) continue;
+          try {
+            const buf = await decodificar(m.ctx, novas[id].audio);
+            const n = await notaDeAfinacao(referencia, f.inicioMs, f.fimMs, buf, novas[id].inicioMs);
+            if (n !== null) notas[id] = n;
+          } catch {
+            /* sem nota para esta fala */
+          }
+        }
+        if (!Object.keys(notas).length) return;
+        setDub((d) => {
+          const n = { ...d, notas: { ...(d.notas ?? {}), ...notas } };
+          void db.salvarDub(n);
+          return n;
+        });
+      })();
+    }
+  }, [tempo, alvo, modo, video, dub, cfg.latenciaMs, cfg.limparVoz, cfg.alinharVoz, original, parar, vozCantor, musica]);
 
   const ouvir = async (f: Fala, comoOriginal: boolean) => {
     if (!video || !mixer.current) return;
@@ -447,6 +483,11 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
           ▶ Resultado {qtdFeitas}/{total}
         </Link>
       </div>
+      {musica && (
+        <div className="aviso-cantar pequeno">
+          🎤 <b>Modo Cantar</b> · 🎧 use fone de ouvido: o instrumental toca enquanto você canta, e cada trecho ganha uma nota de afinação.
+        </div>
+      )}
       {dub.base && (
         <div className="linha-dueto pequeno">
           <span className="selo-dueto">🎭 Dueto com @{dub.base.apelido}</span> as outras vozes já estão no vídeo
@@ -537,6 +578,11 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
               >
                 {falaSel.texto || "…"}
               </p>
+            )}
+            {musica && dub.notas?.[falaSel.id] !== undefined && (
+              <div className="nota-afinacao" aria-label={`Afinação ${dub.notas[falaSel.id]} por cento`}>
+                🎯 Afinação <b>{dub.notas[falaSel.id]}%</b> · {rotuloAfinacao(dub.notas[falaSel.id])}
+              </div>
             )}
           </div>
 

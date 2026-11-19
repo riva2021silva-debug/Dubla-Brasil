@@ -54,6 +54,8 @@ export default function Editor() {
   const [erroCarga, setErroCarga] = useState<string | null>(null);
   const [video, setVideo] = useState<Arquivo | null>(null);
   const [fundo, setFundo] = useState<Arquivo | null>(null);
+  /** Música: a voz do cantor separada pela IA junto com a trilha (para a nota de afinação). */
+  const [vozNova, setVozNova] = useState<File | null>(null);
   const [el, setEl] = useState<HTMLVideoElement | null>(null);
   const [sel, setSel] = useState<string | null>(null);
   const [previa, setPrevia] = useState<string | null>(null); // id da fala que está tocando
@@ -389,8 +391,9 @@ export default function Editor() {
     try {
       const { gerarTrilhaDeFundo } = await import("../separacao");
       const inicio = Date.now();
-      const { arquivo } = await gerarTrilhaDeFundo(video.url, setProgressoFundo);
+      const { arquivo, voz } = await gerarTrilhaDeFundo(video.url, setProgressoFundo, { comVoz: cena.tipo === "musica" });
       setFundo({ url: URL.createObjectURL(arquivo), novo: arquivo });
+      if (voz) setVozNova(voz);
       setAlterado(true);
       setAvisoFundo(
         `✅ Trilha de fundo pronta em ${Math.max(1, Math.round((Date.now() - inicio) / 60000))} min (${(arquivo.size / 1024 / 1024).toFixed(1).replace(".", ",")} MB). Ouça acima e toque em “Salvar cena”.`,
@@ -546,14 +549,24 @@ export default function Editor() {
         }
       }
       setEtapa(video?.novo || fundo?.novo ? "Enviando os arquivos para o servidor…" : "Salvando…");
-      await salvarCena(c, {
+      const salva = await salvarCena(c, {
         video: videoNovo,
         fundo: fundo?.novo ? fundo.novo : !fundo && c.caminhos?.fundo ? null : undefined,
         capa,
+        ...(vozNova && fundo?.novo ? { voz: vozNova } : {}),
         rostos: { ...novosRostos, ...automaticos },
       });
       setAlterado(false);
       await apagarRascunho(chaveRascunho);
+      // Sem trilha de fundo (ou música sem a voz separada): a IA gera sozinha logo depois, na Administração.
+      const precisaIa = !salva.caminhos?.fundo || (salva.tipo === "musica" && !salva.caminhos?.voz);
+      if (precisaIa) {
+        try {
+          sessionStorage.setItem("dubla-brasil:gerar-fundo", salva.id);
+        } catch {
+          /* sem armazenamento: o admin usa o botão */
+        }
+      }
       navegar("/admin");
     } catch (e) {
       const msg = mensagemDeErro(e);
@@ -606,6 +619,15 @@ export default function Editor() {
           </p>
         </div>
         <div className="linha">
+          <label className="linha interruptor" title="Modo Cantar: karaokê com nota de afinação">
+            <input
+              id="eh-musica"
+              type="checkbox"
+              checked={cena.tipo === "musica"}
+              onChange={(e) => atualizar((c) => ({ ...c, tipo: e.target.checked ? "musica" : "cena" }))}
+            />
+            <span>🎤 É uma música</span>
+          </label>
           <label className="linha interruptor">
             <input id="publicada" type="checkbox" checked={estaPublicada(cena)} onChange={(e) => atualizar((c) => ({ ...c, publicada: e.target.checked }))} />
             <span>Publicada no app</span>

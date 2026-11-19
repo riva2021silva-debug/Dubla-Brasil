@@ -16,7 +16,7 @@ export interface PedidoSeparar {
 }
 export type MensagemSeparar =
   | { tipo: "progresso"; etapa: "baixando" | "preparando" | "separando"; fracao: number; detalhe: string }
-  | { tipo: "pronto"; esq: Float32Array; dir: Float32Array; motor: string }
+  | { tipo: "pronto"; esq: Float32Array; dir: Float32Array; motor: string; vozEsq?: Float32Array; vozDir?: Float32Array }
   | { tipo: "erro"; mensagem: string };
 
 const enviar = (m: MensagemSeparar, transferir: Transferable[] = []) => (self as unknown as Worker).postMessage(m, transferir);
@@ -80,7 +80,8 @@ self.onmessage = async (e: MessageEvent<PedidoSeparar>) => {
       const falta = f > 0 ? Math.max(0, (passou / f) * (1 - f)) : 0;
       enviar({ tipo: "progresso", etapa: "separando", fracao: f, detalhe: `Tirando as vozes do vídeo… ${Math.round(f * 100)}%${f > 0 && f < 1 ? ` (falta ~${Math.ceil(falta / 60)} min)` : ""}` });
     });
-    enviar({ tipo: "pronto", esq: r.fundo[0], dir: r.fundo[1], motor }, [r.fundo[0].buffer, r.fundo[1].buffer]);
+    // Também manda a voz separada (usada no Modo Cantar para dar a nota de afinação).
+    enviar({ tipo: "pronto", esq: r.fundo[0], dir: r.fundo[1], motor, vozEsq: r.voz[0], vozDir: r.voz[1] }, [r.fundo[0].buffer, r.fundo[1].buffer, r.voz[0].buffer, r.voz[1].buffer]);
   } catch (err) {
     enviar({ tipo: "erro", mensagem: err instanceof Error ? err.message : String(err) });
   }
