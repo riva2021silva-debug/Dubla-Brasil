@@ -479,7 +479,8 @@ export function qualidadeParaGaleria(duracaoMs: number, alvoBytes: number) {
   const seg = Math.max(5, duracaoMs / 1000 + 1);
   const audio = seg > 120 ? 64_000 : 96_000;
   const total = (alvoBytes * 8) / seg;
-  const video = Math.round(Math.min(1_500_000, Math.max(200_000, total - audio - 30_000)));
-  const largura = video >= 700_000 ? 720 : video >= 400_000 ? 540 : 426;
+  // No máximo ~1 Mbit/s: na tela do celular fica igual, e cada dub ocupa ~40% menos (o plano grátis do servidor rende mais).
+  const video = Math.round(Math.min(1_000_000, Math.max(200_000, total - audio - 30_000)));
+  const largura = video >= 850_000 ? 720 : video >= 450_000 ? 540 : 426;
   return { video, audio, largura };
 }

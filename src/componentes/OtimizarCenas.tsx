@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { blobDaMidia } from "../db";
 import { mensagemDeErro, salvarCena } from "../nuvem";
-import { diagnosticar, otimizarVideo, podeOtimizar } from "../otimizarVideo";
+import { comprimirAudio, diagnosticar, otimizarVideo, podeOtimizar } from "../otimizarVideo";
 import type { Cena } from "../tipos";
 
 type Estado = { titulo: string; texto: string; tipo: "ok" | "feito" | "erro" | "andando" };
@@ -32,19 +32,30 @@ export default function OtimizarCenas({ cenas, aoTerminar }: { cenas: Cena[]; ao
         const video = await blobDaMidia(c.video);
         mudar(i, { texto: "conferindo…" });
         const d = await diagnosticar(video);
-        if (!d.motivos.length) {
+        // Trilha de fundo em WAV (enorme): comprime para M4A.
+        let fundoNovo: Blob | null = null;
+        if (c.fundo && c.caminhos?.fundo?.toLowerCase().endsWith(".wav")) {
+          mudar(i, { texto: "🎵 comprimindo a trilha de fundo…" });
+          const m4a = await comprimirAudio(await blobDaMidia(c.fundo)).catch(() => null);
+          if (m4a) fundoNovo = new File([m4a], "fundo.m4a", { type: "audio/mp4" });
+        }
+        let novo: Blob | null = null;
+        if (d.motivos.length) {
+          novo = await otimizarVideo(video, (f) => mudar(i, { texto: `⚡ otimizando… ${Math.round(f * 100)}%` }));
+          if (!novo && !fundoNovo) {
+            mudar(i, { texto: "este aparelho não consegue refazer o vídeo (tente no Chrome do computador)", tipo: "erro" });
+            continue;
+          }
+        }
+        if (!novo && !fundoNovo) {
           mudar(i, { texto: "✅ já estava leve", tipo: "ok" });
           continue;
         }
-        const novo = await otimizarVideo(video, (f) => mudar(i, { texto: `⚡ otimizando… ${Math.round(f * 100)}%` }));
-        if (!novo) {
-          mudar(i, { texto: "este aparelho não consegue refazer o vídeo (tente no Chrome do computador)", tipo: "erro" });
-          continue;
-        }
         mudar(i, { texto: "enviando…" });
-        await salvarCena(c, { video: novo });
+        await salvarCena(c, { ...(novo ? { video: novo } : {}), ...(fundoNovo ? { fundo: fundoNovo } : {}) });
         trocou = true;
-        mudar(i, { texto: `✅ otimizado (${d.motivos.join("; ")})`, tipo: "feito" });
+        const feito = [novo ? `vídeo otimizado (${d.motivos.join("; ")})` : "", fundoNovo ? "trilha de fundo comprimida" : ""].filter(Boolean).join(" · ");
+        mudar(i, { texto: `✅ ${feito}`, tipo: "feito" });
       } catch (e) {
         mudar(i, { texto: `não deu: ${mensagemDeErro(e)}`, tipo: "erro" });
       }

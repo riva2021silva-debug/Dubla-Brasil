@@ -261,6 +261,16 @@ export async function listarParaModeracao(): Promise<Publicacao[]> {
   return (data as unknown as Linha[]).map(paraPublicacao);
 }
 
+/** Para liberar espaço: dubs mais antigos que `dias` com no máximo `maxCurtidas` curtidas (mais velhos primeiro). */
+export async function listarParaLimpeza(dias: number, maxCurtidas: number): Promise<Publicacao[]> {
+  const antesDe = new Date(Date.now() - dias * 86_400_000).toISOString();
+  const { data, error } = await comPerfil((perfis) =>
+    supabase.from("publicacoes").select(`*, ${perfis}`).lt("criada_em", antesDe).lte("curtidas", maxCurtidas).order("criada_em", { ascending: true }).limit(300),
+  );
+  if (error) erro(error);
+  return (data as unknown as Linha[]).map(paraPublicacao);
+}
+
 // ---------- Reações, comentários e denúncias ----------
 
 export async function minhasReacoes(ids: string[]): Promise<Record<string, 1 | -1>> {

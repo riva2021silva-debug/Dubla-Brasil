@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useCarregar } from "../ganchos";
+import LimparGaleria from "../componentes/LimparGaleria";
 import { apagarPublicacao, listarParaModeracao, ocultarPublicacao, tempoAtras, type Publicacao } from "../galeria";
 
 /** Moderação da galeria: os dubs mais denunciados aparecem primeiro. */
@@ -32,6 +33,7 @@ export default function AdminGaleria() {
           </>
         )}
       </p>
+      <LimparGaleria aoTerminar={lista.recarregar} />
       {erro && <p className="alerta">{erro}</p>}
       {lista.erro && <p className="alerta">{lista.erro}</p>}
       {lista.carregando ? (

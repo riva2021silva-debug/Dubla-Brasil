@@ -109,3 +109,35 @@ export async function otimizarVideo(b: Blob, aoProgredir: (fracao: number) => vo
   if (temSom && !somNovo) return null;
   return novo;
 }
+
+/**
+ * Comprime um áudio (ex.: a trilha de fundo em WAV, que é enorme) para M4A/AAC 128 kbps: fica umas 10 vezes menor,
+ * sem diferença que dê para ouvir, e toca em qualquer celular. Se o aparelho não tem o codificador AAC, usa um
+ * codificador próprio (WebAssembly). Devolve null se não der (aí fica o original).
+ */
+export async function comprimirAudio(b: Blob): Promise<Blob | null> {
+  if (typeof AudioDecoder === "undefined") return null;
+  const mb = await import("mediabunny");
+  if (!(await mb.canEncodeAudio("aac"))) {
+    const { registerAacEncoder } = await import("@mediabunny/aac-encoder");
+    registerAacEncoder();
+  }
+  const entrada = new mb.Input({ source: new mb.BlobSource(b), formats: mb.ALL_FORMATS });
+  const trilha = await entrada.getPrimaryAudioTrack();
+  if (!trilha) return null;
+  const duracao = await entrada.computeDuration();
+  const alvo = new mb.BufferTarget();
+  const saida = new mb.Output({ format: new mb.Mp4OutputFormat({ fastStart: "in-memory" }), target: alvo });
+  const conversao = await mb.Conversion.init({ input: entrada, output: saida, audio: { codec: "aac", bitrate: 128_000, forceTranscode: true }, showWarnings: false });
+  if (!conversao.isValid || conversao.discardedTracks.length) return null;
+  await conversao.execute();
+  entrada.dispose();
+  if (!alvo.buffer) return null;
+  const novo = new Blob([alvo.buffer], { type: "audio/mp4" });
+  // Confere: mesma duração (±0,2 s) e menor que o original.
+  const conferir = new mb.Input({ source: new mb.BlobSource(novo), formats: mb.ALL_FORMATS });
+  const durNova = await conferir.computeDuration();
+  conferir.dispose();
+  if (Math.abs(durNova - duracao) > 0.2 || novo.size >= b.size) return null;
+  return novo;
+}

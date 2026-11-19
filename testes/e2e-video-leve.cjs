@@ -77,13 +77,29 @@ const baixarDoServidor = async (caminho, nome) => {
   await adm.goto(BASE + "#/cenas");
   await adm.goto(BASE + "#/admin");
   await adm.getByRole("button", { name: "⚡ Otimizar vídeos" }).click();
-  await adm.getByText(/✅ otimizado/).waitFor({ timeout: 120000 });
+  await adm.getByText(/✅ vídeo otimizado/).waitFor({ timeout: 120000 });
   await adm.screenshot({ path: path.join(SAIDA, "video-leve-admin.png") });
   cena = (await (await fetch(`${SERVIDOR}/__estado`)).json()).cenas.find((c) => c.id === cena.id);
   const refeito = analisar(await baixarDoServidor(cena.video_path, "video-leve-refeito.mp4"));
   console.log("Cena antiga depois do botão:", JSON.stringify(refeito));
   console.log("2) “⚡ Otimizar vídeos” refaz a cena antiga:", cena.video_path !== caminhoRuim && bom(refeito) ? "ok" : "FALHOU");
   console.log("3) Falas da cena continuam as mesmas:", cena.falas.length === 2 && cena.falas[0].inicioMs === 2000 ? "ok" : "FALHOU");
+  // Trilha de fundo antiga em WAV (pesada): o botão comprime para M4A, com a mesma duração.
+  const WAV = path.join(SAIDA, "fundo-pesado.wav");
+  execFileSync("ffmpeg", ["-v", "error", "-y", "-f", "lavfi", "-i", "sine=frequency=330:sample_rate=44100", "-t", "12", "-ac", "2", WAV]);
+  const caminhoWav = `cenas/${cena.id}/fundo-antigo.wav`;
+  await fetch(`${SERVIDOR}/storage/v1/object/midias/${caminhoWav}`, { method: "POST", headers: { Authorization: "Bearer token-admin-de-teste", "Content-Type": "audio/wav" }, body: fs.readFileSync(WAV) });
+  await fetch(`${SERVIDOR}/rest/v1/cenas?id=eq.${cena.id}`, { method: "PATCH", headers: { Authorization: "Bearer token-admin-de-teste", "Content-Type": "application/json" }, body: JSON.stringify({ fundo_path: caminhoWav }) });
+  await adm.goto(BASE + "#/cenas");
+  await adm.goto(BASE + "#/admin");
+  await adm.getByRole("button", { name: "⚡ Otimizar vídeos" }).click();
+  await adm.getByText(/trilha de fundo comprimida/).waitFor({ timeout: 120000 });
+  cena = (await (await fetch(`${SERVIDOR}/__estado`)).json()).cenas.find((c) => c.id === cena.id);
+  const m4a = await baixarDoServidor(cena.fundo_path, "fundo-comprimido.m4a");
+  const durM4a = Number(spawnSync("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", m4a], { encoding: "utf8" }).stdout);
+  const kb = (f) => Math.round(fs.statSync(f).size / 1024);
+  console.log(`Trilha de fundo: WAV ${kb(WAV)} KB → M4A ${kb(m4a)} KB · duração ${durM4a.toFixed(2)} s`);
+  console.log("5) Trilha de fundo em WAV vira M4A bem menor, com a mesma duração:", cena.fundo_path.endsWith(".m4a") && kb(m4a) * 5 < kb(WAV) && Math.abs(durM4a - 12) < 0.2 ? "ok" : "FALHOU");
   // Rodando de novo: tudo já está leve, nada é refeito.
   await adm.getByRole("button", { name: "⚡ Otimizar vídeos" }).click();
   await adm.getByText("✅ já estava leve").first().waitFor({ timeout: 60000 });

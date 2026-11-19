@@ -1,11 +1,11 @@
 {
-  "versao": "4.4",
-  "codigo": 35,
+  "versao": "4.5",
+  "codigo": 36,
   "data": "2026-11-19",
   "novidades": [
-    "Admin: se a internet cair no meio do envio do vídeo, o app tenta de novo sozinho (até 3 vezes)",
-    "Admin: quando não dá para salvar, o app explica o que fazer e a sua edição continua guardada",
-    "Legendas da IA sem “ah, ah, ah, ah…” repetido dezenas de vezes"
+    "Trilhas de fundo comprimidas (umas 10x menores): o servidor aguenta muito mais gente e as cenas abrem mais rápido",
+    "Dubs da Galeria mais leves (cerca de 40% menores), com a mesma qualidade na tela do celular",
+    "Admin: “🧹 Liberar espaço” na Galeria apaga dubs antigos e sem curtidas (mostra a lista antes e só apaga quando você confirma)"
   ],
   "apk": "https://dublabr.netlify.app/baixar/DublaBrasilAI.apk"
 }

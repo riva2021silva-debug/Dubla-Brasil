@@ -156,7 +156,10 @@ function filtrar(linhas, params) {
     const [op, ...resto] = v.split(".");
     const alvo = resto.join(".");
     if (op === "eq") r = r.filter((l) => String(l[k]) === alvo);
-    else if (op === "lt") r = r.filter((l) => String(l[k]) < alvo);
+    else if (op === "lt" || op === "lte") {
+      const cmp = (v) => (typeof v === "number" && !isNaN(Number(alvo)) ? v - Number(alvo) : String(v) < alvo ? -1 : String(v) > alvo ? 1 : 0);
+      r = r.filter((l) => (op === "lt" ? cmp(l[k]) < 0 : cmp(l[k]) <= 0));
+    }
     else if (op === "in") {
       const lista = alvo.replace(/^\(|\)$/g, "").split(",").map((s) => s.replace(/^"|"$/g, ""));
       r = r.filter((l) => lista.includes(String(l[k])));

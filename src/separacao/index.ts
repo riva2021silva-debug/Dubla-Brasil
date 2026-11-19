@@ -61,7 +61,20 @@ export async function gerarTrilhaDeFundo(urlVideo: string, aoProgredir: (p: Prog
       if (m.tipo === "progresso") aoProgredir({ etapa: m.etapa, fracao: m.fracao, detalhe: m.detalhe });
       else {
         w.terminate();
-        if (m.tipo === "pronto") resolve({ arquivo: new File([wavEstereo(m.esq, m.dir, TAXA)], "fundo-ia.wav", { type: "audio/wav" }), motor: m.motor });
+        if (m.tipo === "pronto") {
+          const wav = wavEstereo(m.esq, m.dir, TAXA);
+          // Comprime (M4A, umas 10x menor): ocupa menos espaço no servidor e baixa mais rápido no celular.
+          aoProgredir({ etapa: "separando", fracao: 1, detalhe: "Comprimindo a trilha…" });
+          void import("../otimizarVideo")
+            .then(({ comprimirAudio }) => comprimirAudio(wav))
+            .catch(() => null)
+            .then((m4a) =>
+              resolve({
+                arquivo: m4a ? new File([m4a], "fundo-ia.m4a", { type: "audio/mp4" }) : new File([wav], "fundo-ia.wav", { type: "audio/wav" }),
+                motor: m.motor,
+              }),
+            );
+        }
         else reject(new Error(/fetch|network|Failed to fetch|NetworkError/i.test(m.mensagem) ? "Sem internet para baixar a IA. Conecte-se e tente de novo." : m.mensagem));
       }
     };
