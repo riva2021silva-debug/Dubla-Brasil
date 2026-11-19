@@ -222,3 +222,34 @@ export function organizarPorTurnos<T extends FalaTurno>(falas: T[], opcoes = { j
   }
   return turnos;
 }
+
+/**
+ * A IA de transcrição às vezes "engasga" em música, grito ou risada e repete a mesma palavra dezenas de vezes
+ * ("ah, ah, ah, ah…"). Junta qualquer palavra (ou trecho de até 4 palavras) repetida mais de 3 vezes seguidas
+ * em só 3 vezes + "…".
+ */
+export function limparRepeticoes(texto: string): string {
+  const palavras = texto.split(/\s+/).filter(Boolean);
+  const norm = (w: string) => w.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
+  const saida: string[] = [];
+  let i = 0;
+  while (i < palavras.length) {
+    let pulou = false;
+    for (let n = 1; n <= 4 && i + n <= palavras.length; n++) {
+      const bloco = palavras.slice(i, i + n).map(norm).join(" ");
+      if (!bloco.trim()) continue;
+      let rep = 1;
+      while (i + (rep + 1) * n <= palavras.length && palavras.slice(i + rep * n, i + (rep + 1) * n).map(norm).join(" ") === bloco) rep++;
+      if (rep > 3) {
+        const manter = palavras.slice(i, i + 3 * n);
+        manter[manter.length - 1] = manter[manter.length - 1].replace(/[,;.!?…]+$/, "") + "…";
+        saida.push(...manter);
+        i += rep * n;
+        pulou = true;
+        break;
+      }
+    }
+    if (!pulou) saida.push(palavras[i++]);
+  }
+  return saida.join(" ");
+}

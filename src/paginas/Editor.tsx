@@ -556,7 +556,11 @@ export default function Editor() {
       await apagarRascunho(chaveRascunho);
       navegar("/admin");
     } catch (e) {
-      setProblemas([`Não foi possível salvar: ${mensagemDeErro(e)}`]);
+      const msg = mensagemDeErro(e);
+      setProblemas([
+        `Não foi possível salvar: ${msg}`,
+        ...(/conexão/i.test(msg) ? ["A internet caiu no meio do envio (o app já tentou 3 vezes). Sua edição está guardada no aparelho: confira o Wi-Fi ou os dados móveis e toque em “Salvar cena” de novo."] : []),
+      ]);
     } finally {
       setSalvando(false);
       setEtapa(null);

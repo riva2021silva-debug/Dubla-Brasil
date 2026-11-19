@@ -51,9 +51,14 @@ async function enviar(pasta: string, nomeBase: string, arquivo: Blob): Promise<s
     throw new Error(`O arquivo tem ${(arquivo.size / 1024 / 1024).toFixed(0)} MB. O limite é 50 MB: use um vídeo mais curto ou comprimido.`);
   const tipo = tipoDoArquivo(arquivo, arquivo instanceof File ? arquivo.name : undefined);
   const caminho = `${pasta}/${nomeBase}-${Date.now().toString(36)}.${EXTENSOES[tipo] ?? "bin"}`;
-  const { error } = await supabase.storage.from(PASTA).upload(caminho, arquivo, { contentType: tipo, upsert: false, cacheControl: "31536000" });
-  if (error) falhou(error);
-  return caminho;
+  // Internet do celular oscila no meio de um envio grande: tenta de novo sozinho (3 vezes, esperando um pouco).
+  for (let tentativa = 1; ; tentativa++) {
+    const { error } = await supabase.storage.from(PASTA).upload(caminho, arquivo, { contentType: tipo, upsert: tentativa > 1, cacheControl: "31536000" });
+    if (!error) return caminho;
+    const rede = /Failed to fetch|NetworkError|network|Load failed|fetch|timeout|timed out|aborted/i.test(error.message ?? "");
+    if (!rede || tentativa >= 3) falhou(error);
+    await new Promise((r) => setTimeout(r, tentativa * 3000));
+  }
 }
 
 async function apagarArquivos(caminhos: (string | null | undefined)[]) {

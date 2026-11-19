@@ -1,11 +1,11 @@
 {
-  "versao": "4.3",
-  "codigo": 34,
+  "versao": "4.4",
+  "codigo": 35,
   "data": "2026-11-19",
   "novidades": [
-    "✨ Admin: “Gerar as trilhas” cria a trilha de fundo com IA de todas as cenas de uma vez (dublagem limpa: na sua fala sai só a voz do personagem, a música continua)",
-    "📋 Estúdio: toque em “Fala 3 de 22 ▾” para ver todas as suas falas e pular direto para qualquer uma",
-    "🎙️ Estúdio: atalho para ajustar o microfone"
+    "Admin: se a internet cair no meio do envio do vídeo, o app tenta de novo sozinho (até 3 vezes)",
+    "Admin: quando não dá para salvar, o app explica o que fazer e a sua edição continua guardada",
+    "Legendas da IA sem “ah, ah, ah, ah…” repetido dezenas de vezes"
   ],
   "apk": "https://dublabr.netlify.app/baixar/DublaBrasilAI.apk"
 }

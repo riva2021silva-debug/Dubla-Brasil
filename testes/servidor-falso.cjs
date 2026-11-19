@@ -85,6 +85,7 @@ const regras = {
 };
 
 let relogio = Date.now();
+let falharEnvios = 0;
 function agora() {
   relogio = Math.max(relogio + 1, Date.now()); // datas sempre crescentes (a ordem do feed fica estável)
   return new Date(relogio).toISOString();
@@ -359,7 +360,16 @@ const servidor = http.createServer(async (req, res) => {
   }
   const podeEscrever = (pasta, caminho) => (pasta === "midias" ? u.admin : !!u.id && caminho.split("/")[0] === u.id);
   const podeApagar = (pasta, caminho) => (pasta === "midias" ? u.admin : u.admin || (!!u.id && caminho.split("/")[0] === u.id));
+  // Teste de internet caindo: as próximas N tentativas de envio de arquivo perdem a conexão no meio.
+  if (p === "/__falhar-envios") {
+    falharEnvios = Number(url.searchParams.get("n") || 0);
+    return responder(res, 200, { falharEnvios });
+  }
   const obj = /^\/storage\/v1\/object\/(midias|dubs)\/(.+)$/.exec(p);
+  if (obj && req.method === "POST" && falharEnvios > 0) {
+    falharEnvios--;
+    return req.socket.destroy();
+  }
   if (obj && req.method === "POST") {
     const caminho = decodeURIComponent(obj[2]);
     if (!podeEscrever(obj[1], caminho)) return responder(res, 403, { statusCode: "403", error: "Unauthorized", message: "new row violates row-level security policy" });

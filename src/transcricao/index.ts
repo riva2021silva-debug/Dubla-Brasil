@@ -5,7 +5,7 @@ import { contextoDeAudio } from "../audio/mixer";
 import type { Fala, Personagem } from "../tipos";
 import { novoId } from "../util";
 import type { Mensagem, Pedido } from "./trabalhador";
-import { audioEstereo, detectarFala, dividirPorPausas, organizarPorTurnos, trechosSemFala, type Trecho } from "./vozes";
+import { audioEstereo, detectarFala, dividirPorPausas, limparRepeticoes, organizarPorTurnos, trechosSemFala, type Trecho } from "./vozes";
 
 const TAXA = 16000;
 const MAX_FALA_MS = 7000;
@@ -218,7 +218,12 @@ export async function separarFalas(opcoes: {
   // O Whisper às vezes pula falas curtas ou rápidas: o detector de voz acha esses buracos e completa.
   const extras = await completarBuracos({ som, copia, falas, personagens, idioma, modelo: opcoes.modelo ?? "base", aoProgredir });
   // Por turnos: cada pessoa fala até terminar e o turno vai até a próxima pessoa começar.
-  return organizarPorTurnos([...falas, ...extras]);
+  return organizarPorTurnos([...falas, ...extras]).map(semRepeticoes);
+}
+
+/** Tira as repetições em que a IA "engasga" ("ah, ah, ah, ah…"). */
+function semRepeticoes<T extends { texto: string; original?: string }>(f: T): T {
+  return { ...f, texto: limparRepeticoes(f.texto), ...(f.original ? { original: limparRepeticoes(f.original) } : {}) };
 }
 
 /** Acha trechos com voz sem fala marcada, transcreve só eles e escolhe o personagem pelo tom de voz. */
@@ -343,7 +348,7 @@ export async function arrumarFalas(opcoes: {
     modelo: opcoes.modelo ?? "base",
     aoProgredir: opcoes.aoProgredir,
   });
-  return { falas: organizarPorTurnos([...arrumadas, ...novas]), divididas, novas };
+  return { falas: organizarPorTurnos([...arrumadas, ...novas]).map(semRepeticoes), divididas, novas: novas.map(semRepeticoes) };
 }
 
 /** Para o editor: procura falas que ficaram de fora (sem refazer as que já existem). */
@@ -357,7 +362,7 @@ export async function encontrarFalasQueFaltaram(opcoes: {
 }): Promise<Fala[]> {
   opcoes.aoProgredir({ etapa: "preparando", detalhe: "Procurando trechos com voz sem fala marcada…" });
   const som = await audioDoVideo(opcoes.urlVideo);
-  return completarBuracos({
+  const achadas = await completarBuracos({
     som,
     copia: som.mono,
     falas: opcoes.falas,
@@ -366,4 +371,5 @@ export async function encontrarFalasQueFaltaram(opcoes: {
     modelo: opcoes.modelo ?? "base",
     aoProgredir: opcoes.aoProgredir,
   });
+  return achadas.map(semRepeticoes);
 }
