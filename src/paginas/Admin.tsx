@@ -296,13 +296,14 @@ function PainelCenas() {
           <button className="botao" onClick={() => arquivo.current?.click()} disabled={importando}>
             {importando ? "Enviando…" : "📦 Importar pacote"}
           </button>
+          <button className="botao" onClick={() => document.getElementById("ferramentas-cenas")?.scrollIntoView({ behavior: "smooth", block: "start" })}>
+            🛠️ Otimizar / Trilhas
+          </button>
           <Link className="botao botao-primario" to="/admin/cena/nova">
             + Adicionar vídeo
           </Link>
         </div>
       </div>
-      {ultimasCenas.current.length > 0 && <GerarFundos cenas={ultimasCenas.current} aoTerminar={cenas.recarregar} />}
-      {ultimasCenas.current.length > 0 && <OtimizarCenas cenas={ultimasCenas.current} aoTerminar={cenas.recarregar} />}
       <input
         ref={arquivo}
         type="file"
@@ -347,6 +348,15 @@ function PainelCenas() {
             <LinhaCena key={c.id} cena={c} aoMudar={cenas.recarregar} aoErro={setErro} />
           ))}
           {lista.length === 0 && <p className="suave" style={{ padding: 12 }}>Nenhuma cena com esse título.</p>}
+        </div>
+      )}
+
+      {/* Ferramentas para todas as cenas de uma vez (logo abaixo da lista, fácil de achar). */}
+      {ultimasCenas.current.length > 0 && (
+        <div className="pilha" id="ferramentas-cenas">
+          <h3 style={{ margin: "8px 0 0" }}>🛠️ Ferramentas para todas as cenas</h3>
+          <OtimizarCenas cenas={ultimasCenas.current} aoTerminar={cenas.recarregar} />
+          <GerarFundos cenas={ultimasCenas.current} aoTerminar={cenas.recarregar} />
         </div>
       )}
 

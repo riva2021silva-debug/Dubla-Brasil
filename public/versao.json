@@ -1,12 +1,9 @@
 {
-  "versao": "4.5",
-  "codigo": 36,
+  "versao": "4.6",
+  "codigo": 37,
   "data": "2026-11-19",
   "novidades": [
-    "Trilhas de fundo comprimidas (umas 10x menores): o servidor aguenta muito mais gente e as cenas abrem mais rápido",
-    "Dubs da Galeria mais leves (cerca de 40% menores), com a mesma qualidade na tela do celular",
-    "Admin: “🧹 Liberar espaço” na Galeria apaga dubs antigos e sem curtidas (mostra a lista antes e só apaga quando você confirma)",
-    "Admin: aviso “🧹 Hora de liberar espaço” quando o servidor passa de 70% (no Admin, no botão Admin e nas Notificações)"
+    "Admin: ferramentas “⚡ Otimizar vídeos” e “✨ Gerar as trilhas” logo abaixo da lista de cenas (e atalho “🛠️ Otimizar / Trilhas” no topo)"
   ],
   "apk": "https://dublabr.netlify.app/baixar/DublaBrasilAI.apk"
 }
