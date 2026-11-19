@@ -1,12 +1,16 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { tempoAtras } from "../galeria";
+import { useAdmin } from "../admin";
+import { useAvisoEspaco } from "../espaco";
 import { frase, icone, limparNotificacoes, listarNotificacoes, marcarComoLida, marcarTodasComoLidas, type Notificacao } from "../notificacoes";
 
 export default function Notificacoes() {
   const [lista, setLista] = useState<Notificacao[] | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const navegar = useNavigate();
+  const { aberto } = useAdmin();
+  const espaco = useAvisoEspaco(aberto);
 
   useEffect(() => {
     let vivo = true;
@@ -44,6 +48,20 @@ export default function Notificacoes() {
           </button>
         )}
       </div>
+      {espaco?.avisar && (
+        <button className="notificacao nova" onClick={() => navegar("/admin?aba=galeria")}>
+          <span className="notificacao-icone" aria-hidden>
+            🧹
+          </span>
+          <span className="notificacao-corpo">
+            <span>
+              <strong>Hora de liberar espaço no servidor</strong>
+            </span>
+            <span className="notificacao-texto">{espaco.texto}</span>
+            <span className="suave pequeno">Toque para abrir o “Liberar espaço” (só o administrador vê este aviso)</span>
+          </span>
+        </button>
+      )}
       {erro && <p className="alerta">{erro}</p>}
       {!lista && !erro && <p className="suave">Carregando…</p>}
       {lista && lista.length === 0 && (

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { apagarPublicacao, listarParaLimpeza, type Publicacao } from "../galeria";
+import { EVENTO_ESPACO } from "../espaco";
 
 const DIAS = 60;
 const MAX_CURTIDAS = 2;
@@ -42,6 +43,7 @@ export default function LimparGaleria({ aoTerminar }: { aoTerminar: () => void }
     setMsg(`✅ ${feitos} ${feitos === 1 ? "dub apagado" : "dubs apagados"}. Espaço liberado no servidor.`);
     setLista(null);
     setOcupado(false);
+    window.dispatchEvent(new Event(EVENTO_ESPACO)); // o aviso de espaço confere de novo
     aoTerminar();
   };
 

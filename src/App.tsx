@@ -23,11 +23,13 @@ import { vigiarSeloExterno } from "./seloExterno";
 import { useAdmin } from "./admin";
 import Notificacoes from "./paginas/Notificacoes";
 import { useNaoLidas } from "./notificacoes";
+import { useAvisoEspaco } from "./espaco";
 
 function Layout() {
   const { aberto } = useAdmin();
   const plano = usePlano();
-  const naoLidas = useNaoLidas();
+  const espaco = useAvisoEspaco(aberto);
+  const naoLidas = useNaoLidas() + (espaco?.avisar ? 1 : 0);
   // Selo de fora (ex.: "Powered by Netlify"): a barra de botões sobe para não ficar por baixo dele.
   useEffect(() => vigiarSeloExterno(), []);
   // Administrador: quantas mensagens de Ajuda estão esperando (aparece no botão Admin).
@@ -60,8 +62,13 @@ function Layout() {
         </nav>
         <div className="atalhos-topo">
           {aberto && (
-            <NavLink to="/admin" className="botao botao-pequeno" aria-label={novas ? `Admin, ${novas} mensagens novas` : "Admin"}>
-              Admin{novas > 0 && <span className="selo-novas">{novas}</span>}
+            <NavLink
+              to={espaco?.avisar ? "/admin?aba=galeria" : "/admin"}
+              className="botao botao-pequeno"
+              aria-label={[novas ? `Admin, ${novas} mensagens novas` : "Admin", espaco?.avisar ? "hora de liberar espaço" : ""].filter(Boolean).join(", ")}
+            >
+              Admin{espaco?.avisar && <span aria-hidden> 🧹</span>}
+              {novas > 0 && <span className="selo-novas">{novas}</span>}
             </NavLink>
           )}
           <NavLink to="/conta" className={`botao botao-pequeno botao-premium ${plano.premium ? "eh-premium" : ""}`} aria-label="Minha conta e plano">

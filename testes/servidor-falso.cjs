@@ -86,6 +86,7 @@ const regras = {
 
 let relogio = Date.now();
 let falharEnvios = 0;
+const extraBytes = {};
 function agora() {
   relogio = Math.max(relogio + 1, Date.now()); // datas sempre crescentes (a ordem do feed fica estável)
   return new Date(relogio).toISOString();
@@ -258,6 +259,22 @@ const servidor = http.createServer(async (req, res) => {
     if (n >= 3) return responder(res, 200, { ok: false, premium: false, usadas: 3, limite: 3 });
     uso.set(u.id + hoje, n + 1);
     return responder(res, 200, { ok: true, premium: false, usadas: n + 1, limite: 3 });
+  }
+  if (p === "/rest/v1/rpc/admin_uso_armazenamento") {
+    if (!u.admin) return responder(res, 400, { message: "Só o administrador pode fazer isso." });
+    const por = {};
+    for (const [k, a] of arquivos) {
+      const pasta = k.split("/")[0];
+      por[pasta] = por[pasta] || { pasta, arquivos: 0, bytes: 0 };
+      por[pasta].arquivos++;
+      por[pasta].bytes += a.dados.length + (extraBytes[pasta] || 0) / Math.max(1, [...arquivos.keys()].filter((x) => x.startsWith(pasta + "/")).length);
+    }
+    return responder(res, 200, Object.values(por).map((x) => ({ ...x, bytes: Math.round(x.bytes) })));
+  }
+  // Teste: finge que as pastas ocupam mais espaço (para ver o aviso de "liberar espaço").
+  if (p === "/__espaco-extra") {
+    extraBytes[url.searchParams.get("pasta")] = Number(url.searchParams.get("bytes") || 0);
+    return responder(res, 200, extraBytes);
   }
   if (p === "/rest/v1/rpc/admin_listar_pagamentos") return u.admin ? responder(res, 200, []) : responder(res, 400, { message: "Só o administrador pode fazer isso." });
   if (p === "/rest/v1/rpc/apagar_minha_conta") {

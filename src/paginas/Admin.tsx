@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { entrar, sair, useAdmin } from "../admin";
 import { Capa } from "../componentes/CartaoCena";
 import { blobDaMidia, db } from "../db";
 import { todasAsCenas, useCarregar } from "../ganchos";
 import OtimizarCenas from "../componentes/OtimizarCenas";
 import GerarFundos from "../componentes/GerarFundos";
+import AvisoEspacoBanner from "../componentes/AvisoEspaco";
+import { useAvisoEspaco } from "../espaco";
 import { excluirCena, mensagemDeErro, publicarCena, salvarCena, salvarSom, trocarSenha } from "../nuvem";
 import { exportarPacote, importarPacote } from "../pacote";
 import { estaPublicada, type Cena } from "../tipos";
@@ -225,8 +227,10 @@ function EnviarDoAparelho({ aoTerminar }: { aoTerminar: () => void }) {
 }
 
 function Painel() {
-  const { email } = useAdmin();
-  const [aba, setAba] = useState<"cenas" | "sons" | "galeria" | "assinantes" | "mensagens">("cenas");
+  const { email, aberto } = useAdmin();
+  const [params] = useSearchParams();
+  const [aba, setAba] = useState<"cenas" | "sons" | "galeria" | "assinantes" | "mensagens">(params.get("aba") === "galeria" ? "galeria" : "cenas");
+  const avisoEspaco = useAvisoEspaco(aberto);
   const [versao, setVersao] = useState(0);
   return (
     <div className="pilha">
@@ -234,6 +238,7 @@ function Painel() {
         <h1 style={{ margin: 0 }}>Administração</h1>
         <span className="suave pequeno">Conectado como {email}</span>
       </div>
+      <AvisoEspacoBanner aviso={avisoEspaco} aoLiberar={() => setAba("galeria")} />
       <AvisoRascunho />
       <EnviarDoAparelho aoTerminar={() => setVersao((v) => v + 1)} />
       <div className="abas" role="tablist">
