@@ -1,9 +1,12 @@
 {
-  "versao": "4.6",
-  "codigo": 37,
+  "versao": "5.0",
+  "codigo": 38,
   "data": "2026-11-19",
   "novidades": [
-    "Admin: ferramentas “⚡ Otimizar vídeos” e “✨ Gerar as trilhas” logo abaixo da lista de cenas (e atalho “🛠️ Otimizar / Trilhas” no topo)"
+    "🎤 Modo Cantar: músicas para cantar com o instrumental, letra no estilo karaokê e nota de afinação em cada trecho",
+    "Admin: marque “🎤 É uma música” ao cadastrar; a IA separa sozinha o instrumental e a voz do cantor",
+    "Admin: ao salvar um vídeo ou música sem trilha de fundo, a IA gera a trilha automaticamente",
+    "Admin: ferramentas “⚡ Otimizar vídeos” e “✨ Gerar as trilhas” logo abaixo da lista de cenas"
   ],
   "apk": "https://dublabr.netlify.app/baixar/DublaBrasilAI.apk"
 }

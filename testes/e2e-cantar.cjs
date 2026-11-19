@@ -69,7 +69,7 @@ const estado = async () => (await fetch(`${S}/__estado`)).json();
   await u.waitForFunction(() => document.querySelector("video")?.readyState >= 2);
   await u.getByRole("button", { name: "Gravar esta fala" }).click();
   await u.locator(".nota-afinacao").waitFor({ timeout: 40000 });
-  const nota = await u.locator(".nota-afinacao").innerText();
+  const nota = (await u.locator(".nota-afinacao").innerText()).replace(/\s+/g, " ");
   console.log(`Depois de cantar o trecho aparece a nota (${nota.replace(/\s+/g, " ")}):`, /Afinação \d+%/.test(nota) ? "ok" : "FALHOU");
   await u.screenshot({ path: path.join(SAIDA, "cantar-estudio.png") });
   await u.getByRole("link", { name: /Resultado/ }).click();
