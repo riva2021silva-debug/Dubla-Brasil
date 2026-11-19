@@ -58,6 +58,7 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
   const mic = useRef<Microfone | null>(null);
   /** Contagem 3, 2, 1 com a imagem parada no começo da fala (antes de gravar). */
   const [contagemPrep, setContagemPrep] = useState<number | null>(null);
+  const [verLista, setVerLista] = useState(false);
   const vezDaGravacao = useRef(0);
   const [micPronto, setMicPronto] = useState(false);
   const [nivel, setNivel] = useState(0);
@@ -520,8 +521,13 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
                 {p && <Avatar personagem={p} tamanho={34} />}
                 <strong style={{ color: p?.cor }}>{p?.nome}</strong>
               </span>
-              <span className="suave">
-                Fala {indice + 1} de {total} · {((falaSel.fimMs - falaSel.inicioMs) / 1000).toFixed(1)} s
+              <span className="linha" style={{ gap: 6 }}>
+                <button className="botao-lista-falas" onClick={() => setVerLista(true)} disabled={ocupado} aria-label={`Fala ${indice + 1} de ${total}. Ver todas as falas`}>
+                  Fala {indice + 1} de {total} ▾
+                </button>
+                <Link to="/configuracoes" className="botao-lista-falas" aria-label="Ajustar o microfone" title="Microfone e sincronia">
+                  🎙️
+                </Link>
               </span>
             </div>
             {cfg.mostrarLegendas && (
@@ -533,6 +539,42 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
               </p>
             )}
           </div>
+
+          {verLista && (
+            <div className="fundo-modal" role="dialog" aria-modal="true" aria-label="Suas falas" onClick={(e) => e.target === e.currentTarget && setVerLista(false)}>
+              <div className="cartao pilha modal lista-falas-modal">
+                <div className="linha entre">
+                  <h3 style={{ margin: 0 }}>Suas falas</h3>
+                  <button className="botao botao-pequeno" onClick={() => setVerLista(false)} aria-label="Fechar">
+                    ✕
+                  </button>
+                </div>
+                <ol className="lista-falas">
+                  {minhas.map((f, i) => {
+                    const pf = cena.personagens.find((x) => x.id === f.personagemId);
+                    return (
+                      <li key={f.id}>
+                        <button
+                          className={`item-fala ${i === indice ? "atual" : ""}`}
+                          onClick={() => {
+                            setVerLista(false);
+                            irParaFala(i);
+                          }}
+                        >
+                          <span className="numero-fala">{i + 1}</span>
+                          <span className="item-fala-corpo">
+                            <b style={{ color: pf?.cor }}>{pf?.nome}</b> <span className="suave pequeno">{formatarTempo(f.inicioMs, false)}</span>
+                            <span className="item-fala-texto">{f.texto || "…"}</span>
+                          </span>
+                          <span aria-label={dub.tomadas[f.id] ? "gravada" : "falta gravar"}>{dub.tomadas[f.id] ? "✅" : "○"}</span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </div>
+            </div>
+          )}
 
           <SinalDeFala
             fala={(modo === "gravando" && alvo ? alvo.falas.find((f) => tempo < f.fimMs + 400) : null) ?? falaSel}

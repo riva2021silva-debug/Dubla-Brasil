@@ -5,6 +5,7 @@ import { Capa } from "../componentes/CartaoCena";
 import { blobDaMidia, db } from "../db";
 import { todasAsCenas, useCarregar } from "../ganchos";
 import OtimizarCenas from "../componentes/OtimizarCenas";
+import GerarFundos from "../componentes/GerarFundos";
 import { excluirCena, mensagemDeErro, publicarCena, salvarCena, salvarSom, trocarSenha } from "../nuvem";
 import { exportarPacote, importarPacote } from "../pacote";
 import { estaPublicada, type Cena } from "../tipos";
@@ -295,6 +296,7 @@ function PainelCenas() {
           </Link>
         </div>
       </div>
+      {ultimasCenas.current.length > 0 && <GerarFundos cenas={ultimasCenas.current} aoTerminar={cenas.recarregar} />}
       {ultimasCenas.current.length > 0 && <OtimizarCenas cenas={ultimasCenas.current} aoTerminar={cenas.recarregar} />}
       <input
         ref={arquivo}
