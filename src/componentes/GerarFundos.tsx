@@ -6,6 +6,9 @@ import type { Cena } from "../tipos";
 type Estado = { titulo: string; texto: string; tipo: "feito" | "erro" | "andando" };
 const CHAVE_AUTO = "dubla-brasil:gerar-fundo";
 
+/** Celular ou tablet (app instalado ou navegador): a separação com IA é pesada demais para rodar sozinha. */
+const ehCelular = () => /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || ("Capacitor" in window && (window as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.() === true);
+
 /** Cena que ainda precisa da IA: sem trilha de fundo, ou música sem a voz separada (para a nota). */
 const precisa = (c: Cena) => !!c.caminhos?.video && (!c.caminhos?.fundo || (c.tipo === "musica" && !c.caminhos?.voz));
 
@@ -18,6 +21,10 @@ export default function GerarFundos({ cenas, aoTerminar }: { cenas: Cena[]; aoTe
   const [rodando, setRodando] = useState(false);
   const [estados, setEstados] = useState<Estado[]>([]);
   const caixa = useRef<HTMLElement>(null);
+  const parar = useRef(new AbortController());
+  // Saiu da Administração: a IA para (não fica rodando escondida, pesando no aparelho).
+  useEffect(() => () => parar.current.abort(), []);
+  const [avisoCelular, setAvisoCelular] = useState(false);
   const semFundo = cenas.filter(precisa);
 
   const rodar = async (fila: Cena[]) => {
@@ -36,12 +43,13 @@ export default function GerarFundos({ cenas, aoTerminar }: { cenas: Cena[]; aoTe
         const inicio = Date.now();
         const url = await urlDaMidia(c.video);
         const musica = c.tipo === "musica";
-        const { arquivo, voz } = await gerarTrilhaDeFundo(url, (p) => mudar(i, { texto: `${p.detalhe} ${Math.round(p.fracao * 100)}%` }), { comVoz: musica });
+        const { arquivo, voz } = await gerarTrilhaDeFundo(url, (p) => mudar(i, { texto: `${p.detalhe} ${Math.round(p.fracao * 100)}%` }), { comVoz: musica, sinal: parar.current.signal });
         mudar(i, { texto: "enviando…" });
         await salvarCena(c, { fundo: arquivo, ...(voz ? { voz } : {}) });
         feitas++;
         mudar(i, { texto: `✅ ${musica ? "instrumental e voz separados" : "trilha de fundo pronta"} (${Math.max(1, Math.round((Date.now() - inicio) / 60000))} min)`, tipo: "feito" });
       } catch (e) {
+        if (parar.current.signal.aborted) return;
         mudar(i, { texto: `não deu: ${mensagemDeErro(e)}`, tipo: "erro" });
       }
     }
@@ -68,7 +76,9 @@ export default function GerarFundos({ cenas, aoTerminar }: { cenas: Cena[]; aoTe
       /* ok */
     }
     caixa.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-    void rodar([alvo]);
+    // No celular a IA é pesada demais para começar sozinha: avisa e deixa o botão (melhor no computador).
+    if (ehCelular()) setAvisoCelular(true);
+    else void rodar([alvo]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cenas]);
 
@@ -91,6 +101,11 @@ export default function GerarFundos({ cenas, aoTerminar }: { cenas: Cena[]; aoTe
           </button>
         )}
       </div>
+      {avisoCelular && !rodando && (
+        <p className="pequeno" style={{ margin: 0 }}>
+          📱 Cena salva! A trilha de fundo é gerada por uma IA pesada: para o celular não travar, faça isso no <b>computador</b> (Administração → ✨ Gerar). Se quiser mesmo pelo celular, toque no botão acima e deixe esta tela aberta, sem usar o app, até terminar.
+        </p>
+      )}
       {rodando && (
         <p className="pequeno" style={{ margin: 0 }}>
           ⏳ A IA está trabalhando. Deixe esta página aberta até terminar (alguns minutos por cena).

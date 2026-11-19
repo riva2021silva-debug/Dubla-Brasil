@@ -54,12 +54,18 @@ function wavEstereo(esq: Float32Array, dir: Float32Array, taxa: number): Blob {
 export async function gerarTrilhaDeFundo(
   urlVideo: string,
   aoProgredir: (p: ProgressoFundo) => void,
-  opcoes: { comVoz?: boolean } = {},
+  opcoes: { comVoz?: boolean; sinal?: AbortSignal } = {},
 ): Promise<{ arquivo: File; motor: string; voz?: File }> {
   aoProgredir({ etapa: "lendo", fracao: 0, detalhe: "Lendo o áudio do vídeo…" });
   const { esq, dir } = await audioDoVideo(urlVideo);
+  if (opcoes.sinal?.aborted) throw new Error("Parado.");
   return new Promise((resolve, reject) => {
     const w = new Worker(new URL("./trabalhador.ts", import.meta.url), { type: "module" });
+    // Saiu da tela: a IA para na hora (senão continuava pesando no aparelho, escondida, e o vídeo picotava).
+    opcoes.sinal?.addEventListener("abort", () => {
+      w.terminate();
+      reject(new Error("Parado: você saiu da tela antes de terminar."));
+    });
     w.onmessage = (e: MessageEvent<MensagemSeparar>) => {
       const m = e.data;
       if (m.tipo === "progresso") aoProgredir({ etapa: m.etapa, fracao: m.fracao, detalhe: m.detalhe });

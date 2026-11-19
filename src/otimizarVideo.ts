@@ -52,12 +52,20 @@ export async function diagnosticar(b: Blob): Promise<Diagnostico> {
       }
       if (maiorEspaco > 1.5) motivos.push(`poucos quadros-chave (um a cada ${maiorEspaco.toFixed(1)} s)`);
       if (Math.max(trilha.displayWidth, trilha.displayHeight) > 1920) motivos.push("resolução maior que o necessário");
+      const duracao = await entrada.computeDuration().catch(() => 0);
+      const bps = duracao > 0 ? (b.size * 8) / duracao : 0;
+      if (bps > 2_300_000) motivos.push(`pesado para a internet do celular (${(bps / 1_000_000).toFixed(1).replace(".", ",")} Mbit/s)`);
     }
     entrada.dispose?.();
   } catch {
     /* sem como ler: fica só com o que as caixas disseram */
   }
   return { motivos };
+}
+
+/** Taxa de bits boa para o tamanho da imagem (H.264, 30 quadros/s), entre 0,6 e 1,8 Mbit/s. */
+function bitsPorSegundo(pixels: number): number {
+  return Math.round(Math.min(1_800_000, Math.max(600_000, pixels * 30 * 0.058)));
 }
 
 /** O aparelho consegue refazer vídeos (WebCodecs)? */
@@ -88,7 +96,8 @@ export async function otimizarVideo(b: Blob, aoProgredir: (fracao: number) => vo
       codec: "avc",
       keyFrameInterval: 1,
       frameRate: 30,
-      quality: mb.QUALITY_MEDIUM,
+      // Leve para a internet do celular: ~1,6 Mbit/s em 720p (~0,9 em 480p). Na tela do celular fica igual.
+      bitrate: bitsPorSegundo(reduzir ? (trilha.displayWidth >= trilha.displayHeight ? 1280 * 720 : 720 * 1280) : trilha.displayWidth * trilha.displayHeight),
       forceTranscode: true,
       ...(reduzir ? (trilha.displayWidth >= trilha.displayHeight ? { width: 1280 } : { height: 1280 }) : {}),
     },
