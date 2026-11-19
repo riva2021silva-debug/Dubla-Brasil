@@ -1,11 +1,11 @@
 {
-  "versao": "4.2",
-  "codigo": 33,
+  "versao": "4.3",
+  "codigo": 34,
   "data": "2026-11-19",
   "novidades": [
-    "⚡ Vídeos leves: as cenas não travam mais ao pular para cada fala (até 10x mais rápido)",
-    "Admin: botão “⚡ Otimizar vídeos” para deixar as cenas antigas leves",
-    "Admin: vídeo novo ou editado já sobe otimizado para o celular"
+    "✨ Admin: “Gerar as trilhas” cria a trilha de fundo com IA de todas as cenas de uma vez (dublagem limpa: na sua fala sai só a voz do personagem, a música continua)",
+    "📋 Estúdio: toque em “Fala 3 de 22 ▾” para ver todas as suas falas e pular direto para qualquer uma",
+    "🎙️ Estúdio: atalho para ajustar o microfone"
   ],
   "apk": "https://dublabr.netlify.app/baixar/DublaBrasilAI.apk"
 }
