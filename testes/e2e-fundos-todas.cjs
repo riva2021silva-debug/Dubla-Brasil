@@ -36,6 +36,15 @@ const SRT = path.join(SAIDA, "cena-fala-musica-2.srt");
   const erros = [];
   p.on("pageerror", (e) => erros.push(String(e)));
   await entrarAdmin(p, BASE);
+  // Aqui o teste é do botão "Gerar as trilhas" (todas de uma vez): desliga o começo automático depois de salvar
+  // (esse é conferido no teste e2e-cantar).
+  await p.evaluate(() => {
+    const original = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (k, v) {
+      if (k === "dubla-brasil:gerar-fundo") return;
+      return original.call(this, k, v);
+    };
+  });
   // Duas cenas sem trilha de fundo (como as do servidor de verdade hoje).
   for (const titulo of ["Cena A sem fundo", "Cena B sem fundo"]) {
     await p.getByRole("link", { name: /Adicionar vídeo/ }).first().click();
