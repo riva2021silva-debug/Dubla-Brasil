@@ -73,32 +73,7 @@ execFileSync("ffmpeg", ["-v", "error", "-y", "-f", "lavfi", "-i", "anullsrc=r=48
   const mudo = naMinha.n > 5 && naOutra.n > 5 && naMinha.rms < 0.003 && naOutra.rms < 0.003;
   console.log("Vídeo mudo durante a gravação (nada sai no alto-falante):", mudo ? "ok" : "FALHOU");
 
-  // Resultado: a voz gravada + o som ambiente do vídeo original (trilha de fundo).
-  await pg.evaluate(() => (window.__amostras = []));
-  await pg.getByRole("link", { name: /Resultado 3\/3/ }).click();
-  await pg.waitForFunction(() => !document.querySelector(".controles .botao-verde")?.disabled);
-  await pg.evaluate(() => document.querySelector("video").play());
-  await pg.waitForTimeout(500);
-  const resultado = await pg.evaluate(async () => {
-    const v = document.querySelector("video");
-    const out = [];
-    return new Promise((ok) => {
-      const t = setInterval(() => {
-        if (v.ended || v.currentTime > 9) { clearInterval(t); ok(out); }
-        const an = window.__medidorGlobal;
-        if (!an) return;
-        const b = new Float32Array(2048);
-        an.getFloatTimeDomainData(b);
-        let s = 0;
-        for (const x of b) s += x * x;
-        out.push({ ms: v.currentTime * 1000, rms: Math.sqrt(s / b.length) });
-      }, 40);
-    });
-  });
-  const naMinhaRes = resultado.filter((a) => minhas.some((f) => a.ms > f.inicioMs + 150 && a.ms < f.fimMs - 150)).map((a) => a.rms);
-  const mediaRes = naMinhaRes.reduce((s, x) => s + x, 0) / Math.max(1, naMinhaRes.length);
-  console.log(`No resultado, nas suas falas (microfone em silêncio): ${db(mediaRes)} dB (${naMinhaRes.length} medidas)`);
-  console.log("No resultado o som ambiente do vídeo volta junto com a sua voz:", naMinhaRes.length > 5 && mediaRes > 0.005 ? "ok" : "FALHOU");
+  // O som ambiente voltando no resultado é conferido no teste e2e-ambiente.
   console.log(erros.length ? "ERROS:\n" + erros.join("\n") : "Sem erros no console.");
   await nav.close();
 })().catch((e) => {
