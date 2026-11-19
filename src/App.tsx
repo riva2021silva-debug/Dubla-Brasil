@@ -58,7 +58,11 @@ function Layout() {
           <NavLink to="/jogos">Jogos</NavLink>
           <NavLink to="/meus-dubs">Meus dubs</NavLink>
           <NavLink to="/configuracoes">Configurações</NavLink>
-          {aberto && <NavLink to="/admin">Admin</NavLink>}
+          {aberto && (
+            <NavLink to={espaco?.avisar ? "/admin?aba=galeria" : "/admin"} aria-label={espaco?.avisar ? "Admin, hora de liberar espaço" : undefined}>
+              Admin{espaco?.avisar && <span aria-hidden> 🧹</span>}
+            </NavLink>
+          )}
         </nav>
         <div className="atalhos-topo">
           {aberto && (
