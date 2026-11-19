@@ -572,3 +572,5 @@ kbd { background: var(--superficie-2); border: 1px solid var(--borda); border-bo
   .atalhos-topo .botao-pequeno { padding: 6px 9px; font-size: 13px; }
   .botao-premium .texto-premium { display: none; }
 }
+.lista-otimizar { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 14px; }
+.lista-otimizar li.erro .suave { color: #fca5a5; }

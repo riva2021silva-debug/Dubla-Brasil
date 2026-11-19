@@ -4,6 +4,7 @@ import { entrar, sair, useAdmin } from "../admin";
 import { Capa } from "../componentes/CartaoCena";
 import { blobDaMidia, db } from "../db";
 import { todasAsCenas, useCarregar } from "../ganchos";
+import OtimizarCenas from "../componentes/OtimizarCenas";
 import { excluirCena, mensagemDeErro, publicarCena, salvarCena, salvarSom, trocarSenha } from "../nuvem";
 import { exportarPacote, importarPacote } from "../pacote";
 import { estaPublicada, type Cena } from "../tipos";
@@ -266,6 +267,9 @@ function Painel() {
 
 function PainelCenas() {
   const cenas = useCarregar(() => todasAsCenas(true), []);
+  // A lista fica guardada enquanto recarrega (o painel de otimizar não some no meio e mantém o resultado na tela).
+  const ultimasCenas = useRef<Cena[]>([]);
+  if (cenas.dado) ultimasCenas.current = cenas.dado;
   const [busca, setBusca] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [importando, setImportando] = useState(false);
@@ -291,6 +295,7 @@ function PainelCenas() {
           </Link>
         </div>
       </div>
+      {ultimasCenas.current.length > 0 && <OtimizarCenas cenas={ultimasCenas.current} aoTerminar={cenas.recarregar} />}
       <input
         ref={arquivo}
         type="file"

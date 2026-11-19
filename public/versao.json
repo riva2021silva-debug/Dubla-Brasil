@@ -1,15 +1,11 @@
 {
-  "versao": "4.1",
-  "codigo": 32,
-  "data": "2026-11-18",
+  "versao": "4.2",
+  "codigo": 33,
+  "data": "2026-11-19",
   "novidades": [
-    "🎬 Dublagem estilo estúdio: contagem 3, 2, 1 com a imagem parada e o vídeo toca só a sua fala",
-    "🎭 Cada um na sua vez: a sua voz nunca entra na fala do outro personagem",
-    "🔇 Vídeo mudo enquanto você grava (sem eco); o som ambiente volta no resultado",
-    "🎙️ Voz sem chiado: novo redutor de ruído",
-    "🔁 Contador de tomadas (Tomada 2, 3…)",
-    "📱 Tamanho padrão no celular (Android e iPhone)",
-    "🎭 Botão “Dublar junto” em todos os dubs da galeria"
+    "⚡ Vídeos leves: as cenas não travam mais ao pular para cada fala (até 10x mais rápido)",
+    "Admin: botão “⚡ Otimizar vídeos” para deixar as cenas antigas leves",
+    "Admin: vídeo novo ou editado já sobe otimizado para o celular"
   ],
   "apk": "https://dublabr.netlify.app/baixar/DublaBrasilAI.apk"
 }

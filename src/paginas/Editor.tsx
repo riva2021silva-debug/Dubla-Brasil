@@ -4,6 +4,7 @@ import LinhaDoTempo from "../componentes/LinhaDoTempo";
 import Legenda from "../componentes/Legenda";
 import { urlDaMidia } from "../db";
 import { mensagemDeErro, salvarCena } from "../nuvem";
+import { diagnosticar, otimizarVideo, podeOtimizar } from "../otimizarVideo";
 import { gerarRostos, rostoDaImagem, rostoDoQuadro } from "../rostos";
 import type { Progresso } from "../transcricao";
 import Avatar from "../componentes/Avatar";
@@ -531,9 +532,22 @@ export default function Editor() {
       }
       // Personagens que falam e ainda não têm foto ganham o rosto automaticamente.
       const automaticos = await encontrarRostos(false);
+      // Vídeo novo: deixa leve para pular entre as falas (senão o estúdio trava no celular).
+      let videoNovo = video?.novo;
+      if (videoNovo && podeOtimizar()) {
+        try {
+          setEtapa("⚡ Conferindo o vídeo…");
+          if ((await diagnosticar(videoNovo)).motivos.length) {
+            const leve = await otimizarVideo(videoNovo, (f) => setEtapa(`⚡ Deixando o vídeo leve para o celular… ${Math.round(f * 100)}%`));
+            if (leve) videoNovo = new File([leve], "video.mp4", { type: "video/mp4" });
+          }
+        } catch {
+          /* não conseguiu: envia o original */
+        }
+      }
       setEtapa(video?.novo || fundo?.novo ? "Enviando os arquivos para o servidor…" : "Salvando…");
       await salvarCena(c, {
-        video: video?.novo,
+        video: videoNovo,
         fundo: fundo?.novo ? fundo.novo : !fundo && c.caminhos?.fundo ? null : undefined,
         capa,
         rostos: { ...novosRostos, ...automaticos },
