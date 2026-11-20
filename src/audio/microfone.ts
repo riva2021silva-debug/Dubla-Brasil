@@ -1,3 +1,4 @@
+import { salvarConfig } from "../config";
 // Gravação do microfone com carimbo de tempo exato (AudioWorklet), para alinhar a voz ao vídeo.
 
 const CODIGO_WORKLET = `
@@ -54,23 +55,35 @@ export class Microfone {
   ): Promise<Microfone> {
     if (!navigator.mediaDevices?.getUserMedia)
       throw new Error("Este navegador não permite usar o microfone. Use o Chrome, Edge ou Firefox atualizados.");
-    let stream: MediaStream;
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({
+    const pedir = (deviceId?: string) =>
+      navigator.mediaDevices.getUserMedia({
         audio: {
-          deviceId: opcoes.microfoneId ? { exact: opcoes.microfoneId } : undefined,
+          deviceId: deviceId ? { exact: deviceId } : undefined,
           echoCancellation: opcoes.cancelamentoEco,
           noiseSuppression: opcoes.reducaoRuido ?? true,
           autoGainControl: false,
           channelCount: 1,
         },
       });
+    let stream: MediaStream;
+    try {
+      try {
+        stream = await pedir(opcoes.microfoneId || undefined);
+      } catch (e) {
+        // O microfone escolhido antes (ex.: um de lapela) foi desconectado: volta sozinho para o do celular.
+        const nome = (e as DOMException)?.name;
+        if (!opcoes.microfoneId || (nome !== "OverconstrainedError" && nome !== "NotFoundError" && nome !== "NotReadableError")) throw e;
+        stream = await pedir(undefined);
+        salvarConfig({ microfoneId: "" });
+      }
     } catch (e) {
       const nome = (e as DOMException)?.name;
       if (nome === "NotAllowedError")
-        throw new Error("Você não permitiu o uso do microfone. Libere o acesso no cadeado da barra de endereço.");
+        throw new Error("Você não permitiu o uso do microfone. Libere o acesso nas permissões do app (ou no cadeado da barra de endereço).");
       if (nome === "NotFoundError" || nome === "OverconstrainedError")
-        throw new Error("Nenhum microfone encontrado. Conecte um e confira em Configurações.");
+        throw new Error("Nenhum microfone encontrado. Desconecte e conecte de novo o fone/microfone, ou reinicie o app.");
+      if (nome === "NotReadableError")
+        throw new Error("O microfone está sendo usado por outro app (ligação, gravador, WhatsApp). Feche o outro app e tente de novo.");
       throw e;
     }
     if (!modulosCarregados.has(ctx)) {
