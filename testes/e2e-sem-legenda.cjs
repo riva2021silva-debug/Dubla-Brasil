@@ -23,18 +23,19 @@ const S = "http://localhost:54399";
   const mostra = async () => { const corpo = await u.locator("body").innerText(); return textos.filter((t) => t && corpo.includes(t)); };
   let vistos = await mostra();
   console.log("Estúdio: “Ouça Capivara e fale do seu jeito” e nenhuma legenda:", vistos.length === 0 ? "ok" : `FALHOU (${vistos.join(" | ")})`);
-  // Toca o vídeo desde o começo: antes de cada fala aparece a contagem.
+  // "Gravar todas seguidas": o vídeo toca as falas da Capivara e as do Tucano no meio; antes de cada fala aparece a contagem.
   const vistosContagem = new Set();
-  await u.evaluate(() => { const v = document.querySelector(".estudio video"); v.currentTime = 0; v.muted = true; return v.play(); });
-  for (let i = 0; i < 40; i++) {
+  await u.waitForFunction(() => document.querySelector(".estudio video")?.readyState >= 2);
+  await u.getByText("Mais opções").click();
+  await u.getByRole("button", { name: /Gravar todas seguidas/ }).click();
+  for (let i = 0; i < 120 && !(await u.getByRole("link", { name: /Resultado 3\/3/ }).count()); i++) {
     const t = await u.locator(".proxima-fala").innerText().catch(() => "");
     if (t) vistosContagem.add(t.replace(/\s+/g, " ").replace(/\d+$/, "N"));
+    if (t && i % 10 === 0) await u.screenshot({ path: path.join(__dirname, "saida", "sem-legenda-contagem.png") });
     await u.waitForTimeout(200);
   }
-  await u.screenshot({ path: path.join(__dirname, "saida", "sem-legenda-contagem.png") });
   const lista = [...vistosContagem];
   console.log(`Contagem antes das falas (${lista.join(" · ")}):`, lista.some((x) => /Sua vez em/.test(x)) && lista.some((x) => /Tucano fala em/.test(x)) ? "ok" : "FALHOU");
-  await u.evaluate(() => document.querySelector(".estudio video").pause());
   // Resultado: sem legenda também.
   await u.getByRole("link", { name: /Resultado/ }).click();
   await u.locator(".palco video").waitFor();
