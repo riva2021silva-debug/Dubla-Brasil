@@ -70,6 +70,16 @@ function db(arq, ini, dur, freq) {
     await u.getByRole("button", { name: /Salvar na galeria/ }).click();
     const arq = path.join(SAIDA, `ambiente-${rotulo}.mp4`);
     await (await dl).saveAs(arq);
+    await u.waitForFunction(() => !document.querySelector(".controles .botao-verde")?.disabled);
+    return arq;
+  };
+  // Exporta de novo a MESMA dublagem com a chave "Só a minha voz" ligada (sem gastar outra dublagem grátis).
+  const exportarSoMinhaVoz = async () => {
+    await u.getByLabel(/Só a minha voz/).check();
+    const dl = u.waitForEvent("download", { timeout: 90000 });
+    await u.getByRole("button", { name: /Salvar na galeria/ }).click();
+    const arq = path.join(SAIDA, "ambiente-so-minha-voz.mp4");
+    await (await dl).saveAs(arq);
     return arq;
   };
   const ligado = await gravarEBaixar("ligado");
@@ -81,7 +91,7 @@ function db(arq, ini, dur, freq) {
   // Esta cena só tem um personagem: dublando ele, a voz original some também fora da fala (cena inteira).
 
   // "Só a minha voz" (padrão): nenhum som original — nem voz, nem resto da voz no truque sem IA.
-  const soMinha = await gravarEBaixar("so-minha-voz", true);
+  const soMinha = await exportarSoMinhaVoz();
   const vozSo = db(soMinha, 5, 2, 880), musicaSo = db(soMinha, 5, 2, 330), vozSoFora = db(soMinha, 1, 0.8, 880);
   console.log(`“Só a minha voz” (sem trilha da IA): voz original ${vozSo.toFixed(0)} dB na fala e ${vozSoFora.toFixed(0)} dB fora:`, vozSo < vozOrig - 40 && vozSoFora < vozOrig - 40 ? "ok" : "FALHOU");
   await u.goto(BASE + "#/configuracoes");
