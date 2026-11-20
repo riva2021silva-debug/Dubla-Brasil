@@ -16,6 +16,7 @@ import Galeria from "./paginas/Galeria";
 import Premium, { Conta } from "./paginas/Premium";
 import { usePlano } from "./plano";
 import AvisoAtualizacao from "./componentes/AvisoAtualizacao";
+import AvisoBaixarApp from "./componentes/AvisoBaixarApp";
 import Ajuda from "./paginas/Ajuda";
 import { useEffect, useState } from "react";
 import { contarNovas } from "./ajuda";
@@ -89,6 +90,7 @@ function Layout() {
           </NavLink>
         </div>
       </header>
+      <AvisoBaixarApp />
       <main className="pagina">
         <Outlet />
       </main>
