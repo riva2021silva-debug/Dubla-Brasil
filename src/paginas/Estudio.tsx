@@ -341,7 +341,8 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
     });
     void db.salvarDub(atualizado);
     // Modo Cantar: nota de afinação de cada fala cantada (comparando com a voz do cantor).
-    const referencia = vozCantor ?? original;
+    // Só com a voz do cantor separada pela IA: comparar com a música inteira (instrumentos juntos) dá nota errada.
+    const referencia = vozCantor;
     if (musica && referencia) {
       void (async () => {
         const notas: Record<string, number> = {};
@@ -364,7 +365,7 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
         });
       })();
     }
-  }, [tempo, alvo, modo, video, dub, cfg.latenciaMs, cfg.limparVoz, cfg.alinharVoz, original, parar, vozCantor, musica]);
+  }, [tempo, alvo, modo, video, dub, cfg.latenciaMs, cfg.limparVoz, cfg.alinharVoz, original, parar, vozCantor, musica, cena.voz]);
 
   const ouvir = async (f: Fala, comoOriginal: boolean) => {
     if (!video || !mixer.current) return;
@@ -579,7 +580,10 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
                 {falaSel.texto || "…"}
               </p>
             )}
-            {musica && dub.notas?.[falaSel.id] !== undefined && (
+            {musica && !cena.voz && (
+              <div className="suave pequeno">🎯 A nota de afinação aparece quando o administrador gerar a trilha desta música (✨ Gerar).</div>
+            )}
+            {musica && cena.voz && dub.notas?.[falaSel.id] !== undefined && (
               <div className="nota-afinacao" aria-label={`Afinação ${dub.notas[falaSel.id]} por cento`}>
                 🎯 Afinação <b>{dub.notas[falaSel.id]}%</b> · {rotuloAfinacao(dub.notas[falaSel.id])}
               </div>
@@ -665,72 +669,75 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
             />
           </div>
 
-          <div className="botoes-redondos">
-            <div className="botao-redondo-grupo">
-              <button
-                className={`botao-redondo ${modo === "original" ? "ativo" : ""}`}
-                onClick={() => (modo === "original" ? parar() : ouvir(falaSel, true))}
-                disabled={!video || (ocupado && modo !== "original")}
-                aria-label="Ouvir a fala original"
-              >
-                {modo === "original" ? "■" : "▶"}
-              </button>
-              <span className="rotulo-redondo">Original</span>
+          {/* Botões sempre à vista: no celular ficam presos embaixo da tela, junto com o vídeo, a legenda e a onda. */}
+          <div className="controles-estudio">
+            <div className="botoes-redondos">
+              <div className="botao-redondo-grupo">
+                <button
+                  className={`botao-redondo ${modo === "original" ? "ativo" : ""}`}
+                  onClick={() => (modo === "original" ? parar() : ouvir(falaSel, true))}
+                  disabled={!video || (ocupado && modo !== "original")}
+                  aria-label="Ouvir a fala original"
+                >
+                  {modo === "original" ? "■" : "▶"}
+                </button>
+                <span className="rotulo-redondo">Original</span>
+              </div>
+              <div className="botao-redondo-grupo">
+                <button
+                  className={`botao-redondo botao-gravar-grande ${modo === "gravando" ? "gravando" : ""}`}
+                  onClick={() => (modo === "gravando" ? parar() : gravar([falaSel]))}
+                  disabled={!video || (ocupado && modo !== "gravando")}
+                  aria-label={modo === "gravando" ? "Parar gravação" : temTomada ? "Regravar esta fala" : "Gravar esta fala"}
+                >
+                  <span className={modo === "gravando" ? "quadrado" : "circulo"} />
+                </button>
+                <span className="rotulo-redondo" style={{ color: modo === "gravando" ? "var(--gravando)" : undefined }}>
+                  {contagemPrep !== null ? "Prepare-se…" : modo === "gravando" ? "Parar" : temTomada ? "Regravar" : "Gravar"}
+                </span>
+                {temTomada && modo !== "gravando" && (dub.tomadas[falaSel.id].numero ?? 1) > 1 && (
+                  <span className="suave pequeno">Tomada {dub.tomadas[falaSel.id].numero}</span>
+                )}
+              </div>
+              <div className="botao-redondo-grupo">
+                <button
+                  className={`botao-redondo ${modo === "minha" ? "ativo" : ""} ${temTomada ? "tem-tomada" : ""}`}
+                  onClick={() => (modo === "minha" ? parar() : ouvir(falaSel, false))}
+                  disabled={!temTomada || (ocupado && modo !== "minha")}
+                  aria-label="Ouvir a minha tomada"
+                >
+                  {modo === "minha" ? "■" : "🎧"}
+                </button>
+                <span className="rotulo-redondo">Minha tomada</span>
+                <span className="suave pequeno">{temTomada ? "Gravada ✓" : "Nenhuma ainda"}</span>
+              </div>
             </div>
-            <div className="botao-redondo-grupo">
-              <button
-                className={`botao-redondo botao-gravar-grande ${modo === "gravando" ? "gravando" : ""}`}
-                onClick={() => (modo === "gravando" ? parar() : gravar([falaSel]))}
-                disabled={!video || (ocupado && modo !== "gravando")}
-                aria-label={modo === "gravando" ? "Parar gravação" : temTomada ? "Regravar esta fala" : "Gravar esta fala"}
-              >
-                <span className={modo === "gravando" ? "quadrado" : "circulo"} />
+
+            {temTomada && !ocupado && (
+              indice < total - 1 ? (
+                <button className="botao botao-verde botao-grande manter-proxima" onClick={() => irParaFala(indice + 1)}>
+                  ✅ Ficou bom · Próxima fala →
+                </button>
+              ) : (
+                <Link className="botao botao-verde botao-grande manter-proxima" to={`/dub/${dub.id}`}>
+                  ✅ Ficou bom · Ver o resultado →
+                </Link>
+              )
+            )}
+            <div className="nav-falas">
+              <button className="botao-texto" onClick={() => irParaFala(indice - 1)} disabled={ocupado || indice === 0}>
+                ‹ Anterior
               </button>
-              <span className="rotulo-redondo" style={{ color: modo === "gravando" ? "var(--gravando)" : undefined }}>
-                {contagemPrep !== null ? "Prepare-se…" : modo === "gravando" ? "Parar" : temTomada ? "Regravar" : "Gravar"}
-              </span>
-              {temTomada && modo !== "gravando" && (dub.tomadas[falaSel.id].numero ?? 1) > 1 && (
-                <span className="suave pequeno">Tomada {dub.tomadas[falaSel.id].numero}</span>
+              {indice < total - 1 ? (
+                <button className={`botao-texto ${temTomada ? "destaque-nav" : ""}`} onClick={() => irParaFala(indice + 1)} disabled={ocupado}>
+                  {temTomada ? "Próxima" : "Pular"} ›
+                </button>
+              ) : (
+                <Link className="botao-texto destaque-nav" to={`/dub/${dub.id}`}>
+                  Ver resultado ›
+                </Link>
               )}
             </div>
-            <div className="botao-redondo-grupo">
-              <button
-                className={`botao-redondo ${modo === "minha" ? "ativo" : ""} ${temTomada ? "tem-tomada" : ""}`}
-                onClick={() => (modo === "minha" ? parar() : ouvir(falaSel, false))}
-                disabled={!temTomada || (ocupado && modo !== "minha")}
-                aria-label="Ouvir a minha tomada"
-              >
-                {modo === "minha" ? "■" : "🎧"}
-              </button>
-              <span className="rotulo-redondo">Minha tomada</span>
-              <span className="suave pequeno">{temTomada ? "Gravada ✓" : "Nenhuma ainda"}</span>
-            </div>
-          </div>
-
-          {temTomada && !ocupado && (
-            indice < total - 1 ? (
-              <button className="botao botao-verde botao-grande manter-proxima" onClick={() => irParaFala(indice + 1)}>
-                ✅ Ficou bom · Próxima fala →
-              </button>
-            ) : (
-              <Link className="botao botao-verde botao-grande manter-proxima" to={`/dub/${dub.id}`}>
-                ✅ Ficou bom · Ver o resultado →
-              </Link>
-            )
-          )}
-          <div className="nav-falas">
-            <button className="botao-texto" onClick={() => irParaFala(indice - 1)} disabled={ocupado || indice === 0}>
-              ‹ Anterior
-            </button>
-            {indice < total - 1 ? (
-              <button className={`botao-texto ${temTomada ? "destaque-nav" : ""}`} onClick={() => irParaFala(indice + 1)} disabled={ocupado}>
-                {temTomada ? "Próxima" : "Pular"} ›
-              </button>
-            ) : (
-              <Link className="botao-texto destaque-nav" to={`/dub/${dub.id}`}>
-                Ver resultado ›
-              </Link>
-            )}
           </div>
         </>
       ) : (

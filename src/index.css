@@ -595,3 +595,38 @@ kbd { background: var(--superficie-2); border: 1px solid var(--borda); border-bo
 .filtro-tipo { display: flex; gap: 6px; flex-wrap: wrap; }
 .filtro-tipo button { border: 1px solid var(--borda); background: transparent; color: inherit; padding: 6px 12px; border-radius: 999px; font: inherit; cursor: pointer; }
 .filtro-tipo button.ativo { background: var(--amarelo); color: #1a0b3d; border-color: var(--amarelo); font-weight: 700; }
+
+/* ===== Estúdio no celular: tudo numa tela só (vídeo, legenda, onda e botões) =====
+   Os botões ficam presos embaixo (sempre à vista); a barra de menu some só no estúdio (volta com o ←). */
+.controles-estudio { display: flex; flex-direction: column; gap: 6px; }
+@media (max-width: 760px) {
+  body:has(.estudio) .barra-inferior,
+  body:has(.estudio) .rodape { display: none; }
+  .pagina:has(.estudio) { padding-bottom: 0; }
+  .estudio { gap: 6px; }
+  .estudio .palco:not(.vertical) { max-height: 30dvh; }
+  .estudio .palco:not(.vertical) video { max-height: 30dvh; }
+  .estudio .palco.vertical { height: min(32dvh, 420px); }
+  .estudio .pontos-falas { padding: 3px 6px; }
+  .estudio .ponto-fala { height: 7px; }
+  .estudio .cartao-fala { padding: 8px 10px; gap: 4px; }
+  .estudio .texto-fala { font-size: clamp(0.98rem, 4vw, 1.2rem); line-height: 1.25; }
+  .estudio .nota-afinacao { margin-top: 2px; padding: 2px 8px; font-size: 13px; }
+  .estudio .painel-onda { padding: 6px 8px; gap: 4px; }
+  .estudio .onda { height: 42px; }
+  /* A dica "comece no traço verde…" já está desenhada na onda (FALE / PARE): no celular só aparece gravando. */
+  .estudio .sinal-fala.parado { display: none; }
+  .estudio .sinal-fala { padding: 6px 10px; font-size: .9rem; }
+  .estudio .aviso-cantar { padding: 5px 10px; font-size: 12px; }
+  .controles-estudio {
+    position: sticky; bottom: 0; z-index: 6; gap: 4px;
+    margin: 0 -12px; padding: 8px 12px calc(8px + var(--sa-bottom));
+    background: linear-gradient(to top, var(--fundo, #08021f) 82%, rgb(8 2 31 / 0));
+  }
+  .controles-estudio .botao-redondo { width: 50px; height: 50px; }
+  .controles-estudio .botao-gravar-grande { width: 64px; height: 64px; }
+  .controles-estudio .rotulo-redondo { font-size: .75rem; }
+  .controles-estudio .suave.pequeno { font-size: .7rem; }
+  .controles-estudio .manter-proxima { padding: 9px 14px; font-size: 1rem; min-height: 0; }
+  .controles-estudio .nav-falas { padding-top: 2px; border-top: 0; }
+}

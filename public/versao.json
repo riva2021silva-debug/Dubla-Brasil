@@ -1,6 +1,6 @@
 {
-  "versao": "5.1",
-  "codigo": 39,
+  "versao": "5.2",
+  "codigo": 40,
   "data": "2026-11-19",
   "novidades": [
     "🎤 Modo Cantar: músicas para cantar com o instrumental, letra no estilo karaokê e nota de afinação em cada trecho",
@@ -8,7 +8,9 @@
     "Admin: ao salvar um vídeo ou música sem trilha de fundo, a IA gera a trilha automaticamente",
     "Admin: ferramentas “⚡ Otimizar vídeos” e “✨ Gerar as trilhas” logo abaixo da lista de cenas",
     "Sem travadas: no celular a IA da trilha de fundo não começa sozinha (ela pesava e o vídeo picotava) e para quando você sai da tela",
-    "Vídeos otimizados ~35% mais leves para a internet do celular (o “⚡ Otimizar vídeos” deixa leves também os que estavam pesados)"
+    "Vídeos otimizados ~35% mais leves para a internet do celular (o “⚡ Otimizar vídeos” deixa leves também os que estavam pesados)",
+    "📱 Estúdio numa tela só no celular: vídeo, legenda, onda e os botões Original / Gravar / Minha tomada sempre à vista",
+    "🎤 Nota de afinação só aparece com a voz do cantor separada pela IA (antes saía uma nota errada)"
   ],
   "apk": "https://dublabr.netlify.app/baixar/DublaBrasilAI.apk"
 }

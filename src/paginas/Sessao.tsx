@@ -363,7 +363,7 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
             </button>
           </span>
           <h1 style={{ marginTop: 8 }}>{cena.titulo}</h1>
-          {ehMusica(cena) && notaFinal !== null && (
+          {ehMusica(cena) && cena.voz && notaFinal !== null && (
             <div className="nota-afinacao" style={{ marginBottom: 6 }}>
               🎤 Nota final: <b>{notaFinal}%</b> · {rotuloAfinacao(notaFinal)}
             </div>
