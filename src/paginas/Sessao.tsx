@@ -119,6 +119,10 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
 
   const minhas = useMemo(() => cena.falas.filter((f) => dub.papeis.includes(f.personagemId)), [cena, dub.papeis]);
   const faltando = minhas.filter((f) => !dub.tomadas[f.id]).length;
+  const todosOsPapeis = cena.personagens.filter((p) => cena.falas.some((f) => f.personagemId === p.id)).every((p) => dub.papeis.includes(p.id));
+  // "Tirar todas as vozes originais": nenhuma voz original no vídeo inteiro (nem nas partes sem fala marcada).
+  // Já vem ligado quando a pessoa dublou todos os personagens.
+  const [semVozOriginal, setSemVozOriginal] = useState(todosOsPapeis && !dub.base);
 
   useEffect(() => {
     if (!video || !urls) return;
@@ -128,11 +132,9 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
     m.volumeOriginalNaMinhaFala = cfg.volumeOriginalNaMinhaFala;
     m.somAmbiente = cfg.somAmbiente;
     m.definirVolumeVoz(cfg.volumeVoz);
-    // Só silencia o original nas falas que você de fato gravou.
-    // Se a pessoa dublou todos os personagens e gravou todas as falas, a voz original some na cena inteira.
-    const todosOsPapeis = cena.personagens.filter((p) => cena.falas.some((f) => f.personagemId === p.id)).every((p) => dub.papeis.includes(p.id));
+    // Só silencia o original nas falas que você de fato gravou; com "Tirar todas as vozes originais", na cena inteira.
     const gravadas = minhas.filter((f) => dub.tomadas[f.id]);
-    m.definirJanelas(gravadas, todosOsPapeis && gravadas.length === cena.falas.length);
+    m.definirJanelas(gravadas, semVozOriginal && gravadas.length > 0);
     let vivo = true;
     (async () => {
       if (urls.fundo) {
@@ -156,6 +158,12 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
       mixer.current = null;
     };
   }, [video, urls, dub, minhas, cfg.volumeOriginalNaMinhaFala, cfg.somAmbiente, cfg.volumeVoz]);
+
+  // Liga/desliga "Tirar todas as vozes originais" sem recriar o som.
+  useEffect(() => {
+    const gravadas = minhas.filter((f) => dub.tomadas[f.id]);
+    mixer.current?.definirJanelas(gravadas, semVozOriginal && gravadas.length > 0);
+  }, [semVozOriginal, minhas, dub.tomadas]);
 
   useEffect(() => () => cancelar.current(), []);
 
@@ -375,6 +383,17 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
           🎙️ Voltar ao estúdio
         </Link>
       </div>
+
+      <label className="interruptor-sem-voz">
+        <input type="checkbox" checked={semVozOriginal} onChange={(e) => setSemVozOriginal(e.target.checked)} disabled={!!exportando} />
+        <span>
+          <b>🔇 Tirar todas as vozes originais</b>
+          <span className="suave pequeno">
+            {" "}
+            · fica só a sua voz no vídeo inteiro{todosOsPapeis ? "" : " (as falas dos personagens que você não dublou também somem)"}
+          </span>
+        </span>
+      </label>
 
       {faltando > 0 && (
         <p className="info">
