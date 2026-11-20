@@ -160,8 +160,8 @@ export function limparVoz(entrada: Float32Array, taxa: number): Float32Array {
     y[i] = x[i] * (ganho[q] * (1 - t) + ganho[proximo] * t);
     maximo = Math.max(maximo, Math.abs(y[i]));
   }
-  // Volume: leva o pico a -1 dB, mas sem aumentar mais que 3x (para não destacar o ruído).
-  const fator = maximo > 0 ? Math.min(3, 0.89 / maximo) : 1;
+  // Volume: leva o pico a -4 dB (sobra espaço para somar com a música sem estourar), sem aumentar mais que 3x.
+  const fator = maximo > 0 ? Math.min(3, 0.63 / maximo) : 1;
   if (fator !== 1) for (let i = 0; i < y.length; i++) y[i] *= fator;
   return y;
 }

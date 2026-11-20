@@ -44,7 +44,10 @@ export class Mixer {
   private ganhoSemVoz: GainNode;
   /** Liga o som ambiente automático nas suas falas. */
   somAmbiente = true;
+  /** Saída final (depois do limitador): é o que toca e o que vai para o vídeo exportado. */
   readonly saida: GainNode;
+  private soma: GainNode;
+  private limitador: DynamicsCompressorNode;
   private fundo: AudioBuffer | null = null;
   private tomadas: TomadaTocavel[] = [];
   private janelas: Janela[] = [];
@@ -81,14 +84,23 @@ export class Mixer {
     this.ganhoFundo = this.ctx.createGain();
     this.ganhoFundo.gain.value = 0;
     this.ganhoVoz = this.ctx.createGain();
+    // Tudo se soma aqui e passa por um limitador (como nos estúdios): a mistura nunca passa do máximo e não "estoura".
+    this.soma = this.ctx.createGain();
+    this.limitador = this.ctx.createDynamicsCompressor();
+    this.limitador.threshold.value = -6;
+    this.limitador.knee.value = 4;
+    this.limitador.ratio.value = 20;
+    this.limitador.attack.value = 0.002;
+    this.limitador.release.value = 0.18;
     this.saida = this.ctx.createGain();
     this.ganhoSemVoz = this.ctx.createGain();
     this.ganhoSemVoz.gain.value = 0;
-    fonte.connect(this.ganhoVideo).connect(this.saida);
+    fonte.connect(this.ganhoVideo).connect(this.soma);
     const semVoz = montarSemVoz(this.ctx, fonte);
-    semVoz.connect(this.ganhoSemVoz).connect(this.saida);
-    this.ganhoFundo.connect(this.saida);
-    this.ganhoVoz.connect(this.saida);
+    semVoz.connect(this.ganhoSemVoz).connect(this.soma);
+    this.ganhoFundo.connect(this.soma);
+    this.ganhoVoz.connect(this.soma);
+    this.soma.connect(this.limitador).connect(this.saida);
     this.saida.connect(this.ctx.destination);
 
     const agendar = () => this.agendar();
@@ -107,6 +119,8 @@ export class Mixer {
       this.parar();
       fonte!.disconnect();
       semVoz.disconnect();
+      this.soma.disconnect();
+      this.limitador.disconnect();
       this.saida.disconnect();
     };
   }

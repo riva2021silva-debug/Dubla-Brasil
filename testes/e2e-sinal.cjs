@@ -26,8 +26,10 @@ const SAIDA = path.join(__dirname, "saida");
   await u.getByRole("button", { name: /Entrar no estúdio/ }).click();
   await u.locator(".estudio").waitFor();
   await u.waitForFunction(() => document.querySelector("video")?.readyState >= 2);
-  await u.locator(".sinal-fala.parado").getByText("Comece").waitFor();
-  console.log("Parado: dica \"Comece no traço verde e pare no vermelho\": ok");
+  // No celular (5.2) a dica parada fica escondida para caber tudo numa tela: as marcas FALE/PARE estão na onda.
+  await u.locator(".sinal-fala.parado").getByText("Comece").waitFor({ state: "attached" });
+  await u.locator(".painel-onda canvas").first().waitFor();
+  console.log("Parado: marcas FALE / PARE na onda (a dica escrita fica escondida no celular): ok");
   // Observa os estados do sinal durante a gravação da fala 1 (1,0 s a 3,2 s).
   await u.evaluate(() => {
     window.__sinais = [];
@@ -44,7 +46,7 @@ const SAIDA = path.join(__dirname, "saida");
   await u.waitForTimeout(500);
   await u.screenshot({ path: path.join(SAIDA, "s1-fale-agora.png") });
   await u.locator(".sinal-fala.pare").waitFor({ timeout: 10000 });
-  await u.locator(".sinal-fala.parado").waitFor({ timeout: 10000 });
+  await u.locator(".sinal-fala.parado").waitFor({ state: "attached", timeout: 10000 });
   const sinais = await u.evaluate(() => window.__sinais);
   const ordem = sinais.filter((x) => x !== "parado").join(" → ");
   console.log(`Sinal durante a gravação: ${ordem}`, ordem === "prepare → fale → pare" ? "ok" : "FALHOU");

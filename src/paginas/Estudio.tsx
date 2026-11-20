@@ -484,6 +484,11 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
           ▶ Resultado {qtdFeitas}/{total}
         </Link>
       </div>
+      {musica && !cena.fundo && (
+        <div className="aviso-cantar pequeno" role="alert">
+          ⚠️ Esta música ainda não tem o <b>instrumental</b>: o resultado sai só com a sua voz. O administrador precisa gerar a trilha (✨ Gerar).
+        </div>
+      )}
       {musica && (
         <div className="aviso-cantar pequeno">
           🎤 <b>Modo Cantar</b> · 🎧 use fone de ouvido: o instrumental toca enquanto você canta, e cada trecho ganha uma nota de afinação.

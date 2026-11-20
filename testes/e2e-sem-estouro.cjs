@@ -1,0 +1,57 @@
+// Sem estourar (versão 5.2): música no volume máximo + voz alta somadas. O limitador do app segura a mistura:
+// o vídeo final não pode passar do máximo (0 dB) nem ter amostras "cortadas" (distorção).
+const { chromium, devices } = require("playwright");
+const fs = require("fs");
+const path = require("path");
+const { execFileSync, spawnSync } = require("child_process");
+const { entrarAdmin } = require("./auxiliar.cjs");
+const BASE = process.argv[2] || "http://localhost:4174/";
+const S = "http://localhost:54399";
+const SAIDA = path.join(__dirname, "saida");
+fs.mkdirSync(SAIDA, { recursive: true });
+const VIDEO = path.join(SAIDA, "cena-alta.mp4"), SRT = path.join(SAIDA, "cena-alta.srt"), TOM = path.join(SAIDA, "mic-alto.wav"), FUNDO = path.join(SAIDA, "fundo-alto.m4a");
+(async () => {
+  // Original e trilha de fundo no volume máximo (picos em ~0 dB); microfone alto.
+  execFileSync("ffmpeg", ["-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=size=640x360:rate=30", "-f", "lavfi", "-i", "aevalsrc=0.98*sin(2*PI*220*t)|0.98*sin(2*PI*330*t):s=48000", "-t", "8", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k", "-shortest", VIDEO]);
+  execFileSync("ffmpeg", ["-v", "error", "-y", "-f", "lavfi", "-i", "aevalsrc=0.98*sin(2*PI*220*t)|0.98*sin(2*PI*330*t):s=48000", "-t", "8", "-c:a", "aac", "-b:a", "192k", FUNDO]);
+  execFileSync("ffmpeg", ["-v", "error", "-y", "-f", "lavfi", "-i", "sine=frequency=600:sample_rate=48000", "-af", "volume=0.9", "-t", "60", TOM]);
+  fs.writeFileSync(SRT, "1\n00:00:01,500 --> 00:00:06,000\nCantando bem alto\n");
+  const nav = await chromium.launch({ args: ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream", `--use-file-for-fake-audio-capture=${TOM}`, "--autoplay-policy=no-user-gesture-required"] });
+  const adm = await (await nav.newContext({ viewport: { width: 1280, height: 900 }, acceptDownloads: true })).newPage();
+  await entrarAdmin(adm, BASE);
+  await adm.getByRole("link", { name: /Adicionar vídeo/ }).first().click();
+  const [v] = await Promise.all([adm.waitForEvent("filechooser"), adm.getByRole("button", { name: /Escolher o vídeo da cena/ }).click()]);
+  await v.setFiles(VIDEO);
+  await adm.locator(".palco video").waitFor();
+  const [f] = await Promise.all([adm.waitForEvent("filechooser"), adm.locator("section", { hasText: "Arquivos" }).getByRole("button", { name: "Escolher" }).click()]);
+  await f.setFiles(FUNDO);
+  await adm.getByText("carregada").waitFor();
+  const [s] = await Promise.all([adm.waitForEvent("filechooser"), adm.getByRole("button", { name: /Importar legendas/ }).click()]);
+  await s.setFiles(SRT);
+  await adm.getByLabel("Título").fill("Cena alta");
+  await adm.getByRole("button", { name: /Salvar cena/ }).click();
+  await adm.getByRole("heading", { name: "Administração" }).waitFor({ timeout: 120000 });
+  const cena = (await (await fetch(`${S}/__estado`)).json()).cenas[0];
+  const u = await (await nav.newContext({ ...devices["Pixel 7"], permissions: ["microphone"], acceptDownloads: true })).newPage();
+  await u.goto(BASE + "#/cena/" + cena.id);
+  await u.getByRole("button", { name: /Entrar no estúdio/ }).click();
+  await u.locator(".estudio").waitFor();
+  await u.waitForFunction(() => document.querySelector("video")?.readyState >= 2);
+  await u.getByRole("button", { name: "Gravar esta fala" }).click();
+  await u.getByRole("link", { name: /Resultado 1\/1/ }).waitFor({ timeout: 40000 });
+  await u.getByRole("link", { name: /Resultado 1\/1/ }).click();
+  await u.waitForFunction(() => !document.querySelector(".controles .botao-verde")?.disabled);
+  const dl = u.waitForEvent("download", { timeout: 90000 });
+  await u.getByRole("button", { name: /Salvar na galeria/ }).click();
+  const arq = path.join(SAIDA, "sem-estouro.mp4");
+  await (await dl).saveAs(arq);
+  const out = spawnSync("ffmpeg", ["-hide_banner", "-i", arq, "-af", "astats=metadata=0", "-f", "null", "-"], { encoding: "utf8" }).stderr;
+  const pico = Number((/Overall[\s\S]*?Peak level dB: (-?[\d.]+)/.exec(out) || [])[1]);
+  const raw = execFileSync("ffmpeg", ["-v", "error", "-i", arq, "-f", "f32le", "-"], { maxBuffer: 1e9 });
+  const x = new Float32Array(raw.buffer, raw.byteOffset, raw.length / 4);
+  let cortadas = 0;
+  for (const a of x) if (Math.abs(a) > 0.995) cortadas++;
+  console.log(`Pico do vídeo final: ${pico.toFixed(1)} dB · amostras no limite: ${((cortadas / x.length) * 100).toFixed(3)}%`);
+  console.log("Música alta + voz alta não estouram (pico abaixo de 0 dB, sem distorção):", pico < 0 && cortadas / x.length < 0.0005 ? "ok" : "FALHOU");
+  await nav.close();
+})().catch((e) => { console.error("FALHOU:", e); process.exit(1); });

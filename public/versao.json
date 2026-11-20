@@ -10,7 +10,9 @@
     "Sem travadas: no celular a IA da trilha de fundo não começa sozinha (ela pesava e o vídeo picotava) e para quando você sai da tela",
     "Vídeos otimizados ~35% mais leves para a internet do celular (o “⚡ Otimizar vídeos” deixa leves também os que estavam pesados)",
     "📱 Estúdio numa tela só no celular: vídeo, legenda, onda e os botões Original / Gravar / Minha tomada sempre à vista",
-    "🎤 Nota de afinação só aparece com a voz do cantor separada pela IA (antes saía uma nota errada)"
+    "🎤 Nota de afinação só aparece com a voz do cantor separada pela IA (antes saía uma nota errada)",
+    "🔊 Som sem estourar: limitador na mistura final e voz em volume equilibrado com a música",
+    "🎤 Aviso no estúdio quando a música ainda não tem o instrumental gerado pela IA"
   ],
   "apk": "https://dublabr.netlify.app/baixar/DublaBrasilAI.apk"
 }
