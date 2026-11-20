@@ -67,6 +67,8 @@ const db = (arq, ini, dur, freq) => {
   await u.getByRole("link", { name: /Resultado 1\/1/ }).waitFor({ timeout: 30000 });
   await u.getByRole("link", { name: /Resultado 1\/1/ }).click();
   await u.waitForFunction(() => !document.querySelector(".controles .botao-verde")?.disabled);
+  // Este teste confere a fala do Jack (personagem não dublado) inteira: desliga o "Só a minha voz".
+  await u.getByLabel(/Só a minha voz/).uncheck();
   const dl = u.waitForEvent("download", { timeout: 90000 });
   await u.getByRole("button", { name: /Salvar na galeria/ }).click();
   const arq = path.join(SAIDA, "cada-um-na-vez.mp4");

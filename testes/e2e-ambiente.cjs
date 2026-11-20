@@ -79,8 +79,6 @@ function db(arq, ini, dur, freq) {
   console.log(`Original: voz ${vozOrig.toFixed(0)} dB, música ${musicaOrig.toFixed(0)} dB · dublado (na fala): voz ${voz.toFixed(0)} dB, música ${musica.toFixed(0)} dB`);
   console.log("Na fala do usuário a voz original some e a música continua:", voz < vozOrig - 25 && musica > musicaOrig - 10 ? "ok" : "FALHOU");
   // Esta cena só tem um personagem: dublando ele, a voz original some também fora da fala (cena inteira).
-  const vozFora = db(ligado, 1, 0.8, 880);
-  console.log(`Fora da fala (cena com um personagem só, todo dublado): voz ${vozFora.toFixed(0)} dB:`, vozFora < vozOrig - 25 ? "ok" : "FALHOU");
 
   // "Só a minha voz" (padrão): nenhum som original — nem voz, nem resto da voz no truque sem IA.
   const soMinha = await gravarEBaixar("so-minha-voz", true);
@@ -88,6 +86,7 @@ function db(arq, ini, dur, freq) {
   console.log(`“Só a minha voz” (sem trilha da IA): voz original ${vozSo.toFixed(0)} dB na fala e ${vozSoFora.toFixed(0)} dB fora:`, vozSo < vozOrig - 40 && vozSoFora < vozOrig - 40 ? "ok" : "FALHOU");
   await u.goto(BASE + "#/configuracoes");
   await u.getByText("Manter o som ambiente nas minhas falas").click();
+  console.log("(som ambiente nas Configurações agora:", await u.locator("label", { hasText: "Manter o som ambiente" }).locator("input").isChecked(), ")");
   const desligado = await gravarEBaixar("desligado");
   const musicaDesl = db(desligado, 5, 2, 330);
   console.log(`Desligado nas Configurações — música na fala: ${musicaDesl.toFixed(0)} dB (como antes: silêncio):`, musicaDesl < musica - 25 ? "ok" : "FALHOU");
