@@ -120,9 +120,10 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
   const minhas = useMemo(() => cena.falas.filter((f) => dub.papeis.includes(f.personagemId)), [cena, dub.papeis]);
   const faltando = minhas.filter((f) => !dub.tomadas[f.id]).length;
   const todosOsPapeis = cena.personagens.filter((p) => cena.falas.some((f) => f.personagemId === p.id)).every((p) => dub.papeis.includes(p.id));
-  // "Tirar todas as vozes originais": nenhuma voz original no vídeo inteiro (nem nas partes sem fala marcada).
-  // Já vem ligado quando a pessoa dublou todos os personagens.
-  const [semVozOriginal, setSemVozOriginal] = useState(todosOsPapeis && !dub.base);
+  // "Só a minha voz": nenhuma voz original no vídeo inteiro (nem nas partes sem fala marcada, nem resto escondido).
+  // Com a trilha de fundo da IA fica a música e os efeitos; sem ela, só a voz de quem dublou. Já vem ligado
+  // (menos no dueto, em que a outra voz é de outro dublador).
+  const [semVozOriginal, setSemVozOriginal] = useState(!dub.base);
 
   useEffect(() => {
     if (!video || !urls) return;
@@ -130,7 +131,8 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
     mixer.current = m;
     m.definirFalasDaCena(cena.falas);
     m.volumeOriginalNaMinhaFala = cfg.volumeOriginalNaMinhaFala;
-    m.somAmbiente = cfg.somAmbiente;
+    // O "som ambiente" sem a IA é um truque que deixa passar um pouco da voz original: com "Só a minha voz", não usa.
+    m.somAmbiente = cfg.somAmbiente && !semVozOriginal;
     m.definirVolumeVoz(cfg.volumeVoz);
     // Só silencia o original nas falas que você de fato gravou; com "Tirar todas as vozes originais", na cena inteira.
     const gravadas = minhas.filter((f) => dub.tomadas[f.id]);
@@ -162,8 +164,9 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
   // Liga/desliga "Tirar todas as vozes originais" sem recriar o som.
   useEffect(() => {
     const gravadas = minhas.filter((f) => dub.tomadas[f.id]);
+    if (mixer.current) mixer.current.somAmbiente = cfg.somAmbiente && !semVozOriginal;
     mixer.current?.definirJanelas(gravadas, semVozOriginal && gravadas.length > 0);
-  }, [semVozOriginal, minhas, dub.tomadas]);
+  }, [semVozOriginal, minhas, dub.tomadas, cfg.somAmbiente]);
 
   useEffect(() => () => cancelar.current(), []);
 
@@ -387,10 +390,11 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
       <label className="interruptor-sem-voz">
         <input type="checkbox" checked={semVozOriginal} onChange={(e) => setSemVozOriginal(e.target.checked)} disabled={!!exportando} />
         <span>
-          <b>🔇 Tirar todas as vozes originais</b>
+          <b>🔇 Só a minha voz</b>
           <span className="suave pequeno">
             {" "}
-            · fica só a sua voz no vídeo inteiro{todosOsPapeis ? "" : " (as falas dos personagens que você não dublou também somem)"}
+            · nenhuma voz original no vídeo{cena.fundo ? " (a música e os efeitos da cena continuam)" : " — para manter a música e os efeitos, o administrador gera a trilha de fundo (✨ Gerar)"}
+            {!todosOsPapeis ? ". As falas dos personagens que você não dublou também saem." : "."}
           </span>
         </span>
       </label>

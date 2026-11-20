@@ -48,10 +48,10 @@ const db = (arq, ini, dur, f) => { const o = spawnSync("ffmpeg", ["-hide_banner"
     return arq;
   };
   // Cena com um personagem só, todo dublado: a chave já vem ligada.
-  const ligada = await u.getByLabel(/Tirar todas as vozes originais/).isChecked();
-  console.log("Dublou todos os personagens: “Tirar todas as vozes originais” já vem ligado:", ligada ? "ok" : "FALHOU");
+  const ligada = await u.getByLabel(/Só a minha voz/).isChecked();
+  console.log("Dublou todos os personagens: “Só a minha voz” já vem ligado:", ligada ? "ok" : "FALHOU");
   const comChave = await exportar("sem-voz-ligado.mp4");
-  await u.getByLabel(/Tirar todas as vozes originais/).uncheck();
+  await u.getByLabel(/Só a minha voz/).uncheck();
   const semChave = await exportar("sem-voz-desligado.mp4");
   const vozSoltaLigado = db(comChave, 0.5, 0.8, 1000), vozSoltaDesligado = db(semChave, 0.5, 0.8, 1000), minhaVoz = db(comChave, 3.3, 1.4, 600);
   console.log(`Voz original na parte sem fala marcada: chave ligada ${vozSoltaLigado.toFixed(1)} dB · desligada ${vozSoltaDesligado.toFixed(1)} dB · sua voz ${minhaVoz.toFixed(1)} dB`);

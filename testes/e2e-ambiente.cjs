@@ -53,7 +53,7 @@ function db(arq, ini, dur, freq) {
   const cenaId = (await (await fetch(`${SERVIDOR}/__estado`)).json()).cenas.find((c) => c.titulo === "Cena do ambiente").id;
 
   const u = await nova({ ...devices["Pixel 7"] });
-  const gravarEBaixar = async (rotulo) => {
+  const gravarEBaixar = async (rotulo, soMinhaVoz = false) => {
     await u.goto(BASE + "#/cena/" + cenaId);
     await u.getByRole("button", { name: /Entrar no estúdio/ }).click();
     await u.locator(".estudio").waitFor();
@@ -62,6 +62,10 @@ function db(arq, ini, dur, freq) {
     await u.getByRole("link", { name: /Resultado 1\/1/ }).waitFor({ timeout: 30000 });
     await u.getByRole("link", { name: /Resultado 1\/1/ }).click();
     await u.waitForFunction(() => !document.querySelector(".controles .botao-verde")?.disabled);
+    // Versão 5.5: "Só a minha voz" vem ligado; para testar o som ambiente (sem a IA), desliga.
+    const chave = u.getByLabel(/Só a minha voz/);
+    if (soMinhaVoz) await chave.check();
+    else await chave.uncheck();
     const dl = u.waitForEvent("download", { timeout: 90000 });
     await u.getByRole("button", { name: /Salvar na galeria/ }).click();
     const arq = path.join(SAIDA, `ambiente-${rotulo}.mp4`);
@@ -78,6 +82,10 @@ function db(arq, ini, dur, freq) {
   const vozFora = db(ligado, 1, 0.8, 880);
   console.log(`Fora da fala (cena com um personagem só, todo dublado): voz ${vozFora.toFixed(0)} dB:`, vozFora < vozOrig - 25 ? "ok" : "FALHOU");
 
+  // "Só a minha voz" (padrão): nenhum som original — nem voz, nem resto da voz no truque sem IA.
+  const soMinha = await gravarEBaixar("so-minha-voz", true);
+  const vozSo = db(soMinha, 5, 2, 880), musicaSo = db(soMinha, 5, 2, 330), vozSoFora = db(soMinha, 1, 0.8, 880);
+  console.log(`“Só a minha voz” (sem trilha da IA): voz original ${vozSo.toFixed(0)} dB na fala e ${vozSoFora.toFixed(0)} dB fora:`, vozSo < vozOrig - 40 && vozSoFora < vozOrig - 40 ? "ok" : "FALHOU");
   await u.goto(BASE + "#/configuracoes");
   await u.getByText("Manter o som ambiente nas minhas falas").click();
   const desligado = await gravarEBaixar("desligado");
