@@ -472,14 +472,6 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
         >
           📷
         </button>
-        <button
-          className={`botao botao-pequeno botao-legenda ${cfg.mostrarLegendas ? "ligada" : ""}`}
-          aria-pressed={cfg.mostrarLegendas}
-          title={cfg.mostrarLegendas ? "Esconder a legenda" : "Mostrar a legenda"}
-          onClick={() => salvarCfg({ mostrarLegendas: !cfg.mostrarLegendas })}
-        >
-          💬 {cfg.mostrarLegendas ? "Legenda" : "Sem legenda"}
-        </button>
         <Link className={`botao botao-pequeno ${qtdFeitas === total && total > 0 ? "botao-verde" : ""}`} to={`/dub/${dub.id}`}>
           ▶ Resultado {qtdFeitas}/{total}
         </Link>
@@ -541,6 +533,7 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
           </div>
         )}
         {contagem !== null && contagem <= 3 && <div className="contagem">{contagem}</div>}
+        {contagem === null && <ProximaFala falas={cena.falas} minhas={minhas} personagens={cena.personagens} tempoMs={tempo} tocando={!!video && !video.paused} />}
         {modo === "gravando" && <div className="barra-progresso" style={{ width: `${(decorrido / (janela.ate - janela.de)) * 100}%` }} />}
       </div>
 
@@ -577,14 +570,11 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
                 </Link>
               </span>
             </div>
-            {cfg.mostrarLegendas && (
-              <p
-                className="texto-fala texto-karaoke"
-                style={{ "--progresso": `${Math.round(Math.min(1, Math.max(0, (tempo - falaSel.inicioMs) / Math.max(1, falaSel.fimMs - falaSel.inicioMs))) * 100)}%` } as React.CSSProperties}
-              >
-                {falaSel.texto || "…"}
-              </p>
-            )}
+            {/* Sem legenda: a pessoa ouve o personagem (botão Original) e fala do jeito dela. */}
+            <p className="ouca-e-fale">
+              {musica ? "🎧 Ouça o trecho e cante junto, no tempo da música" : `🎧 Ouça ${p?.nome ?? "o personagem"} e fale do seu jeito`}
+              <span className="suave"> · {((falaSel.fimMs - falaSel.inicioMs) / 1000).toFixed(1).replace(".", ",")} s</span>
+            </p>
             {musica && !cena.voz && (
               <div className="suave pequeno">🎯 A nota de afinação aparece quando o administrador gerar a trilha desta música (✨ Gerar).</div>
             )}
@@ -619,7 +609,7 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
                           <span className="numero-fala">{i + 1}</span>
                           <span className="item-fala-corpo">
                             <b style={{ color: pf?.cor }}>{pf?.nome}</b> <span className="suave pequeno">{formatarTempo(f.inicioMs, false)}</span>
-                            <span className="item-fala-texto">{f.texto || "…"}</span>
+                            <span className="item-fala-texto suave">{((f.fimMs - f.inicioMs) / 1000).toFixed(1).replace(".", ",")} s de fala</span>
                           </span>
                           <span aria-label={dub.tomadas[f.id] ? "gravada" : "falta gravar"}>{dub.tomadas[f.id] ? "✅" : "○"}</span>
                         </button>
@@ -781,7 +771,7 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
                 <span className="ponto" style={{ background: personagem(f.personagemId)?.cor }} />
                 <div style={{ minWidth: 0 }}>
                   <div className="texto">
-                    {i + 1}. {f.texto || "…"}
+                    {i + 1}. {personagem(f.personagemId)?.nome ?? "Fala"} · {((f.fimMs - f.inicioMs) / 1000).toFixed(1).replace(".", ",")} s
                   </div>
                   <div className="meta">{formatarTempo(f.inicioMs)}</div>
                 </div>
@@ -854,6 +844,27 @@ function SinalDeFala({ fala, tempoMs, ativo, gravando }: { fala: Fala; tempoMs: 
   return (
     <div className="sinal-fala pare" aria-live="polite">
       <span>✋ {gravando ? "PARE de falar" : "Fim da fala"}</span>
+    </div>
+  );
+}
+
+/**
+ * Sem legenda, a pessoa precisa saber QUANDO alguém vai falar (ex.: numa cena de luta, espera a luta passar).
+ * Enquanto o vídeo toca, mostra a contagem até a próxima fala: "🎙️ Sua vez em 3" ou "🗣️ Jack fala em 3".
+ */
+function ProximaFala({ falas, minhas, personagens, tempoMs, tocando }: { falas: Fala[]; minhas: Fala[]; personagens: Cena["personagens"]; tempoMs: number; tocando: boolean }) {
+  if (!tocando) return null;
+  // Alguém já está falando: não mostra (a pessoa está ouvindo ou gravando).
+  if (falas.some((f) => tempoMs >= f.inicioMs && tempoMs < f.fimMs)) return null;
+  const proxima = falas.filter((f) => f.inicioMs > tempoMs).sort((a, b) => a.inicioMs - b.inicioMs)[0];
+  if (!proxima) return null;
+  const falta = (proxima.inicioMs - tempoMs) / 1000;
+  if (falta > 5) return null;
+  const minha = minhas.some((f) => f.id === proxima.id);
+  const nome = personagens.find((p) => p.id === proxima.personagemId)?.nome ?? "O personagem";
+  return (
+    <div className={`proxima-fala ${minha ? "minha" : ""}`} aria-live="polite">
+      {minha ? "🎙️ Sua vez em" : `🗣️ ${nome} fala em`} <b>{Math.ceil(falta)}</b>
     </div>
   );
 }

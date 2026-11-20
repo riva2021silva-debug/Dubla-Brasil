@@ -28,7 +28,7 @@ const S = "http://localhost:54399";
     await pg.waitForTimeout(600);
     const r = await pg.evaluate(() => {
       const caixa = (sel) => document.querySelector(sel)?.getBoundingClientRect();
-      const video = caixa(".estudio .palco"), fala = caixa(".cartao-fala .texto-fala"), onda = caixa(".painel-onda"), gravar = caixa(".botao-gravar-grande"), original = caixa(".botoes-redondos .botao-redondo");
+      const video = caixa(".estudio .palco"), fala = caixa(".cartao-fala .ouca-e-fale"), onda = caixa(".painel-onda"), gravar = caixa(".botao-gravar-grande"), original = caixa(".botoes-redondos .botao-redondo");
       const h = innerHeight;
       const visivel = (b) => !!b && b.top >= 0 && b.bottom <= h + 1;
       return { h, video: visivel(video), fala: visivel(fala), onda: visivel(onda), gravar: visivel(gravar), original: visivel(original), rolagem: scrollY };

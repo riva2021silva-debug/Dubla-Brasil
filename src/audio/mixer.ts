@@ -47,7 +47,7 @@ export class Mixer {
   /** Saída final (depois do limitador): é o que toca e o que vai para o vídeo exportado. */
   readonly saida: GainNode;
   private soma: GainNode;
-  private limitador: DynamicsCompressorNode;
+  private limitador: WaveShaperNode;
   private fundo: AudioBuffer | null = null;
   private tomadas: TomadaTocavel[] = [];
   private janelas: Janela[] = [];
@@ -84,14 +84,13 @@ export class Mixer {
     this.ganhoFundo = this.ctx.createGain();
     this.ganhoFundo.gain.value = 0;
     this.ganhoVoz = this.ctx.createGain();
-    // Tudo se soma aqui e passa por um limitador (como nos estúdios): a mistura nunca passa do máximo e não "estoura".
+    // Tudo se soma aqui e passa por um limitador: abaixo de ~-3 dB o som passa IGUAL (sem mudar o volume); só os
+    // picos que passariam do máximo são arredondados (não "estoura"). Curva fixa, igual em todo celular.
     this.soma = this.ctx.createGain();
-    this.limitador = this.ctx.createDynamicsCompressor();
-    this.limitador.threshold.value = -6;
-    this.limitador.knee.value = 4;
-    this.limitador.ratio.value = 20;
-    this.limitador.attack.value = 0.002;
-    this.limitador.release.value = 0.18;
+    this.soma.gain.value = 0.5; // a curva cobre de -2 a +2 (somas que passam de 1)
+    this.limitador = this.ctx.createWaveShaper();
+    this.limitador.curve = curvaLimitador();
+    this.limitador.oversample = "4x";
     this.saida = this.ctx.createGain();
     this.ganhoSemVoz = this.ctx.createGain();
     this.ganhoSemVoz.gain.value = 0;
@@ -288,6 +287,19 @@ export class Mixer {
       this.ativas.push(src);
     });
   }
+}
+
+/** Curva do limitador (entrada de -2 a +2, já dividida por 2 antes): linear até 0,7; depois arredonda até 0,98. */
+function curvaLimitador(): Float32Array<ArrayBuffer> {
+  const n = 4096;
+  const c = new Float32Array(new ArrayBuffer(n * 4));
+  for (let i = 0; i < n; i++) {
+    const x = ((i / (n - 1)) * 2 - 1) * 2; // valor real da soma
+    const a = Math.abs(x);
+    const y = a <= 0.7 ? a : 0.7 + 0.28 * Math.tanh((a - 0.7) / 0.28);
+    c[i] = Math.sign(x) * y;
+  }
+  return c;
 }
 
 export async function decodificar(ctx: BaseAudioContext, blob: Blob): Promise<AudioBuffer> {

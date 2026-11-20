@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import PedirApelido from "../componentes/PedirApelido";
 import { LIMITE_BYTES, meuApelido, publicar } from "../galeria";
-import LegendaKaraoke from "../componentes/LegendaKaraoke";
 import LinhaDoTempo from "../componentes/LinhaDoTempo";
 import { useConfig } from "../config";
 import { db } from "../db";
@@ -52,7 +51,7 @@ function formatoDeExportacao(): { mime: string; ext: string } | null {
 }
 
 function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
-  const [cfg, salvarCfg] = useConfig();
+  const [cfg] = useConfig();
   const { urls, erro: erroMidia } = useMidiasDaCena(cena);
   const [video, setVideo] = useState<HTMLVideoElement | null>(null);
   const mixer = useRef<Mixer | null>(null);
@@ -354,13 +353,6 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
         <div>
           <span className="linha" style={{ gap: 8 }}>
             <span className="etiqueta">🎬 Sessão de estreia</span>
-            <button
-              className={`botao botao-pequeno botao-legenda ${cfg.mostrarLegendas ? "ligada" : ""}`}
-              aria-pressed={cfg.mostrarLegendas}
-              onClick={() => salvarCfg({ mostrarLegendas: !cfg.mostrarLegendas })}
-            >
-              💬 {cfg.mostrarLegendas ? "Legenda" : "Sem legenda"}
-            </button>
           </span>
           <h1 style={{ marginTop: 8 }}>{cena.titulo}</h1>
           {ehMusica(cena) && cena.voz && notaFinal !== null && (
@@ -411,7 +403,6 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
           </div>
         )}
       </div>
-      {cfg.mostrarLegendas && <LegendaKaraoke falas={cena.falas} personagens={cena.personagens} tempoMs={tempo} papeis={dub.papeis} />}
 
       <LinhaDoTempo
         duracaoMs={cena.duracaoMs}

@@ -18,7 +18,7 @@ export default function Biblioteca() {
     const lista = (cenas.dado ?? []).filter((c) => tipo === "todas" || (tipo === "musica" ? c.tipo === "musica" : c.tipo !== "musica")).filter((c) =>
       !q
         ? true
-        : [c.titulo, c.descricao, ...c.personagens.map((p) => p.nome), ...c.falas.map((f) => f.texto)].join(" ").toLowerCase().includes(q),
+        : [c.titulo, c.descricao, ...c.personagens.map((p) => p.nome)].join(" ").toLowerCase().includes(q),
     );
     const cmp: Record<Ordem, (a: (typeof lista)[0], b: (typeof lista)[0]) => number> = {
       recentes: (a, b) => b.atualizadaEm - a.atualizadaEm,
@@ -53,7 +53,7 @@ export default function Biblioteca() {
           className="entrada"
           style={{ maxWidth: 380, flex: 1 }}
           type="search"
-          placeholder="Buscar por título, personagem ou fala…"
+          placeholder="Buscar por título ou personagem…"
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
           aria-label="Buscar cenas"

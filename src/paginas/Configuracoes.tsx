@@ -163,10 +163,6 @@ export default function Configuracoes() {
           <input type="range" min={0} max={0.5} step={0.05} value={cfg.volumeOriginalNaMinhaFala} onChange={(e) => salvar({ volumeOriginalNaMinhaFala: +e.target.value })} />
           <span className="suave pequeno">Em 0%, o original some enquanto você fala. Um pouco de volume mantém a música, mas a voz original vaza.</span>
         </label>
-        <label className="linha">
-          <input type="checkbox" checked={cfg.mostrarLegendas} onChange={(e) => salvar({ mostrarLegendas: e.target.checked })} />
-          Mostrar legendas no vídeo (e no vídeo baixado)
-        </label>
       </section>
 
       <div>

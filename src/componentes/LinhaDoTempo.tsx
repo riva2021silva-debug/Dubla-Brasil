@@ -57,7 +57,7 @@ export default function LinhaDoTempo(p: Props) {
           <div
             key={f.id}
             className={classes.join(" ")}
-            title={f.texto}
+            title={`${((f.fimMs - f.inicioMs) / 1000).toFixed(1)} s`}
             onPointerDown={(e) => {
               if (!p.onSelecionar) return;
               e.stopPropagation();

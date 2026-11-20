@@ -52,8 +52,10 @@ const SAIDA = path.join(__dirname, "saida");
   await u.goto(BASE + "#/cena/" + cena.id);
   await u.getByRole("button", { name: /Entrar no estúdio/ }).click();
   await u.locator(".estudio").waitFor();
-  await u.locator(".texto-fala", { hasText: "chinelo de estimação" }).waitFor();
-  console.log("Usuário vê a legenda corrigida no estúdio: ok");
+  // Versão 5.3: o usuário não vê mais legenda (dublagem de ouvido); o estúdio mostra "Ouça … e fale do seu jeito".
+  await u.locator(".ouca-e-fale").waitFor();
+  const semLegenda = (await u.getByText("chinelo de estimação").count()) === 0;
+  console.log("Estúdio sem legenda (mostra “Ouça e fale”):", semLegenda ? "ok" : "FALHOU");
   console.log(erros.length ? "ERROS:\n" + erros.join("\n") : "Sem erros no console.");
   await navegador.close();
 })().catch((e) => {
