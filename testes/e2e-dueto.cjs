@@ -154,6 +154,7 @@ async function tonsNasFalas(pg, url, falas) {
   console.log("Sino da Ana com 3 avisos:", selo === "3" ? "ok" : `FALHOU (${selo})`);
   await ana.locator(".sino").click();
   await ana.getByRole("heading", { name: "🔔 Notificações" }).waitFor();
+  await ana.locator(".notificacao").nth(2).waitFor(); // a lista chega um instante depois do título
   const textos = await ana.locator(".notificacao").allInnerTexts();
   const tem = (re) => textos.some((t) => re.test(t));
   console.log(
