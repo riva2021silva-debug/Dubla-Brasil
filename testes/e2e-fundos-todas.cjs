@@ -61,14 +61,14 @@ const SRT = path.join(SAIDA, "cena-fala-musica-2.srt");
   await p.getByText("2 de 2 cenas estão sem trilha de fundo").waitFor();
   const t0 = Date.now();
   await p.getByRole("button", { name: "✨ Gerar as 2 trilhas" }).click();
-  await p.locator(".lista-otimizar li.feito").nth(1).waitFor({ timeout: 900000 });
+  await p.locator("section:not(#processamento) > .lista-otimizar li.feito").nth(1).waitFor({ timeout: 900000 });
   console.log(`As 2 trilhas geradas em ${((Date.now() - t0) / 1000).toFixed(0)} s`);
   await p.screenshot({ path: path.join(SAIDA, "fundos-todas.png") });
   const estado = await (await fetch(`${SERVIDOR}/__estado`)).json();
   const comFundo = estado.cenas.filter((c) => c.fundo_path).length;
   console.log("As 2 cenas ganharam trilha de fundo no servidor:", comFundo === 2 ? "ok" : `FALHOU (${comFundo})`);
   await p.getByText("Todas as cenas têm trilha de fundo. ✅").waitFor({ timeout: 20000 });
-  console.log("Painel mostra que todas têm trilha (resultado continua na tela):", (await p.locator(".lista-otimizar li.feito").count()) === 2 ? "ok" : "FALHOU");
+  console.log("Painel mostra que todas têm trilha (resultado continua na tela):", (await p.locator("section:not(#processamento) > .lista-otimizar li.feito").count()) === 2 ? "ok" : "FALHOU");
 
   // A trilha não pode ter a voz: compara com a música pura (correlação) e com a fala.
   const fundo = estado.cenas[0].fundo_path;
