@@ -14,6 +14,17 @@ import { ehMusica, type Cena, type Dub } from "../tipos";
 import { rotuloAfinacao } from "../audio/afinacao";
 import { formatarTempo, gerarCapa, nomeArquivo, salvarVideoNaGaleria } from "../util";
 
+/**
+ * Onde a voz original some no resultado. "Só a minha voz": no vídeo inteiro. Desligada e com todas as falas
+ * gravadas: da primeira à última fala, sem buracos entre elas (antes e depois, a cena toca como é).
+ */
+function janelasDoResultado(gravadas: { inicioMs: number; fimMs: number }[], total: number, semVozOriginal: boolean): [{ inicioMs: number; fimMs: number }[], boolean] {
+  if (!gravadas.length) return [gravadas, false];
+  if (semVozOriginal) return [gravadas, true];
+  if (gravadas.length === total) return [[{ inicioMs: Math.min(...gravadas.map((f) => f.inicioMs)), fimMs: Math.max(...gravadas.map((f) => f.fimMs)) }], false];
+  return [gravadas, false];
+}
+
 export default function Sessao() {
   const { dubId = "" } = useParams();
   const dados = useCarregar(async () => {
@@ -136,7 +147,7 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
     m.definirVolumeVoz(cfg.volumeVoz);
     // Só silencia o original nas falas que você de fato gravou; com "Tirar todas as vozes originais", na cena inteira.
     const gravadas = minhas.filter((f) => dub.tomadas[f.id]);
-    m.definirJanelas(gravadas, semVozOriginal && gravadas.length > 0);
+    m.definirJanelas(...janelasDoResultado(gravadas, cena.falas.length, semVozOriginal));
     let vivo = true;
     (async () => {
       if (urls.fundo) {
@@ -165,7 +176,7 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
   useEffect(() => {
     const gravadas = minhas.filter((f) => dub.tomadas[f.id]);
     if (mixer.current) mixer.current.somAmbiente = cfg.somAmbiente && !semVozOriginal;
-    mixer.current?.definirJanelas(gravadas, semVozOriginal && gravadas.length > 0);
+    mixer.current?.definirJanelas(...janelasDoResultado(gravadas, cena.falas.length, semVozOriginal));
   }, [semVozOriginal, minhas, dub.tomadas, cfg.somAmbiente]);
 
   useEffect(() => () => cancelar.current(), []);

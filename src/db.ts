@@ -68,7 +68,7 @@ export const db = {
   excluirRascunho: (chave: string) => operar<undefined>("rascunhos", "readwrite", (s) => s.delete(chave)),
 
   listarProcessamento: <T>() => operar<T[]>("processamento", "readonly", (s) => s.getAll()),
-  salvarProcessamento: (t: { id: string }) => operar<IDBValidKey>("processamento", "readwrite", (s) => s.put(t)),
+  salvarProcessamento: <T extends { id: string }>(t: T) => operar<IDBValidKey>("processamento", "readwrite", (s) => s.put(t)),
   excluirProcessamento: (id: string) => operar<undefined>("processamento", "readwrite", (s) => s.delete(id)),
 
   salvarMidia: (chave: string, b: Blob) => operar<IDBValidKey>("midias", "readwrite", (s) => s.put(b, chave)),
