@@ -7,7 +7,7 @@ const { chromium } = require("playwright");
 const fs = require("fs");
 const path = require("path");
 const { execFileSync, spawnSync } = require("child_process");
-const { entrarAdmin } = require("./auxiliar.cjs");
+const { entrarAdmin, esperarFila } = require("./auxiliar.cjs");
 const BASE = process.argv[2] || "http://localhost:4174/";
 const SERVIDOR = "http://localhost:54399";
 const SAIDA = path.join(__dirname, "saida");
@@ -63,6 +63,7 @@ const baixarDoServidor = async (caminho, nome) => {
   await adm.getByLabel("Título").fill("Vídeo leve");
   await adm.getByRole("button", { name: /Salvar cena/ }).click();
   await adm.getByRole("heading", { name: "Administração" }).waitFor({ timeout: 120000 });
+  await esperarFila(adm);
   let cena = (await (await fetch(`${SERVIDOR}/__estado`)).json()).cenas.find((c) => c.titulo === "Vídeo leve");
   const novo = analisar(await baixarDoServidor(cena.video_path, "video-leve-salvo.mp4"));
   console.log("Vídeo que chegou ao servidor:", JSON.stringify(novo));

@@ -4,7 +4,7 @@ const { chromium, devices } = require("playwright");
 const fs = require("fs");
 const path = require("path");
 const { execFileSync } = require("child_process");
-const { entrarAdmin } = require("./auxiliar.cjs");
+const { entrarAdmin, esperarFila } = require("./auxiliar.cjs");
 const BASE = process.argv[2] || "http://localhost:4174/";
 const SERVIDOR = "http://localhost:54399";
 const SAIDA = path.join(__dirname, "saida");
@@ -38,6 +38,7 @@ const SRT = path.join(SAIDA, "cena-longa.srt");
   await adm.getByLabel("Título").fill("Cena longa");
   await adm.getByRole("button", { name: /Salvar cena/ }).click();
   await adm.getByRole("heading", { name: "Administração" }).waitFor({ timeout: 120000 });
+  await esperarFila(adm);
   const cenaId = (await (await fetch(`${SERVIDOR}/__estado`)).json()).cenas.find((c) => c.titulo === "Cena longa").id;
 
   const u = await nova({ ...devices["Pixel 7"] });

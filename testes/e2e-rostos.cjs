@@ -3,7 +3,7 @@
 const { chromium, devices } = require("playwright");
 const fs = require("fs");
 const path = require("path");
-const { entrarAdmin } = require("./auxiliar.cjs");
+const { entrarAdmin, esperarFila } = require("./auxiliar.cjs");
 const BASE = process.argv[2] || "http://localhost:4174/";
 const SERVIDOR = "http://localhost:54399";
 const SAIDA = path.join(__dirname, "saida");
@@ -43,6 +43,7 @@ fs.mkdirSync(SAIDA, { recursive: true });
 
   await p.getByRole("button", { name: /Salvar cena/ }).click();
   await p.getByRole("heading", { name: "Administração" }).waitFor({ timeout: 60000 });
+  await esperarFila(p);
   const estado = await (await fetch(`${SERVIDOR}/__estado`)).json();
   const cena = estado.cenas.find((c) => c.titulo === "Conversa de teste");
   console.log("Fotos salvas no servidor:", cena.personagens.map((x) => `${x.nome} → ${x.fotoPath ? "ok" : "SEM FOTO"}`).join(", "));

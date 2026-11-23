@@ -5,7 +5,7 @@ const { chromium } = require("playwright");
 const fs = require("fs");
 const path = require("path");
 const { execFileSync, spawnSync } = require("child_process");
-const { entrarAdmin } = require("./auxiliar.cjs");
+const { entrarAdmin, esperarFila } = require("./auxiliar.cjs");
 const BASE = process.argv[2] || "http://localhost:4174/";
 const SERVIDOR = "http://localhost:54399";
 const SAIDA = path.join(__dirname, "saida");
@@ -56,6 +56,7 @@ const SRT = path.join(SAIDA, "cena-fala-musica-2.srt");
     await p.getByLabel("Título").fill(titulo);
     await p.getByRole("button", { name: /Salvar cena/ }).click();
     await p.getByRole("heading", { name: "Administração" }).waitFor({ timeout: 120000 });
+    await esperarFila(p);
   }
   await p.getByText("2 de 2 cenas estão sem trilha de fundo").waitFor();
   const t0 = Date.now();

@@ -1,8 +1,10 @@
 {
-  "versao": "5.6",
-  "codigo": 44,
-  "data": "2026-11-20",
+  "versao": "5.7",
+  "codigo": 45,
+  "data": "2026-11-23",
   "novidades": [
+    "⏳ Admin: toque em “Salvar” e pronto — o app deixa o vídeo leve, separa as vozes com a IA e publica a cena sozinho, em segundo plano. Dá para sair da tela e adicionar outras cenas enquanto isso",
+    "Sem travadas: a IA pausa sozinha enquanto você dubla (estúdio e resultado) e continua depois",
     "🔇 “Só a minha voz” já vem ligado: o vídeo final não tem nenhuma voz original nem dos personagens, só a de quem dublou (com a trilha de fundo da IA, a música e os efeitos continuam)",
     "🎙️ Microfone: se o microfone escolhido (ex.: de lapela) for desconectado, o app volta sozinho para o do celular",
     "🎧 Dublagem de ouvido: sem legendas nos filmes e nas músicas — ouça o personagem e fale do seu jeito",
@@ -10,8 +12,7 @@
     "📱 Estúdio numa tela só no celular: vídeo, onda e os botões Original / Gravar / Minha tomada sempre à vista",
     "🔊 Som que não estoura (limitador) e voz em volume equilibrado com a música",
     "🎤 Modo Cantar: aviso quando a música ainda não tem instrumental; nota só com a voz do cantor separada",
-    "📲 No site: aviso para baixar o app no celular, com ✕ para fechar",
-    "Sem travadas: a IA da trilha de fundo não começa sozinha no celular e para ao sair da tela"
+    "📲 No site: aviso para baixar o app no celular, com ✕ para fechar"
   ],
   "apk": "https://dublabr.netlify.app/baixar/DublaBrasilAI.apk"
 }

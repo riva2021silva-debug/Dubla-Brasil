@@ -5,8 +5,10 @@ const FIX = path.join(__dirname, "fixtures");
 const ADMIN = { email: "admin@teste.dev", senha: "senha-de-teste-123" };
 
 /** Entra na área do administrador com e-mail e senha. */
-async function entrarAdmin(p, base) {
+async function entrarAdmin(p, base, { iaAutomatica = false } = {}) {
   await p.goto(base + "#/admin");
+  // A fila automática (versão 5.7) só roda a IA de 180 MB nos testes que pedem.
+  await p.evaluate((sim) => (sim ? localStorage.removeItem("dubla-brasil:teste-sem-ia") : localStorage.setItem("dubla-brasil:teste-sem-ia", "1")), iaAutomatica);
   const titulo = p.getByRole("heading", { name: "Administração" });
   const botao = p.getByRole("button", { name: "Entrar" });
   await Promise.race([titulo.waitFor(), botao.waitFor()]);
@@ -16,6 +18,13 @@ async function entrarAdmin(p, base) {
     await botao.click();
   }
   await titulo.waitFor();
+}
+
+/** Depois de "Salvar": espera a fila automática terminar de enviar (versão 5.7, o envio é em segundo plano). */
+async function esperarFila(p, timeout = 300000) {
+  await p.waitForFunction(() => !document.querySelector("#processamento li.andando"), null, { timeout, polling: 250 });
+  const erro = await p.locator("#processamento li.erro").first().innerText().catch(() => null);
+  if (erro) throw new Error("A fila não conseguiu salvar: " + erro);
 }
 
 /** Cria e publica a cena de teste (vídeo + fundo + legendas, Capivara e Tucano). */
@@ -38,7 +47,8 @@ async function criarCenaTeste(p, titulo = "Cadê meu chinelo?") {
   for (const i of [1, 3, 5]) await p.getByLabel("Personagem", { exact: true }).nth(i).selectOption({ label: "Tucano" });
   await p.getByRole("button", { name: /Salvar cena/ }).click();
   await p.getByRole("heading", { name: "Administração" }).waitFor();
+  await esperarFila(p);
   await p.getByText(titulo).first().waitFor();
 }
 
-module.exports = { entrarAdmin, criarCenaTeste, ADMIN };
+module.exports = { esperarFila, entrarAdmin, criarCenaTeste, ADMIN };

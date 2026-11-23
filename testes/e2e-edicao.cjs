@@ -4,7 +4,7 @@ const { chromium } = require("playwright");
 const fs = require("fs");
 const path = require("path");
 const { execFileSync } = require("child_process");
-const { entrarAdmin } = require("./auxiliar.cjs");
+const { entrarAdmin, esperarFila } = require("./auxiliar.cjs");
 const BASE = process.argv[2] || "http://localhost:4174/";
 const SERVIDOR = "http://localhost:54399";
 const SAIDA = path.join(__dirname, "saida");
@@ -67,6 +67,7 @@ const mudarFaixa = (p, id, valor) =>
 
   await p.getByRole("button", { name: /Salvar cena/ }).click();
   await p.getByRole("heading", { name: "Administração" }).waitFor({ timeout: 90000 });
+  await esperarFila(p);
   const estado = await (await fetch(`${SERVIDOR}/__estado`)).json();
   const cena = estado.cenas.find((c) => c.titulo === "Cena cortada em pé");
   const baixar = async (caminho, nome) => {

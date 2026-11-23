@@ -1,7 +1,7 @@
 // Internet caindo no envio (versão 4.4): o app tenta de novo sozinho; se cair 3 vezes, explica e a edição fica guardada.
 const { chromium } = require("playwright");
 const path = require("path");
-const { entrarAdmin } = require("./auxiliar.cjs");
+const { entrarAdmin, esperarFila } = require("./auxiliar.cjs");
 const BASE = process.argv[2] || "http://localhost:4174/";
 const SERVIDOR = "http://localhost:54399";
 const FIX = path.join(__dirname, "fixtures");
@@ -24,18 +24,20 @@ async function novaCena(p, titulo) {
   await falhar(2);
   await p.getByRole("button", { name: /Salvar cena/ }).click();
   await p.getByRole("heading", { name: "Administração" }).waitFor({ timeout: 120000 });
+  await esperarFila(p);
   const salvou = (await (await fetch(`${SERVIDOR}/__estado`)).json()).cenas.some((c) => c.titulo === "Internet caiu 2 vezes");
   console.log("Internet caiu 2 vezes no envio e o app salvou sozinho na 3ª tentativa:", salvou ? "ok" : "FALHOU");
-  // Caiu de vez: explica o que fazer e não perde nada.
+  // Caiu de vez: a fila mostra o motivo, guarda tudo no aparelho e tenta de novo sozinha quando a internet volta.
   await novaCena(p, "Internet caiu de vez");
   await falhar(99);
   await p.getByRole("button", { name: /Salvar cena/ }).click();
-  await p.getByText(/A internet caiu no meio do envio/).waitFor({ timeout: 120000 });
-  console.log("Sem internet de vez: explica e diz que a edição está guardada: ok");
+  await p.getByRole("heading", { name: "Administração" }).waitFor({ timeout: 20000 });
+  await p.locator("#processamento li.erro").getByText(/Sem conexão/).waitFor({ timeout: 120000 });
+  console.log("Sem internet de vez: o painel explica e oferece “Tentar de novo”:", (await p.getByRole("button", { name: /Tentar de novo/ }).count()) ? "ok" : "FALHOU");
   await falhar(0);
-  await p.getByRole("button", { name: /Salvar cena/ }).click();
-  await p.getByRole("heading", { name: "Administração" }).waitFor({ timeout: 120000 });
+  await p.getByRole("button", { name: /Tentar de novo/ }).click();
+  await esperarFila(p);
   const depois = (await (await fetch(`${SERVIDOR}/__estado`)).json()).cenas.some((c) => c.titulo === "Internet caiu de vez");
-  console.log("Com a internet de volta, tocar em Salvar de novo funciona:", depois ? "ok" : "FALHOU");
+  console.log("Com a internet de volta, “Tentar de novo” salva a cena:", depois ? "ok" : "FALHOU");
   await nav.close();
 })().catch((e) => { console.error("FALHOU:", e); process.exit(1); });

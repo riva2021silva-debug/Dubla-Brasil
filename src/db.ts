@@ -2,7 +2,7 @@
 import type { Cena, Dub, FonteMidia, Imitacao, Som } from "./tipos";
 
 const NOME_DB = "dubla-brasil";
-const VERSAO = 3;
+const VERSAO = 4;
 
 let conexao: Promise<IDBDatabase> | null = null;
 
@@ -18,6 +18,8 @@ function abrir(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains("sons")) db.createObjectStore("sons", { keyPath: "id" });
       if (!db.objectStoreNames.contains("imitacoes")) db.createObjectStore("imitacoes", { keyPath: "somId" });
       if (!db.objectStoreNames.contains("rascunhos")) db.createObjectStore("rascunhos");
+      // Cenas salvas pelo admin esperando o processamento automático (vídeo leve, trilha da IA, publicar).
+      if (!db.objectStoreNames.contains("processamento")) db.createObjectStore("processamento", { keyPath: "id" });
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
@@ -64,6 +66,10 @@ export const db = {
   salvarRascunho: (chave: string, r: unknown) => operar<IDBValidKey>("rascunhos", "readwrite", (s) => s.put(r, chave)),
   obterRascunho: <T>(chave: string) => operar<T | undefined>("rascunhos", "readonly", (s) => s.get(chave)),
   excluirRascunho: (chave: string) => operar<undefined>("rascunhos", "readwrite", (s) => s.delete(chave)),
+
+  listarProcessamento: <T>() => operar<T[]>("processamento", "readonly", (s) => s.getAll()),
+  salvarProcessamento: (t: { id: string }) => operar<IDBValidKey>("processamento", "readwrite", (s) => s.put(t)),
+  excluirProcessamento: (id: string) => operar<undefined>("processamento", "readwrite", (s) => s.delete(id)),
 
   salvarMidia: (chave: string, b: Blob) => operar<IDBValidKey>("midias", "readwrite", (s) => s.put(b, chave)),
   obterMidia: (chave: string) => operar<Blob | undefined>("midias", "readonly", (s) => s.get(chave)),

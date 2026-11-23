@@ -4,7 +4,7 @@ import LinhaDoTempo from "../componentes/LinhaDoTempo";
 import Legenda from "../componentes/Legenda";
 import { urlDaMidia } from "../db";
 import { mensagemDeErro, salvarCena } from "../nuvem";
-import { diagnosticar, otimizarVideo, podeOtimizar } from "../otimizarVideo";
+import { colocarNaFila } from "../processamento";
 import { gerarRostos, rostoDaImagem, rostoDoQuadro } from "../rostos";
 import type { Progresso } from "../transcricao";
 import Avatar from "../componentes/Avatar";
@@ -535,38 +535,31 @@ export default function Editor() {
       }
       // Personagens que falam e ainda não têm foto ganham o rosto automaticamente.
       const automaticos = await encontrarRostos(false);
-      // Vídeo novo: deixa leve para pular entre as falas (senão o estúdio trava no celular).
-      let videoNovo = video?.novo;
-      if (videoNovo && podeOtimizar()) {
-        try {
-          setEtapa("⚡ Conferindo o vídeo…");
-          if ((await diagnosticar(videoNovo)).motivos.length) {
-            const leve = await otimizarVideo(videoNovo, (f) => setEtapa(`⚡ Deixando o vídeo leve para o celular… ${Math.round(f * 100)}%`));
-            if (leve) videoNovo = new File([leve], "video.mp4", { type: "video/mp4" });
-          }
-        } catch {
-          /* não conseguiu: envia o original */
-        }
-      }
-      setEtapa(video?.novo || fundo?.novo ? "Enviando os arquivos para o servidor…" : "Salvando…");
-      const salva = await salvarCena(c, {
-        video: videoNovo,
+      // Daqui para frente é com a fila (segundo plano): vídeo leve → envio → IA separa as vozes → publica.
+      // O admin já pode sair e adicionar outra cena.
+      const pedido = {
+        id: c.id,
+        cena: c,
+        publicar: estaPublicada(c),
+        video: video?.novo,
         fundo: fundo?.novo ? fundo.novo : !fundo && c.caminhos?.fundo ? null : undefined,
         capa,
         ...(vozNova && fundo?.novo ? { voz: vozNova } : {}),
         rostos: { ...novosRostos, ...automaticos },
-      });
+      };
+      let naFila = false;
+      try {
+        await colocarNaFila(pedido);
+        naFila = true;
+      } catch {
+        /* aparelho sem espaço para guardar: salva agora, do jeito antigo */
+      }
+      if (!naFila) {
+        setEtapa(video?.novo || fundo?.novo ? "Enviando os arquivos para o servidor…" : "Salvando…");
+        await salvarCena(c, { video: pedido.video, fundo: pedido.fundo, capa, ...(pedido.voz ? { voz: pedido.voz } : {}), rostos: pedido.rostos });
+      }
       setAlterado(false);
       await apagarRascunho(chaveRascunho);
-      // Sem trilha de fundo (ou música sem a voz separada): a IA gera sozinha logo depois, na Administração.
-      const precisaIa = !salva.caminhos?.fundo || (salva.tipo === "musica" && !salva.caminhos?.voz);
-      if (precisaIa) {
-        try {
-          sessionStorage.setItem("dubla-brasil:gerar-fundo", salva.id);
-        } catch {
-          /* sem armazenamento: o admin usa o botão */
-        }
-      }
       navegar("/admin");
     } catch (e) {
       const msg = mensagemDeErro(e);

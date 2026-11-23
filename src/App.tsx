@@ -1,4 +1,4 @@
-import { HashRouter, NavLink, Link, Route, Routes, Outlet } from "react-router-dom";
+import { HashRouter, NavLink, Link, Route, Routes, Outlet, useLocation } from "react-router-dom";
 import Inicio from "./paginas/Inicio";
 import Biblioteca from "./paginas/Biblioteca";
 import EscolherPapel from "./paginas/EscolherPapel";
@@ -25,12 +25,21 @@ import { useAdmin } from "./admin";
 import Notificacoes from "./paginas/Notificacoes";
 import { useNaoLidas } from "./notificacoes";
 import { useAvisoEspaco } from "./espaco";
+import { emAndamento, iniciarProcessamento, pausarProcessamento, useProcessamento } from "./processamento";
 
 function Layout() {
   const { aberto } = useAdmin();
   const plano = usePlano();
   const espaco = useAvisoEspaco(aberto);
   const naoLidas = useNaoLidas() + (espaco?.avisar ? 1 : 0);
+  // Cenas salvas pelo admin: a fila automática roda em segundo plano (em qualquer tela do app).
+  const processando = emAndamento(useProcessamento()).length;
+  useEffect(() => {
+    if (aberto) void iniciarProcessamento();
+  }, [aberto]);
+  // No estúdio e no resultado a IA pesada espera (a dublagem não pode picotar) e volta sozinha ao sair.
+  const { pathname } = useLocation();
+  useEffect(() => pausarProcessamento(/^\/(estudio|dub)\//.test(pathname)), [pathname]);
   // Selo de fora (ex.: "Powered by Netlify"): a barra de botões sobe para não ficar por baixo dele.
   useEffect(() => vigiarSeloExterno(), []);
   // Administrador: quantas mensagens de Ajuda estão esperando (aparece no botão Admin).
@@ -62,6 +71,7 @@ function Layout() {
           {aberto && (
             <NavLink to={espaco?.avisar ? "/admin?aba=galeria" : "/admin"} aria-label={espaco?.avisar ? "Admin, hora de liberar espaço" : undefined}>
               Admin{espaco?.avisar && <span aria-hidden> 🧹</span>}
+              {processando > 0 && <span className="selo-processando" aria-label={`preparando ${processando}`}>⏳{processando}</span>}
             </NavLink>
           )}
         </nav>
@@ -73,6 +83,11 @@ function Layout() {
               aria-label={[novas ? `Admin, ${novas} mensagens novas` : "Admin", espaco?.avisar ? "hora de liberar espaço" : ""].filter(Boolean).join(", ")}
             >
               Admin{espaco?.avisar && <span aria-hidden> 🧹</span>}
+              {processando > 0 && (
+                <span className="selo-processando" title={`Preparando ${processando} ${processando === 1 ? "cena" : "cenas"}`} aria-label={`preparando ${processando}`}>
+                  ⏳{processando}
+                </span>
+              )}
               {novas > 0 && <span className="selo-novas">{novas}</span>}
             </NavLink>
           )}

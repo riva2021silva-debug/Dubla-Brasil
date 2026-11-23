@@ -4,7 +4,7 @@ const { chromium, devices } = require("playwright");
 const fs = require("fs");
 const path = require("path");
 const { execFileSync } = require("child_process");
-const { entrarAdmin } = require("./auxiliar.cjs");
+const { entrarAdmin, esperarFila } = require("./auxiliar.cjs");
 const BASE = process.argv[2] || "http://localhost:4174/";
 const SERVIDOR = "http://localhost:54399";
 const SAIDA = path.join(__dirname, "saida");
@@ -50,6 +50,7 @@ const durQuadros = (arq) => {
   await adm.getByLabel("Título").fill("Cena de dois minutos");
   await adm.getByRole("button", { name: /Salvar cena/ }).click();
   await adm.getByRole("heading", { name: "Administração" }).waitFor({ timeout: 180000 });
+  await esperarFila(adm);
   const cena = (await (await fetch(`${SERVIDOR}/__estado`)).json()).cenas.find((c) => c.titulo === "Cena de dois minutos");
   const arqCena = path.join(SAIDA, "dois-min-cena" + path.extname(cena.video_path));
   fs.writeFileSync(arqCena, Buffer.from(await (await fetch(`${SERVIDOR}/storage/v1/object/public/midias/${cena.video_path}`)).arrayBuffer()));

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { urlDaMidia } from "../db";
 import { mensagemDeErro, salvarCena } from "../nuvem";
 import type { Cena } from "../tipos";
+import { emAndamento, useProcessamento } from "../processamento";
 
 type Estado = { titulo: string; texto: string; tipo: "feito" | "erro" | "andando" };
 const CHAVE_AUTO = "dubla-brasil:gerar-fundo";
@@ -25,7 +26,9 @@ export default function GerarFundos({ cenas, aoTerminar }: { cenas: Cena[]; aoTe
   // Saiu da Administração: a IA para (não fica rodando escondida, pesando no aparelho).
   useEffect(() => () => parar.current.abort(), []);
   const [avisoCelular, setAvisoCelular] = useState(false);
-  const semFundo = cenas.filter(precisa);
+  // As que a fila automática já está preparando ficam de fora (não faz a mesma cena duas vezes).
+  const naFila = new Set(emAndamento(useProcessamento()).map((t) => t.id));
+  const semFundo = cenas.filter((c) => precisa(c) && !naFila.has(c.id));
 
   const rodar = async (fila: Cena[]) => {
     setRodando(true);

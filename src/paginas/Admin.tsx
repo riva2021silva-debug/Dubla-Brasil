@@ -6,6 +6,7 @@ import { blobDaMidia, db } from "../db";
 import { todasAsCenas, useCarregar } from "../ganchos";
 import OtimizarCenas from "../componentes/OtimizarCenas";
 import GerarFundos from "../componentes/GerarFundos";
+import PainelProcessamento from "../componentes/PainelProcessamento";
 import AvisoEspacoBanner from "../componentes/AvisoEspaco";
 import { useAvisoEspaco } from "../espaco";
 import { excluirCena, mensagemDeErro, publicarCena, salvarCena, salvarSom, trocarSenha } from "../nuvem";
@@ -240,6 +241,7 @@ function Painel() {
       </div>
       <AvisoEspacoBanner aviso={avisoEspaco} aoLiberar={() => setAba("galeria")} />
       <AvisoRascunho />
+      <PainelProcessamento />
       <EnviarDoAparelho aoTerminar={() => setVersao((v) => v + 1)} />
       <div className="abas" role="tablist">
         <button role="tab" aria-selected={aba === "cenas"} className={aba === "cenas" ? "ativa" : ""} onClick={() => setAba("cenas")}>
@@ -273,6 +275,12 @@ function Painel() {
 
 function PainelCenas() {
   const cenas = useCarregar(() => todasAsCenas(true), []);
+  // A fila automática enviou/publicou uma cena: atualiza a lista.
+  const recarregar = cenas.recarregar;
+  useEffect(() => {
+    window.addEventListener("dubla:cenas-mudaram", recarregar);
+    return () => window.removeEventListener("dubla:cenas-mudaram", recarregar);
+  }, [recarregar]);
   // A lista fica guardada enquanto recarrega (o painel de otimizar não some no meio e mantém o resultado na tela).
   const ultimasCenas = useRef<Cena[]>([]);
   if (cenas.dado) ultimasCenas.current = cenas.dado;

@@ -1,7 +1,7 @@
 // Teste: o administrador corrige o texto de uma legenda (e o original) e o usuário vê a correção no estúdio.
 const { chromium, devices } = require("playwright");
 const path = require("path");
-const { entrarAdmin, criarCenaTeste } = require("./auxiliar.cjs");
+const { entrarAdmin, criarCenaTeste, esperarFila } = require("./auxiliar.cjs");
 const BASE = process.argv[2] || "http://localhost:4174/";
 const SERVIDOR = "http://localhost:54399";
 const SAIDA = path.join(__dirname, "saida");
@@ -44,6 +44,7 @@ const SAIDA = path.join(__dirname, "saida");
   await adm.screenshot({ path: path.join(SAIDA, "l1-corrigir-legenda.png") });
   await adm.getByRole("button", { name: /Salvar cena/ }).click();
   await adm.getByRole("heading", { name: "Administração" }).waitFor({ timeout: 60000 });
+  await esperarFila(adm);
   const salva = (await (await fetch(`${SERVIDOR}/__estado`)).json()).cenas.find((c) => c.id === cena.id);
   const texto = [...salva.falas].sort((a, b) => a.inicioMs - b.inicioMs)[0].texto;
   console.log("Legenda corrigida salva no servidor:", texto === "Tucano, cadê o meu chinelo de estimação?" ? "ok" : "FALHOU (" + texto + ")");

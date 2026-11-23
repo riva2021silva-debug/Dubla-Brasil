@@ -4,7 +4,7 @@ const { chromium, devices } = require("playwright");
 const fs = require("fs");
 const path = require("path");
 const { execFileSync, spawnSync } = require("child_process");
-const { entrarAdmin } = require("./auxiliar.cjs");
+const { entrarAdmin, esperarFila } = require("./auxiliar.cjs");
 const BASE = process.argv[2] || "http://localhost:4174/";
 const S = "http://localhost:54399";
 const SAIDA = path.join(__dirname, "saida");
@@ -31,6 +31,7 @@ const VIDEO = path.join(SAIDA, "cena-alta.mp4"), SRT = path.join(SAIDA, "cena-al
   await adm.getByLabel("Título").fill("Cena alta");
   await adm.getByRole("button", { name: /Salvar cena/ }).click();
   await adm.getByRole("heading", { name: "Administração" }).waitFor({ timeout: 120000 });
+  await esperarFila(adm);
   const cena = (await (await fetch(`${S}/__estado`)).json()).cenas[0];
   const u = await (await nav.newContext({ ...devices["Pixel 7"], permissions: ["microphone"], acceptDownloads: true })).newPage();
   await u.goto(BASE + "#/cena/" + cena.id);

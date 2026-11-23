@@ -2,7 +2,7 @@
 // (como se o celular tivesse fechado o app); ao voltar, "Retomar edição" traz tudo de volta, inclusive o vídeo.
 const { chromium, devices } = require("playwright");
 const path = require("path");
-const { entrarAdmin } = require("./auxiliar.cjs");
+const { entrarAdmin, esperarFila } = require("./auxiliar.cjs");
 const BASE = process.argv[2] || "http://localhost:4174/";
 const SERVIDOR = "http://localhost:54399";
 const SAIDA = path.join(__dirname, "saida");
@@ -48,6 +48,7 @@ const FIX = path.join(__dirname, "fixtures");
   // Salva de verdade: o rascunho some.
   await p.getByRole("button", { name: /Salvar cena/ }).click();
   await p.getByRole("heading", { name: "Administração" }).waitFor({ timeout: 60000 });
+  await esperarFila(p);
   await p.waitForTimeout(1000);
   const sobrou = await p.getByText("📝 Vídeo novo em edição").count();
   const cena = (await (await fetch(`${SERVIDOR}/__estado`)).json()).cenas.find((c) => c.titulo === "Rascunho do chinelo");

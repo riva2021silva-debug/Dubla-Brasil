@@ -4,7 +4,7 @@ const { chromium } = require("playwright");
 const fs = require("fs");
 const path = require("path");
 const { execFileSync } = require("child_process");
-const { entrarAdmin } = require("./auxiliar.cjs");
+const { entrarAdmin, esperarFila } = require("./auxiliar.cjs");
 const BASE = process.argv[2] || "http://localhost:4174/";
 const SERVIDOR = "http://localhost:54399";
 const SAIDA = path.join(__dirname, "saida");
@@ -67,6 +67,7 @@ const corr = (a, b) => { let ab = 0, aa = 0, bb = 0; const n = Math.min(a.length
   await p.getByRole("button", { name: /Fala aqui/ }).click();
   await p.getByRole("button", { name: /Salvar cena/ }).click();
   await p.getByRole("heading", { name: "Administração" }).waitFor({ timeout: 120000 });
+  await esperarFila(p);
   const cena = (await (await fetch(`${SERVIDOR}/__estado`)).json()).cenas.find((c) => c.titulo === "Cena com trilha da IA");
   const arqFundo = path.join(SAIDA, "fundo-ia.wav");
   fs.writeFileSync(arqFundo, Buffer.from(await (await fetch(`${SERVIDOR}/storage/v1/object/public/midias/${cena.fundo_path}`)).arrayBuffer()));

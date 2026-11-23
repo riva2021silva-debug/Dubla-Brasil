@@ -643,3 +643,8 @@ kbd { background: var(--superficie-2); border: 1px solid var(--borda); border-bo
 .proxima-fala.minha { border-color: var(--gravando); background: rgb(127 29 29 / .85); }
 .interruptor-sem-voz { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--borda); background: var(--superficie); cursor: pointer; }
 .interruptor-sem-voz input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--amarelo); flex: none; }
+/* Processamento automático das cenas (admin) */
+.painel-processamento { border-color: rgb(167 139 250 / 0.6); }
+.barra-processo { height: 4px; border-radius: 4px; background: rgb(255 255 255 / 0.08); overflow: hidden; margin-top: 4px; }
+.barra-processo span { display: block; height: 100%; background: var(--amarelo, #facc15); transition: width 0.3s; }
+.selo-processando { font-size: 12px; margin-left: 4px; }
