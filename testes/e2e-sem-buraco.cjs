@@ -59,6 +59,8 @@ const db = (arq, ini, dur, freq) => {
   await u.getByRole("link", { name: /Resultado 2\/2/ }).waitFor({ timeout: 40000 });
   await u.getByRole("link", { name: /Resultado 2\/2/ }).click();
   await u.waitForFunction(() => !document.querySelector(".controles .botao-verde")?.disabled);
+  // Cena sem trilha da IA: o teste confere o buraco com o som ambiente (desliga o "Só a minha voz", versão 5.5).
+  await u.getByLabel(/Só a minha voz/).uncheck();
   const dl = u.waitForEvent("download", { timeout: 90000 });
   await u.getByRole("button", { name: /Salvar na galeria/ }).click();
   const arq = path.join(SAIDA, "sem-buraco.mp4");
