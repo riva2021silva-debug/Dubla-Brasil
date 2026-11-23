@@ -2,6 +2,21 @@ import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import CartaoCena from "../componentes/CartaoCena";
 import { todasAsCenas, useCarregar } from "../ganchos";
+import { GENEROS } from "../tipos";
+
+const ICONE_GENERO: Record<string, string> = {
+  Ação: "💥",
+  Comédia: "😂",
+  Drama: "🎭",
+  Romance: "❤️",
+  Terror: "👻",
+  Anime: "🍥",
+  Desenho: "🖍️",
+  "Super-heróis": "🦸",
+  "Séries e novelas": "📺",
+  Memes: "🤣",
+  Infantil: "🧸",
+};
 
 type Ordem = "recentes" | "titulo" | "curtas" | "falas";
 
@@ -12,10 +27,25 @@ export default function Biblioteca() {
   const [params, setParams] = useSearchParams();
   const tipo = (params.get("tipo") as "cena" | "musica" | null) ?? "todas";
   const temMusicas = (cenas.dado ?? []).some((c) => c.tipo === "musica");
+  // Categorias (versão 5.8): só aparecem as que têm cena; idioma só quando há mais de um.
+  const genero = params.get("genero");
+  const idioma = params.get("idioma");
+  const generos = useMemo(() => GENEROS.filter((g) => (cenas.dado ?? []).some((c) => c.genero === g)), [cenas.dado]);
+  const idiomas = useMemo(() => [...new Set((cenas.dado ?? []).map((c) => c.idioma).filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt-BR")), [cenas.dado]);
+  const mudarFiltro = (chave: string, valor: string | null) => {
+    const n = new URLSearchParams(params);
+    if (valor) n.set(chave, valor);
+    else n.delete(chave);
+    setParams(n);
+  };
 
   const visiveis = useMemo(() => {
     const q = busca.trim().toLowerCase();
-    const lista = (cenas.dado ?? []).filter((c) => tipo === "todas" || (tipo === "musica" ? c.tipo === "musica" : c.tipo !== "musica")).filter((c) =>
+    const lista = (cenas.dado ?? [])
+      .filter((c) => tipo === "todas" || (tipo === "musica" ? c.tipo === "musica" : c.tipo !== "musica"))
+      .filter((c) => !genero || c.genero === genero)
+      .filter((c) => !idioma || c.idioma === idioma)
+      .filter((c) =>
       !q
         ? true
         : [c.titulo, c.descricao, ...c.personagens.map((p) => p.nome)].join(" ").toLowerCase().includes(q),
@@ -27,7 +57,7 @@ export default function Biblioteca() {
       falas: (a, b) => a.falas.length - b.falas.length,
     };
     return [...lista].sort(cmp[ordem]);
-  }, [cenas.dado, busca, ordem, tipo]);
+  }, [cenas.dado, busca, ordem, tipo, genero, idioma]);
 
   return (
     <>
@@ -41,8 +71,20 @@ export default function Biblioteca() {
               ["musica", "🎤 Cantar músicas"],
             ] as const
           ).map(([v, rotulo]) => (
-            <button key={v} className={tipo === v ? "ativo" : ""} aria-pressed={tipo === v} onClick={() => setParams(v === "todas" ? {} : { tipo: v })}>
+            <button key={v} className={tipo === v ? "ativo" : ""} aria-pressed={tipo === v} onClick={() => mudarFiltro("tipo", v === "todas" ? null : v)}>
               {rotulo}
+            </button>
+          ))}
+        </div>
+      )}
+      {generos.length > 0 && (
+        <div className="filtro-categorias" role="group" aria-label="Categorias">
+          <button className={!genero ? "ativo" : ""} aria-pressed={!genero} onClick={() => mudarFiltro("genero", null)}>
+            Todas
+          </button>
+          {generos.map((g) => (
+            <button key={g} className={genero === g ? "ativo" : ""} aria-pressed={genero === g} onClick={() => mudarFiltro("genero", genero === g ? null : g)}>
+              {ICONE_GENERO[g] ?? ""} {g}
             </button>
           ))}
         </div>
@@ -64,6 +106,14 @@ export default function Biblioteca() {
           <option value="curtas">Mais curtas</option>
           <option value="falas">Menos falas</option>
         </select>
+        {idiomas.length > 1 && (
+          <select id="idioma-cenas" className="entrada" style={{ width: "auto" }} value={idioma ?? ""} onChange={(e) => mudarFiltro("idioma", e.target.value || null)} aria-label="Idioma">
+            <option value="">Todos os idiomas</option>
+            {idiomas.map((i) => (
+              <option key={i}>{i}</option>
+            ))}
+          </select>
+        )}
         <span className="suave pequeno">
           {visiveis.length} {visiveis.length === 1 ? "cena" : "cenas"}
         </span>
@@ -74,7 +124,7 @@ export default function Biblioteca() {
         <p className="suave">Carregando…</p>
       ) : visiveis.length === 0 ? (
         <div className="cartao vazio">
-          <p style={{ margin: 0 }}>{busca ? "Nenhuma cena encontrada para essa busca." : "Nenhuma cena disponível ainda."}</p>
+          <p style={{ margin: 0 }}>{busca || genero || idioma ? "Nenhuma cena encontrada com esses filtros." : "Nenhuma cena disponível ainda."}</p>
         </div>
       ) : (
         <div className="grade">

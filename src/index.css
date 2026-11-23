@@ -648,3 +648,8 @@ kbd { background: var(--superficie-2); border: 1px solid var(--borda); border-bo
 .barra-processo { height: 4px; border-radius: 4px; background: rgb(255 255 255 / 0.08); overflow: hidden; margin-top: 4px; }
 .barra-processo span { display: block; height: 100%; background: var(--amarelo, #facc15); transition: width 0.3s; }
 .selo-processando { font-size: 12px; margin-left: 4px; }
+/* Categorias na tela de Cenas (versão 5.8): fileira que rola para o lado no celular */
+.filtro-categorias { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 12px; scrollbar-width: none; }
+.filtro-categorias::-webkit-scrollbar { display: none; }
+.filtro-categorias button { flex: none; border: 1px solid var(--borda); background: rgb(255 255 255 / 0.05); color: inherit; font: inherit; font-size: 14px; padding: 6px 12px; border-radius: 999px; cursor: pointer; white-space: nowrap; }
+.filtro-categorias button.ativo { background: var(--roxo, #7c3aed); border-color: transparent; color: #fff; font-weight: 700; }

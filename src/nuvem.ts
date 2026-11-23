@@ -84,6 +84,7 @@ interface LinhaCena {
   atualizada_em: string;
   tipo?: string | null;
   voz_path?: string | null;
+  genero?: string | null;
 }
 
 function linhaParaCena(l: LinhaCena): Cena {
@@ -103,6 +104,7 @@ function linhaParaCena(l: LinhaCena): Cena {
     atualizadaEm: Date.parse(l.atualizada_em),
     tipo: l.tipo === "musica" ? "musica" : "cena",
     voz: l.voz_path ? { tipo: "url", url: urlPublica(l.voz_path) } : null,
+    genero: l.genero ?? null,
     caminhos: {
       video: l.video_path,
       fundo: l.fundo_path,
@@ -175,7 +177,9 @@ export async function salvarCena(
       publicada: cena.publicada !== false,
     };
     const extras = { tipo: cena.tipo === "musica" ? "musica" : "cena", voz_path: voz };
-    let { data, error } = await supabase.from("cenas").upsert({ ...linha, ...extras }).select("*").single();
+    let { data, error } = await supabase.from("cenas").upsert({ ...linha, ...extras, genero: cena.genero ?? null }).select("*").single();
+    // Servidor ainda sem as categorias (arquivo categorias.sql): salva sem o gênero.
+    if (error && /genero/.test(`${error.message}`)) ({ data, error } = await supabase.from("cenas").upsert({ ...linha, ...extras }).select("*").single());
     // Servidor ainda sem o Modo Cantar (arquivo modo-cantar.sql): salva a cena normal.
     if (error && /tipo|voz_path|PGRST204|42703/.test(`${error.code} ${error.message}`)) {
       if (cena.tipo === "musica") throw new Error("O Modo Cantar ainda não foi ativado no servidor: rode o arquivo modo-cantar.sql no Supabase.");

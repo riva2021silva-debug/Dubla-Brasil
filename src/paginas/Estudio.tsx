@@ -9,6 +9,7 @@ import { Microfone } from "../audio/microfone";
 import { Camera } from "../audio/camera";
 import { decodificar, Mixer, type TomadaTocavel } from "../audio/mixer";
 import { notaDeAfinacao, rotuloAfinacao } from "../audio/afinacao";
+import { mono, notaDaDublagem, rotuloDublagem } from "../audio/notaDublagem";
 import { compensacao, fatiarEmTomadas, FOLGA_FIM_MS, irPara, limitesDaFala, picoDe } from "../audio/sincronia";
 
 /** Quanto antes da fala o vídeo volta a andar depois do "1" (um respiro para entrar na hora certa). */
@@ -71,6 +72,8 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
   const [original, setOriginal] = useState<AudioBuffer | null>(null);
   /** Modo Cantar: a voz do cantor separada pela IA (referência para a nota de afinação). */
   const [vozCantor, setVozCantor] = useState<AudioBuffer | null>(null);
+  /** Trilha de fundo decodificada (ajuda a nota da dublagem a achar só a voz do personagem). */
+  const fundoBuf = useRef<AudioBuffer | null>(null);
   const musica = ehMusica(cena);
   const [modo, setModo] = useState<Modo>("parado");
   const [alvo, setAlvo] = useState<{ falas: Fala[]; fimMs: number } | null>(null);
@@ -105,7 +108,11 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
       fetch(urls.fundo)
         .then((r) => r.blob())
         .then((b) => decodificar(m.ctx, b))
-        .then((buf) => vivo && m.definirFundo(buf))
+        .then((buf) => {
+          if (!vivo) return;
+          fundoBuf.current = buf;
+          m.definirFundo(buf);
+        })
         .catch(() => vivo && setAviso("Não foi possível carregar a trilha de fundo; o áudio original será usado."));
     if (ehMusica(cena) && cena.voz)
       void urlDaMidia(cena.voz)
@@ -342,6 +349,42 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
     void db.salvarDub(atualizado);
     // Modo Cantar: nota de afinação de cada fala cantada (comparando com a voz do cantor).
     // Só com a voz do cantor separada pela IA: comparar com a música inteira (instrumentos juntos) dá nota errada.
+    // Cenas (não músicas): nota da dublagem (sincronia com o personagem, duração e volume).
+    if (!musica && original) {
+      void (async () => {
+        const notas: Record<string, number> = {};
+        const orig = mono(original);
+        const fundo = fundoBuf.current;
+        const fundoMono = fundo ? mono(fundo) : null;
+        for (const id of idsGravados) {
+          const f = cena.falas.find((x) => x.id === id);
+          if (!f) continue;
+          try {
+            const buf = await decodificar(m.ctx, novas[id].audio);
+            const n = notaDaDublagem({
+              original: orig,
+              taxaOriginal: original.sampleRate,
+              fundo: fundoMono,
+              taxaFundo: fundo?.sampleRate,
+              tomada: mono(buf),
+              taxaTomada: buf.sampleRate,
+              tomadaInicioMs: novas[id].inicioMs,
+              inicioMs: f.inicioMs,
+              fimMs: f.fimMs,
+            });
+            if (n !== null) notas[id] = n;
+          } catch {
+            /* sem nota para esta fala */
+          }
+        }
+        if (!Object.keys(notas).length) return;
+        setDub((d) => {
+          const n = { ...d, notas: { ...(d.notas ?? {}), ...notas } };
+          void db.salvarDub(n);
+          return n;
+        });
+      })();
+    }
     const referencia = vozCantor;
     if (musica && referencia) {
       void (async () => {
@@ -577,6 +620,11 @@ function EstudioCarregado({ dubInicial, cena }: { dubInicial: Dub; cena: Cena })
             </p>
             {musica && !cena.voz && (
               <div className="suave pequeno">🎯 A nota de afinação aparece quando o administrador gerar a trilha desta música (✨ Gerar).</div>
+            )}
+            {!musica && dub.notas?.[falaSel.id] !== undefined && (
+              <div className="nota-afinacao" aria-label={`Nota da dublagem ${dub.notas[falaSel.id]} por cento`}>
+                🎬 Nota <b>{dub.notas[falaSel.id]}%</b> · {rotuloDublagem(dub.notas[falaSel.id])}
+              </div>
             )}
             {musica && cena.voz && dub.notas?.[falaSel.id] !== undefined && (
               <div className="nota-afinacao" aria-label={`Afinação ${dub.notas[falaSel.id]} por cento`}>

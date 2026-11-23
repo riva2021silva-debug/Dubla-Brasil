@@ -23,6 +23,7 @@ import { contarNovas } from "./ajuda";
 import { vigiarSeloExterno } from "./seloExterno";
 import { useAdmin } from "./admin";
 import Notificacoes from "./paginas/Notificacoes";
+import Novidades from "./paginas/Novidades";
 import { useNaoLidas } from "./notificacoes";
 import { useAvisoEspaco } from "./espaco";
 import { emAndamento, iniciarProcessamento, pausarProcessamento, useProcessamento } from "./processamento";
@@ -125,7 +126,7 @@ function Layout() {
         ))}
       </nav>
       <footer className="rodape">
-        Dubla Brasil AI · Sua voz. Seu talento. Sua dublagem. · <Link to="/admin">Área do administrador</Link>
+        Dubla Brasil AI · Sua voz. Seu talento. Sua dublagem. · <Link to="/novidades">🆕 Novidades</Link> · <Link to="/admin">Área do administrador</Link>
       </footer>
     </>
   );
@@ -165,6 +166,7 @@ export default function App() {
           <Route path="conta" element={<Conta />} />
           <Route path="ajuda" element={<Ajuda />} />
           <Route path="notificacoes" element={<Notificacoes />} />
+          <Route path="novidades" element={<Novidades />} />
           <Route path="premium" element={<Premium />} />
           <Route path="*" element={<NaoEncontrada />} />
         </Route>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { enviarMensagem, minhasMensagens, quando, TIPOS, type TipoMensagem } from "../ajuda";
 import { useCarregar } from "../ganchos";
 
@@ -36,6 +37,9 @@ export default function Ajuda() {
       <p className="suave" style={{ margin: 0 }}>
         Algo não está funcionando? Conte para a gente. A mensagem vai direto para a equipe do Dubla Brasil.
       </p>
+      <Link to="/novidades" className="pequeno">
+        🆕 Veja tudo o que mudou no app (Novidades)
+      </Link>
 
       <form className="cartao pilha" onSubmit={(e) => void enviar(e)}>
         <div className="tipos-ajuda" role="radiogroup" aria-label="Assunto">

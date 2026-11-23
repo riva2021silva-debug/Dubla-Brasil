@@ -13,7 +13,7 @@ import { ajustarFalas, cortarAudio, type Edicao } from "../edicaoVideo";
 import { apagarRascunho, chaveDoRascunho, comoArquivo, guardarArquivo, guardarRascunho, lerArquivo, lerRascunho, quandoFoi, type Rascunho } from "../rascunho";
 import { buscarCena, useFormatoDoVideo, useTempoDoVideo, useUrlDaMidia } from "../ganchos";
 import type { Cena, Fala, Personagem } from "../tipos";
-import { estaPublicada } from "../tipos";
+import { estaPublicada, GENEROS } from "../tipos";
 import { corLivre, duracaoDoArquivo, formatarTempo, gerarCapa, IDIOMAS, lerSrt, novoId } from "../util";
 
 interface Arquivo {
@@ -854,6 +854,15 @@ export default function Editor() {
             <label className="campo">
               Descrição
               <textarea className="entrada" value={cena.descricao} onChange={(e) => atualizar((c) => ({ ...c, descricao: e.target.value }))} placeholder="Do que se trata a cena?" />
+            </label>
+            <label className="campo">
+              Categoria
+              <select className="entrada" value={cena.genero ?? ""} onChange={(e) => atualizar((c) => ({ ...c, genero: e.target.value || null }))}>
+                <option value="">Sem categoria</option>
+                {GENEROS.map((g) => (
+                  <option key={g}>{g}</option>
+                ))}
+              </select>
             </label>
             <label className="campo">
               Idioma das falas

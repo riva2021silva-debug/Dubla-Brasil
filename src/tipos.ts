@@ -49,7 +49,12 @@ export interface Cena {
   tipo?: "cena" | "musica";
   /** Música: a voz do cantor separada pela IA (para comparar a afinação). */
   voz?: FonteMidia | null;
+  /** Categoria da cena (Ação, Comédia, Anime…). Ausente = sem categoria. */
+  genero?: string | null;
 }
+
+/** Categorias das cenas (filtro na tela de Cenas). */
+export const GENEROS = ["Ação", "Comédia", "Drama", "Romance", "Terror", "Anime", "Desenho", "Super-heróis", "Séries e novelas", "Memes", "Infantil"] as const;
 
 export const ehMusica = (c: Cena) => c.tipo === "musica";
 

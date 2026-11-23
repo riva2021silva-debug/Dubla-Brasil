@@ -11,6 +11,7 @@ import { irPara } from "../audio/sincronia";
 import { trechoNoTempo } from "../audio/camera";
 import { usePlano } from "../plano";
 import { ehMusica, type Cena, type Dub } from "../tipos";
+import { rotuloDublagem } from "../audio/notaDublagem";
 import { rotuloAfinacao } from "../audio/afinacao";
 import { formatarTempo, gerarCapa, nomeArquivo, salvarVideoNaGaleria } from "../util";
 
@@ -377,6 +378,11 @@ function SessaoCarregada({ dub, cena }: { dub: Dub; cena: Cena }) {
             <span className="etiqueta">🎬 Sessão de estreia</span>
           </span>
           <h1 style={{ marginTop: 8 }}>{cena.titulo}</h1>
+          {!ehMusica(cena) && notaFinal !== null && (
+            <div className="nota-afinacao" style={{ marginBottom: 6 }}>
+              🎬 Nota da dublagem: <b>{notaFinal}%</b> · {rotuloDublagem(notaFinal)}
+            </div>
+          )}
           {ehMusica(cena) && cena.voz && notaFinal !== null && (
             <div className="nota-afinacao" style={{ marginBottom: 6 }}>
               🎤 Nota final: <b>{notaFinal}%</b> · {rotuloAfinacao(notaFinal)}

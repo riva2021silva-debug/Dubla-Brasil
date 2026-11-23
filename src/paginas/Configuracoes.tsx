@@ -175,9 +175,14 @@ export default function Configuracoes() {
         <span>
           <b>Dubla Brasil AI</b> <span className="suave">versão {VERSAO_APP}</span>
         </span>
-        <button className="botao botao-pequeno" onClick={procurarAtualizacao}>
-          🔄 Procurar atualização
-        </button>
+        <span className="linha" style={{ gap: 8 }}>
+          <Link className="botao botao-pequeno" to="/novidades">
+            🆕 Novidades
+          </Link>
+          <button className="botao botao-pequeno" onClick={procurarAtualizacao}>
+            🔄 Procurar atualização
+          </button>
+        </span>
       </section>
     </div>
   );
